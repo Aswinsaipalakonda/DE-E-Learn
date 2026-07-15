@@ -50,6 +50,6 @@ export async function login(formData: FormData) {
     return { error: error.message };
   }
 
-  // Redirect to portal root; proxy.ts handles subsequent routing/redirection
-  redirect("/");
+  // Return success payload with redirection path
+  return { success: true, redirectTo: "/" };
 }

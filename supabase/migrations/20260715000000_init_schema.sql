@@ -13,8 +13,8 @@ CREATE TABLE public.branches (
 
 -- Insert Initial Branches
 INSERT INTO public.branches (code, name, active) VALUES
-('CIC', 'Data Science', true),
-('CSD', 'Computer Science and Design', true),
+('CIC', 'Cyber Security, IoT with BlockChain Technology', true),
+('CSD', 'Data Science', true),
 ('CSM', 'Artificial Intelligence and Machine Learning', true);
 
 -- 2. Create Semesters Table
@@ -183,10 +183,16 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 -- Users: Admins can see all. Faculty and students can see active records or their own profile.
 CREATE POLICY "Admins full access on users" ON public.users 
-    FOR ALL TO authenticated USING (auth.jwt()->>'role' = 'admin');
+    FOR ALL TO authenticated USING (auth.jwt()->'user_metadata'->>'role' = 'admin');
 
 CREATE POLICY "Users can view their own profile" ON public.users 
     FOR SELECT TO authenticated USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert their own profile" ON public.users 
+    FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile" ON public.users 
+    FOR UPDATE TO authenticated USING (auth.uid() = id);
 
 -- Branches & Semesters: Viewable by all authenticated users
 CREATE POLICY "View active branches" ON public.branches 

@@ -81,42 +81,42 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-45 w-64 bg-surface border-r border-border flex flex-col transform transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-45 w-64 bg-[#111827] border-r border-[#1f2937] flex flex-col transform transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand Header */}
-        <div className="p-6 border-b border-border">
+        <div className="p-6 border-b border-[#1f2937]">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden border border-border shrink-0">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border border-[#374151] bg-[#1f2937] shrink-0">
               <Image
                 src="/De_logo.jpg"
                 alt="Logo"
-                width={36}
-                height={36}
+                width={40}
+                height={40}
                 className="object-cover"
               />
             </div>
             <div>
-              <span className="font-bold text-primary text-sm block">DE E-Learn</span>
-              <span className="text-xs text-primary/45 font-semibold block uppercase tracking-wider">MVGR College</span>
+              <span className="font-extrabold text-white text-base tracking-tight block">DE E-Learn</span>
+              <span className="text-[10px] text-gray-500 font-bold block uppercase tracking-widest">MVGR COLLEGE</span>
             </div>
           </Link>
         </div>
 
         {/* User Scope Badge Panel */}
         {userScope && (userScope.branch || userScope.semester) && (
-          <div className="px-6 py-4 border-b border-border bg-bg/50">
+          <div className="px-6 py-4 border-b border-[#1f2937] bg-[#1f2937]/30">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest block">Current Scope</span>
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block">Current Scope</span>
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {userScope.branch && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/5 text-primary border border-primary/10">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#1f2937] text-gray-300 border border-[#374151]">
                     {userScope.branch}
                   </span>
                 )}
                 {userScope.semester && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-secondary/10 text-secondary border border-secondary/10">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary/20 text-secondary border border-secondary/30">
                     Sem {userScope.semester}
                   </span>
                 )}
@@ -126,7 +126,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
         )}
 
         {/* Navigation items */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
@@ -135,13 +135,13 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
                 key={item.name}
                 href={item.href}
                 onClick={handleLinkClick}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all group ${
+                className={`flex items-center gap-3 px-5 py-3.5 rounded-full text-xs font-bold tracking-wide transition-all duration-200 group ${
                   isActive 
-                    ? "bg-secondary/10 text-secondary" 
-                    : "text-primary/75 hover:bg-bg hover:text-primary"
+                    ? "bg-[#f3f4f6] text-[#111827] shadow-lg shadow-black/10 font-extrabold" 
+                    : "text-gray-400 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <Icon className={`h-5 w-5 transition-colors ${isActive ? "text-secondary" : "text-primary/60 group-hover:text-primary"}`} />
+                <Icon className={`h-4.5 w-4.5 transition-colors duration-200 ${isActive ? "text-[#111827]" : "text-gray-400 group-hover:text-white"}`} />
                 {item.name}
               </Link>
             );
@@ -149,12 +149,12 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
         </nav>
 
         {/* Bottom Panel (Signout / Profile) */}
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-[#1f2937]">
           <button
             onClick={() => signOutAction()}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-danger/80 hover:text-danger hover:bg-danger/5 rounded-xl transition-all cursor-pointer"
+            className="w-full flex items-center gap-3 px-5 py-3 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full transition-all duration-200 cursor-pointer"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-4.5 w-4.5" />
             Sign Out
           </button>
         </div>

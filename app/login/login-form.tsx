@@ -24,10 +24,12 @@ export default function LoginForm() {
       const result = await login(formData);
       if (result?.error) {
         setError(result.error);
+        setLoading(false);
+      } else if (result?.success && result.redirectTo) {
+        window.location.href = result.redirectTo;
       }
-        } catch (err: unknown) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
-    } finally {
       setLoading(false);
     }
   };
