@@ -46,7 +46,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Student Roster", href: "/admin/users", icon: Users },
-      { name: "Taxonomy Catalogs", href: "/admin/taxonomy", icon: Settings },
+      { name: "Courses & Branches", href: "/admin/taxonomy", icon: Settings },
       { name: "Broadcasts", href: "/admin/announcements", icon: Megaphone },
       { name: "System Logs", href: "/admin/logs", icon: History },
     ],
@@ -88,17 +88,17 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
         {/* Brand Header */}
         <div className="p-6 border-b border-[#1f2937]">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border border-[#374151] bg-[#1f2937] shrink-0">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl overflow-hidden border border-[#374151] bg-white p-0.5 shrink-0">
               <Image
                 src="/De_logo.jpg"
                 alt="Logo"
                 width={40}
                 height={40}
-                className="object-cover"
+                className="object-contain"
               />
             </div>
             <div>
-              <span className="font-extrabold text-white text-base tracking-tight block">DE E-Learn</span>
+              <span className="font-extrabold text-white text-base tracking-tight block">Data Engineering</span>
               <span className="text-[10px] text-gray-500 font-bold block uppercase tracking-widest">MVGR COLLEGE</span>
             </div>
           </Link>
@@ -128,7 +128,9 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
         {/* Navigation items */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive = item.href === "/admin" || item.href === "/faculty" || item.href === "/student"
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (
               <Link

@@ -70,7 +70,7 @@ export default async function AdminDashboardPage() {
       <header className="p-6 bg-surface rounded-2xl border border-border shadow-xs">
         <h1 className="text-2xl font-bold text-primary">System Administrator</h1>
         <p className="text-sm text-primary/60 mt-1">
-          Monitor user registrations, branch taxonomy, and overall digital repository metrics.
+          Monitor user registrations, course branches, and overall digital repository metrics.
         </p>
       </header>
 
@@ -172,7 +172,7 @@ export default async function AdminDashboardPage() {
                 href="/admin/taxonomy"
                 className="flex items-center justify-between p-3.5 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
               >
-                <span>Taxonomy (Subjects/Branches)</span>
+                <span>Courses & Branches</span>
                 <ArrowRight className="h-4 w-4 text-primary/40" />
               </Link>
             </div>

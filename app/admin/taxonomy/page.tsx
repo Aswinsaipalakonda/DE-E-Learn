@@ -41,7 +41,7 @@ export default async function AdminTaxonomyPage() {
   if (branchesRes.error || semestersRes.error || subjectsRes.error) {
     return (
       <div role="alert" className="p-4 bg-danger/10 border border-danger/25 text-danger rounded-xl font-semibold">
-        Failed to fetch system taxonomy. Please refresh the page.
+        Failed to fetch course data. Please refresh the page.
       </div>
     );
   }
@@ -53,7 +53,7 @@ export default async function AdminTaxonomyPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-primary tracking-tight">System Taxonomy Manager</h1>
+        <h1 className="text-2xl font-bold text-primary tracking-tight">Courses & Branches Manager</h1>
         <p className="text-sm text-primary/60">
           Maintain the course catalogs, academic branches, semester timelines, and subject records.
         </p>
