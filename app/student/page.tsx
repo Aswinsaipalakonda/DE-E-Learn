@@ -10,6 +10,8 @@ import {
   ArrowRight
 } from "lucide-react";
 
+import SemesterSelect from "@/components/semester-select";
+
 interface SubjectInfo {
   title: string;
   code: string;
@@ -95,27 +97,10 @@ export default async function StudentDashboard({
         </p>
       </section>
 
-      {/* Semester Selection Bar */}
+      {/* Semester Selection Dropdown */}
       <section className="space-y-3">
         <h2 className="text-xs font-bold text-primary/50 uppercase tracking-widest">Select Semester</h2>
-        <div className="flex flex-wrap gap-2">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
-            const isSelected = selectedSemester === num;
-            return (
-              <Link
-                key={num}
-                href={`/student?sem=${num}`}
-                className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wide transition-all border duration-200 ${
-                  isSelected
-                    ? "bg-[#111827] text-white border-[#111827]"
-                    : "bg-surface hover:bg-slate-100 text-slate-600 border-border"
-                }`}
-              >
-                Semester {num}
-              </Link>
-            );
-          })}
-        </div>
+        <SemesterSelect selectedSemester={selectedSemester} />
       </section>
 
       {/* Grid Layout */}

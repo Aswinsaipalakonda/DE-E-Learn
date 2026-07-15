@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { updatePasswordAction } from "./actions";
-import { User, Mail, Shield, BookOpen, Key, Eye, EyeOff } from "lucide-react";
+import { updatePasswordAction, signOutUserAction } from "./actions";
+import { User, Mail, Shield, BookOpen, Key, Eye, EyeOff, LogOut } from "lucide-react";
 
 interface ProfileClientProps {
   profile: {
@@ -95,6 +95,19 @@ export default function ProfileClient({ profile }: ProfileClientProps) {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="pt-6 border-t border-border">
+          <button
+            onClick={async () => {
+              await signOutUserAction();
+              window.location.href = "/login";
+            }}
+            className="w-full px-4 py-2.5 bg-danger/10 hover:bg-danger text-danger hover:text-white font-bold text-xs rounded-full border border-danger/15 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out Account
+          </button>
         </div>
       </div>
 

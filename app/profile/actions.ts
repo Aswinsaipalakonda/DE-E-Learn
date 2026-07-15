@@ -31,3 +31,9 @@ export async function updatePasswordAction(password: string) {
   revalidatePath("/profile");
   return { success: true };
 }
+
+export async function signOutUserAction() {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  await supabase.auth.signOut();
+}

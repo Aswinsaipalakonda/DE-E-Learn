@@ -63,15 +63,6 @@ export default function BottomNav({ userRole, signOutAction }: BottomNavProps) {
           </Link>
         );
       })}
-      
-      {/* Quick Sign Out Action */}
-      <button
-        onClick={() => signOutAction()}
-        className="flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold text-danger/70 hover:text-danger cursor-pointer transition-all"
-      >
-        <LogOut className="h-5 w-5 mb-0.5 text-danger/60" />
-        <span>Sign Out</span>
-      </button>
     </nav>
   );
 }
