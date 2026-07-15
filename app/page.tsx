@@ -1,65 +1,85 @@
-import Image from "next/image";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  // Fetch session user
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Fetch corresponding user profile
+  const { data: profile } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  const handleSignOut = async () => {
+    "use server";
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    await supabase.auth.signOut();
+    redirect("/login");
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="min-h-screen bg-bg p-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header Section */}
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-6 bg-surface rounded-2xl border border-border shadow-sm gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-primary">
+              Welcome back, {profile?.name || user.email}
+            </h1>
+            <p className="text-sm text-primary/60 mt-1">
+              Role: <span className="capitalize font-semibold text-secondary">{profile?.role || "Student"}</span>
+            </p>
+          </div>
+          <form action={handleSignOut}>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary hover:bg-primary/95 text-white font-semibold text-sm rounded-lg shadow-sm cursor-pointer transition-all"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              Sign Out
+            </button>
+          </form>
+        </header>
+
+        {/* Dashboard Skeleton Body */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-6 bg-surface rounded-2xl border border-border shadow-sm col-span-2">
+            <h2 className="text-lg font-bold text-primary mb-4">Latest Uploads</h2>
+            <div className="py-12 text-center text-primary/40 border-2 border-dashed border-border rounded-xl">
+              No recent uploads available.
+            </div>
+          </div>
+          <div className="p-6 bg-surface rounded-2xl border border-border shadow-sm space-y-4">
+            <h2 className="text-lg font-bold text-primary">Your Academic Profile</h2>
+            <div className="space-y-3 text-sm text-primary/80">
+              <div>
+                <span className="block font-semibold text-primary/55">Branch</span>
+                <span>{profile?.branch || "Not Specified"}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-primary/55">Current Semester</span>
+                <span>Semester {profile?.current_semester || "N/A"}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-primary/55">Status</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-success/15 text-success">
+                  {profile?.status || "Active"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
