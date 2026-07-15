@@ -106,8 +106,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       email,
       name,
       role,
-      role === "student" || role === "faculty" ? branch || null : null,
-      role === "student" ? parseInt(semester, 10) || null : null
+      role === "student" ? branch || null : null,
+      null
     );
 
     setLoading(false);
@@ -338,7 +338,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </select>
             </div>
 
-            {(role === "student" || role === "faculty") && (
+            {role === "student" && (
               <div>
                 <label htmlFor="branch" className="block text-xs font-bold text-primary mb-2 uppercase tracking-wider text-primary/60">Academic Branch</label>
                 <select
@@ -350,23 +350,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   <option value="">-- Choose Branch --</option>
                   {branches.map(b => (
                     <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {role === "student" && (
-              <div>
-                <label htmlFor="semester" className="block text-xs font-bold text-primary mb-2 uppercase tracking-wider text-primary/60">Active Semester</label>
-                <select
-                  id="semester"
-                  value={semester}
-                  onChange={(e) => setSemester(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-border bg-surface text-xs focus:outline-none"
-                >
-                  <option value="">-- Choose Semester --</option>
-                  {semesters.map(s => (
-                    <option key={s.number} value={s.number}>Sem {s.number} - {s.name}</option>
                   ))}
                 </select>
               </div>

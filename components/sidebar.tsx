@@ -15,7 +15,7 @@ import {
   FileText,
   Users,
   Settings,
-  Megaphone,
+  BarChart,
   History
 } from "lucide-react";
 
@@ -47,7 +47,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Student Roster", href: "/admin/users", icon: Users },
       { name: "Courses & Branches", href: "/admin/taxonomy", icon: Settings },
-      { name: "Broadcasts", href: "/admin/announcements", icon: Megaphone },
+      { name: "Usage Metrics", href: "/admin/analytics", icon: BarChart },
       { name: "System Logs", href: "/admin/logs", icon: History },
     ],
   };

@@ -22,7 +22,7 @@ async function updateBranches() {
   console.log("Updating branch classifications in database...");
 
   const branches = [
-    { code: "CIC", name: "Cyber Security, IoT with BlockChain", active: true },
+    { code: "CIC", name: "Cyber Security, IoT with BlockChain Technology", active: true },
     { code: "CSD", name: "Data Science", active: true },
     { code: "CSM", name: "Artificial Intelligence and Machine Learning", active: true }
   ];

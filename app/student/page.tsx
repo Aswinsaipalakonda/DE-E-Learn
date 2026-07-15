@@ -22,7 +22,11 @@ interface MaterialDashboardItem {
   subjects: { title: string } | null;
 }
 
-export default async function StudentDashboard() {
+export default async function StudentDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ sem?: string }>;
+}) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -38,7 +42,10 @@ export default async function StudentDashboard() {
     .single();
 
   const branch = profile?.branch || "";
-  const semester = profile?.current_semester || 0;
+  
+  // Resolve selected semester from search params, default to user profile semester or Sem 1
+  const resolvedParams = await searchParams;
+  const selectedSemester = resolvedParams.sem ? parseInt(resolvedParams.sem, 10) : (profile?.current_semester || 1);
 
   // 1. Fetch announcements active today matching scope
   const nowStr = new Date().toISOString();
@@ -48,17 +55,17 @@ export default async function StudentDashboard() {
     .lte("start_time", nowStr)
     .gte("end_time", nowStr)
     .or(`scope_branch.eq.${branch},scope_branch.is.null`)
-    .or(`scope_semester.eq.${semester},scope_semester.is.null`)
+    .or(`scope_semester.eq.${selectedSemester},scope_semester.is.null`)
     .order("priority", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(3);
 
-  // 2. Fetch latest uploads in student scope
+  // 2. Fetch latest uploads in student scope matching selected semester
   const { data: latestUploads } = await supabase
     .from("materials")
     .select("id, title, type, created_at, subjects(title, code)")
     .eq("branch", branch)
-    .eq("semester", semester)
+    .eq("semester", selectedSemester)
     .eq("state", "published")
     .order("created_at", { ascending: false })
     .limit(5);
@@ -84,8 +91,31 @@ export default async function StudentDashboard() {
       <section className="bg-gradient-to-r from-primary to-primary/90 p-8 rounded-2xl border border-border text-white shadow-xs">
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Student Dashboard</h1>
         <p className="text-white/70 mt-2 font-medium max-w-xl text-sm leading-relaxed">
-          Access your courses, bookmarks, and announcements for Branch <span className="text-secondary font-bold">{branch}</span>, Semester <span className="text-secondary font-bold">{semester}</span>.
+          Access your courses, bookmarks, and announcements for Branch <span className="text-secondary font-bold">{branch}</span>.
         </p>
+      </section>
+
+      {/* Semester Selection Bar */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-bold text-primary/50 uppercase tracking-widest">Select Semester</h2>
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
+            const isSelected = selectedSemester === num;
+            return (
+              <Link
+                key={num}
+                href={`/student?sem=${num}`}
+                className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wide transition-all border duration-200 ${
+                  isSelected
+                    ? "bg-[#111827] text-white border-[#111827]"
+                    : "bg-surface hover:bg-slate-100 text-slate-600 border-border"
+                }`}
+              >
+                Semester {num}
+              </Link>
+            );
+          })}
+        </div>
       </section>
 
       {/* Grid Layout */}
