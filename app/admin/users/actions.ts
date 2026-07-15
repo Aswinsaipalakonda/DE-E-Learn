@@ -56,17 +56,17 @@ export async function createUserAction(
     return { error: `Auth registration failed: ${authError?.message}` };
   }
 
-  // 3. Create Profile in public.users
+  // 3. Create/Update Profile in public.users
   const { error: profileError } = await adminClient
     .from("users")
-    .insert({
+    .upsert({
       id: authData.user.id,
       email,
       name,
       role,
       status: "active",
       branch: branch || null,
-      current_semester: semester || null,
+      current_semester: null,
       first_login_pending: true,
     });
 
@@ -75,7 +75,7 @@ export async function createUserAction(
     return { error: `Profile creation failed: ${profileError.message}` };
   }
 
-  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester });
+  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester: null });
 
   revalidatePath("/admin/users");
   return { success: true };
@@ -94,17 +94,16 @@ export async function batchCreateUsersAction(
   const cookieStore = await cookies();
   const adminClient = createServerClient(cookieStore);
 
-  // Verify Admin
-  const { data: { user: adminUser } } = await adminClient.auth.getUser();
-  if (!adminUser) return { error: "Unauthorized" };
+  const { data: { user } } = await adminClient.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
 
-  const { data: adminProfile } = await adminClient
+  const { data: profile } = await adminClient
     .from("users")
     .select("role")
-    .eq("id", adminUser.id)
+    .eq("id", user.id)
     .single();
 
-  if (!adminProfile || adminProfile.role !== "admin") {
+  if (!profile || profile.role !== "admin") {
     return { error: "Permission denied." };
   }
 
@@ -112,13 +111,14 @@ export async function batchCreateUsersAction(
     auth: { persistSession: false }
   });
 
-  const defaultPassword = "ChangeMe1234!";
   let successCount = 0;
   let failCount = 0;
   const errors: string[] = [];
 
   for (const item of usersList) {
     try {
+      const defaultPassword = "ChangeMe1234!";
+
       const { data: authData, error: authError } = await statelessClient.auth.signUp({
         email: item.email,
         password: defaultPassword,
@@ -138,14 +138,14 @@ export async function batchCreateUsersAction(
 
       const { error: profileError } = await adminClient
         .from("users")
-        .insert({
+        .upsert({
           id: authData.user.id,
           email: item.email,
           name: item.name,
           role: item.role,
           status: "active",
           branch: item.branch || null,
-          current_semester: item.semester || null,
+          current_semester: null,
           first_login_pending: true,
         });
 

@@ -134,7 +134,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       name: item.name || "",
       role: (item.role || "student") as "student" | "faculty" | "admin",
       branch: item.branch || null,
-      semester: parseInt(item.semester, 10) || null
+      semester: null
     })).filter(u => u.email && u.name);
 
     const result = await batchCreateUsersAction(formattedList);
@@ -374,7 +374,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           <div className="bg-surface p-6 rounded-2xl border border-border shadow-xs max-w-xl space-y-6">
             <h3 className="text-xs font-bold uppercase tracking-wider text-primary/50">Batch CSV Upload Instructions</h3>
             <p className="text-xs text-primary/60 leading-relaxed">
-              Format your CSV file with headers: <span className="font-bold text-secondary">email, name, role, branch, semester</span>. Default credentials will be created dynamically as <span className="font-semibold text-secondary">ChangeMe1234!</span> for all provisioned users.
+              Format your CSV file with headers: <span className="font-bold text-secondary">email, name, role, branch</span>. Default credentials will be created dynamically as <span className="font-semibold text-secondary">ChangeMe1234!</span> for all provisioned users.
             </p>
 
             <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border hover:border-secondary rounded-xl bg-bg/30 text-center relative group transition-colors cursor-pointer">
@@ -402,7 +402,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       <th className="p-3">Name</th>
                       <th className="p-3">Role</th>
                       <th className="p-3">Branch</th>
-                      <th className="p-3">Semester</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -412,7 +411,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         <td className="p-3 font-semibold">{row.name}</td>
                         <td className="p-3 uppercase">{row.role || "student"}</td>
                         <td className="p-3">{row.branch || "-"}</td>
-                        <td className="p-3">{row.semester || "-"}</td>
                       </tr>
                     ))}
                   </tbody>
