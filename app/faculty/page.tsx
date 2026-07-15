@@ -94,7 +94,7 @@ export default async function FacultyDashboardPage() {
         </div>
         <Link
           href="/faculty/upload"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/95 text-white font-semibold text-sm rounded-lg shadow-sm cursor-pointer transition-all shrink-0"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/95 text-white font-semibold text-sm rounded-full shadow-sm cursor-pointer transition-all shrink-0"
         >
           <Plus className="h-4 w-4" />
           Upload Material
