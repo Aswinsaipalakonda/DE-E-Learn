@@ -4,6 +4,7 @@ import { createClient as createStatelessClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { logAuditAction } from "@/utils/audit-logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -73,6 +74,8 @@ export async function createUserAction(
     // Attempt rollback from auth (admin client can delete if policies/keys match, or we inform admin)
     return { error: `Profile creation failed: ${profileError.message}` };
   }
+
+  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester });
 
   revalidatePath("/admin/users");
   return { success: true };
@@ -158,6 +161,8 @@ export async function batchCreateUsersAction(
     }
   }
 
+  await logAuditAction("BATCH_CREATE_USERS", "csv_import", null, { successCount, failCount });
+
   revalidatePath("/admin/users");
   return { successCount, failCount, errors };
 }
@@ -175,6 +180,8 @@ export async function toggleUserStatus(userId: string, currentStatus: string) {
     .eq("id", userId);
 
   if (error) return { error: error.message };
+
+  await logAuditAction("TOGGLE_USER_STATUS", userId, { status: currentStatus }, { status: newStatus });
 
   revalidatePath("/admin/users");
   return { success: true };

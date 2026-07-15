@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { logAuditAction } from "@/utils/audit-logger";
 
 export async function uploadMaterialAction(formData: FormData) {
   const cookieStore = await cookies();
@@ -122,6 +123,8 @@ export async function uploadMaterialAction(formData: FormData) {
       return { error: `Failed to register file ${file.name} metadata: ${fileInsertError.message}` };
     }
   }
+
+  await logAuditAction("UPLOAD_MATERIAL", material.id, null, { title, type, subject, filesCount: validFiles.length });
 
   redirect("/faculty");
 }

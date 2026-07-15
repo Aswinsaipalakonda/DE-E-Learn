@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { logAuditAction } from "@/utils/audit-logger";
 
 // Create a new subject
 export async function createSubjectAction(
@@ -39,6 +40,8 @@ export async function createSubjectAction(
 
   if (error) return { error: error.message };
 
+  await logAuditAction("CREATE_SUBJECT", code, null, { title, branch, semester });
+
   revalidatePath("/admin/taxonomy");
   return { success: true };
 }
@@ -57,6 +60,8 @@ export async function toggleSubjectActiveAction(code: string, currentActive: boo
     .eq("code", code);
 
   if (error) return { error: error.message };
+
+  await logAuditAction("TOGGLE_SUBJECT_STATUS", code, { active: currentActive }, { active: !currentActive });
 
   revalidatePath("/admin/taxonomy");
   return { success: true };
@@ -79,6 +84,8 @@ export async function createBranchAction(code: string, name: string) {
     });
 
   if (error) return { error: error.message };
+
+  await logAuditAction("CREATE_BRANCH", code, null, { name });
 
   revalidatePath("/admin/taxonomy");
   return { success: true };

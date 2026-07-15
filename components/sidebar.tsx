@@ -12,7 +12,11 @@ import {
   Menu, 
   X,
   Upload,
-  FileText
+  FileText,
+  Users,
+  Settings,
+  Megaphone,
+  History
 } from "lucide-react";
 
 interface SidebarProps {
@@ -41,6 +45,10 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
     ],
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { name: "Student Roster", href: "/admin/users", icon: Users },
+      { name: "Taxonomy Catalogs", href: "/admin/taxonomy", icon: Settings },
+      { name: "Broadcasts", href: "/admin/announcements", icon: Megaphone },
+      { name: "System Logs", href: "/admin/logs", icon: History },
     ],
   };
 
