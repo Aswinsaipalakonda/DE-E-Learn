@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { changePassword } from "./actions";
 
 interface Props {
@@ -52,8 +52,8 @@ export default function ChangePasswordForm({ userEmail }: Props) {
       if (result?.error) {
         setError(result.error);
       }
-    } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }

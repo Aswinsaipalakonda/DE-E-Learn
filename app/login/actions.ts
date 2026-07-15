@@ -19,7 +19,7 @@ export async function login(formData: FormData) {
   const regNo = email.split("@")[0];
 
   // Try standard case-sensitive authentication first
-  let { data, error } = await supabase.auth.signInWithPassword({
+  let { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -42,7 +42,6 @@ export async function login(formData: FormData) {
     }
 
     if (!fallbackResult.error) {
-      data = fallbackResult.data;
       error = null;
     }
   }

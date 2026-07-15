@@ -23,8 +23,8 @@ export default function LoginForm() {
       if (result?.error) {
         setError(result.error);
       }
-    } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred.");
+        } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
