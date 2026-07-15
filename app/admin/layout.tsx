@@ -5,7 +5,7 @@ import Sidebar from "@/components/sidebar";
 import Breadcrumbs from "@/components/breadcrumbs";
 import BottomNav from "@/components/bottom-nav";
 
-export default async function StudentLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export default async function StudentLayout({
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // Fetch session
+  // Fetch session user
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     redirect("/login");
@@ -22,11 +22,11 @@ export default async function StudentLayout({
   // Fetch user profile
   const { data: profile } = await supabase
     .from("users")
-    .select("role, branch, current_semester")
+    .select("role")
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "student") {
+  if (!profile || profile.role !== "admin") {
     redirect("/login");
   }
 
@@ -41,11 +41,7 @@ export default async function StudentLayout({
   return (
     <div className="min-h-screen bg-bg flex flex-col lg:flex-row">
       <Sidebar 
-        userRole="student" 
-        userScope={{
-          branch: profile.branch || undefined,
-          semester: profile.current_semester || undefined,
-        }}
+        userRole="admin" 
         signOutAction={handleSignOut}
       />
 
@@ -58,7 +54,7 @@ export default async function StudentLayout({
       </div>
 
       <BottomNav 
-        userRole="student" 
+        userRole="admin" 
         signOutAction={handleSignOut}
       />
     </div>

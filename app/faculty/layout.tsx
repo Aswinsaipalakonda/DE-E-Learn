@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import Breadcrumbs from "@/components/breadcrumbs";
+import BottomNav from "@/components/bottom-nav";
 
 export default async function FacultyLayout({
   children,
@@ -45,12 +46,17 @@ export default async function FacultyLayout({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen pb-20 lg:pb-0">
         <main className="flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full mt-12 lg:mt-0">
           <Breadcrumbs />
           {children}
         </main>
       </div>
+
+      <BottomNav 
+        userRole="faculty" 
+        signOutAction={handleSignOut}
+      />
     </div>
   );
 }
