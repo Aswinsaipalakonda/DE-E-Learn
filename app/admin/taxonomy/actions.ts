@@ -47,7 +47,7 @@ export async function createSubjectAction(
 }
 
 // Toggle subject active status
-export async function toggleSubjectActiveAction(code: string, currentActive: boolean) {
+export async function toggleSubjectActiveAction(code: string, branch: string, currentActive: boolean) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -57,11 +57,12 @@ export async function toggleSubjectActiveAction(code: string, currentActive: boo
   const { error } = await supabase
     .from("subjects")
     .update({ active: !currentActive })
-    .eq("code", code);
+    .eq("code", code)
+    .eq("branch", branch);
 
   if (error) return { error: error.message };
 
-  await logAuditAction("TOGGLE_SUBJECT_STATUS", code, { active: currentActive }, { active: !currentActive });
+  await logAuditAction("TOGGLE_SUBJECT_STATUS", code, { active: currentActive, branch }, { active: !currentActive, branch });
 
   revalidatePath("/admin/taxonomy");
   return { success: true };

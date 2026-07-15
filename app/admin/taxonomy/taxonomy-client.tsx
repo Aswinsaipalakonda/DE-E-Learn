@@ -88,8 +88,8 @@ export default function TaxonomyClient({ branches, semesters, subjects }: Taxono
     }
   };
 
-  const handleToggleSubject = async (code: string, currentActive: boolean) => {
-    const result = await toggleSubjectActiveAction(code, currentActive);
+  const handleToggleSubject = async (code: string, branch: string, currentActive: boolean) => {
+    const result = await toggleSubjectActiveAction(code, branch, currentActive);
     if (result.error) {
       alert(result.error);
     }
@@ -220,14 +220,14 @@ export default function TaxonomyClient({ branches, semesters, subjects }: Taxono
                     </thead>
                     <tbody className="divide-y divide-border">
                       {subjects.map((sub) => (
-                        <tr key={sub.code} className="hover:bg-bg/25 transition-all font-medium">
+                        <tr key={`${sub.code}-${sub.branch}`} className="hover:bg-bg/25 transition-all font-medium">
                           <td className="p-3 font-bold text-primary">{sub.code}</td>
                           <td className="p-3 text-primary/80">{sub.title}</td>
                           <td className="p-3 font-bold text-secondary">{sub.branch}</td>
                           <td className="p-3 font-semibold">Sem {sub.semester}</td>
                           <td className="p-3 text-right">
                             <button
-                              onClick={() => handleToggleSubject(sub.code, sub.active)}
+                              onClick={() => handleToggleSubject(sub.code, sub.branch, sub.active)}
                               className="focus:outline-none cursor-pointer text-primary"
                               aria-label={sub.active ? "Deactivate subject" : "Activate subject"}
                             >
