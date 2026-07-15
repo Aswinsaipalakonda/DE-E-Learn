@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,7 +10,9 @@ import {
   LayoutDashboard, 
   LogOut, 
   Menu, 
-  X
+  X,
+  Upload,
+  FileText
 } from "lucide-react";
 
 interface SidebarProps {
@@ -33,6 +36,8 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
     ],
     faculty: [
       { name: "Dashboard", href: "/faculty", icon: LayoutDashboard },
+      { name: "Upload Material", href: "/faculty/upload", icon: Upload },
+      { name: "My Materials", href: "/faculty/materials", icon: FileText },
     ],
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -75,8 +80,14 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
         {/* Brand Header */}
         <div className="p-6 border-b border-border">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-white">
-              <BookOpen className="h-5 w-5" />
+            <div className="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden border border-border shrink-0">
+              <Image
+                src="/De_logo.jpg"
+                alt="Logo"
+                width={36}
+                height={36}
+                className="object-cover"
+              />
             </div>
             <div>
               <span className="font-bold text-primary text-sm block">DE E-Learn</span>
