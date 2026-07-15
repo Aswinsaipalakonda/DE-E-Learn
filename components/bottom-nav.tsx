@@ -10,7 +10,8 @@ import {
   FileText,
   Users,
   Settings,
-  LogOut 
+  LogOut,
+  User
 } from "lucide-react";
 
 interface BottomNavProps {
@@ -26,16 +27,19 @@ export default function BottomNav({ userRole, signOutAction }: BottomNavProps) {
       { name: "Dashboard", href: "/student", icon: LayoutDashboard },
       { name: "Subjects", href: "/student/subjects", icon: BookOpen },
       { name: "Bookmarks", href: "/student/bookmarks", icon: Bookmark },
+      { name: "Profile", href: "/student/profile", icon: User },
     ],
     faculty: [
       { name: "Dashboard", href: "/faculty", icon: LayoutDashboard },
       { name: "Upload", href: "/faculty/upload", icon: Upload },
       { name: "Materials", href: "/faculty/materials", icon: FileText },
+      { name: "Profile", href: "/faculty/profile", icon: User },
     ],
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Users", href: "/admin/users", icon: Users },
-      { name: "Taxonomy", href: "/admin/taxonomy", icon: Settings },
+      { name: "Courses", href: "/admin/taxonomy", icon: Settings },
+      { name: "Profile", href: "/admin/profile", icon: User },
     ],
   };
 

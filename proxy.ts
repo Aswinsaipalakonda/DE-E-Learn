@@ -71,15 +71,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const isFirstLoginPending = profile.first_login_pending;
-
-  // 3. Forced Password Change redirection
-  if (isFirstLoginPending) {
-    if (pathname !== "/change-password") {
-      return NextResponse.redirect(new URL("/change-password", request.url));
-    }
-    return supabaseResponse;
-  }
+  const isFirstLoginPending = false;
 
   // 4. Redirect logged-in users away from /login and /change-password
   if (pathname === "/login" || pathname === "/change-password") {

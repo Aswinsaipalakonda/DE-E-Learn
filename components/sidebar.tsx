@@ -16,7 +16,8 @@ import {
   Users,
   Settings,
   BarChart,
-  History
+  History,
+  User
 } from "lucide-react";
 
 interface SidebarProps {
@@ -37,11 +38,13 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
       { name: "Dashboard", href: "/student", icon: LayoutDashboard },
       { name: "Subjects", href: "/student/subjects", icon: BookOpen },
       { name: "Bookmarks", href: "/student/bookmarks", icon: Bookmark },
+      { name: "Profile", href: "/student/profile", icon: User },
     ],
     faculty: [
       { name: "Dashboard", href: "/faculty", icon: LayoutDashboard },
       { name: "Upload Material", href: "/faculty/upload", icon: Upload },
       { name: "My Materials", href: "/faculty/materials", icon: FileText },
+      { name: "Profile", href: "/faculty/profile", icon: User },
     ],
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -49,6 +52,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
       { name: "Courses & Branches", href: "/admin/taxonomy", icon: Settings },
       { name: "Usage Metrics", href: "/admin/analytics", icon: BarChart },
       { name: "System Logs", href: "/admin/logs", icon: History },
+      { name: "Profile", href: "/admin/profile", icon: User },
     ],
   };
 
@@ -60,16 +64,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
 
   return (
     <>
-      {/* Mobile Toggle Button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-2 rounded-lg bg-surface border border-border text-primary hover:bg-bg cursor-pointer focus:outline-none"
-          aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
-        >
-          {isOpen ? <X className="h-6 h-6" /> : <Menu className="h-6 h-6" />}
-        </button>
-      </div>
+
 
       {/* Overlay behind sidebar on mobile */}
       {isOpen && (
