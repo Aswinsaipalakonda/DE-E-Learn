@@ -48,9 +48,9 @@ export async function proxy(request: NextRequest) {
   // Retrieve user session safely
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 1. If not logged in and not on login page -> redirect to /login
+  // 1. If not logged in and not on login or landing page -> redirect to /login
   if (!user) {
-    if (pathname !== "/login") {
+    if (pathname !== "/login" && pathname !== "/") {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     return supabaseResponse;
