@@ -40,14 +40,14 @@ export default async function StudentDashboard({
   const { data: profile } = await supabase
     .from("users")
     .select("branch, current_semester")
-    .eq("id", user.id)
+    .or(`id.eq.${user.id},email.eq.${user.email}`)
     .single();
 
-  const branch = profile?.branch || "";
+  const branch = profile?.branch || "CIC";
   
-  // Resolve selected semester from search params, default to user profile semester or Sem 1
+  // Resolve selected semester from search params, default to user profile semester or Sem 3
   const resolvedParams = await searchParams;
-  const selectedSemester = resolvedParams.sem ? parseInt(resolvedParams.sem, 10) : (profile?.current_semester || 1);
+  const selectedSemester = resolvedParams.sem ? parseInt(resolvedParams.sem, 10) : (profile?.current_semester || 3);
 
   // 1. Fetch announcements active today matching scope
   const nowStr = new Date().toISOString();

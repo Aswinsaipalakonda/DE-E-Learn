@@ -24,14 +24,37 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  // Fetch user profile
-  const { data: profile } = await supabase
+  // Fetch user profile by ID or Email
+  let { data: profile } = await supabase
     .from("users")
-    .select("name, email, role")
-    .eq("id", user.id)
+    .select("id, name, email, role")
+    .or(`id.eq.${user.id},email.eq.${user.email}`)
     .single();
 
-  if (!profile || profile.role !== "admin") {
+  if (!profile) {
+    const adminRole = user.user_metadata?.role || "admin";
+    const adminName = user.user_metadata?.name || "System Administrator";
+
+    const { data: newProfile } = await supabase
+      .from("users")
+      .upsert({
+        id: user.id,
+        email: user.email!,
+        name: adminName,
+        role: adminRole,
+        status: "active",
+        first_login_pending: false,
+      })
+      .select()
+      .single();
+
+    profile = newProfile;
+  } else if (profile.id !== user.id) {
+    await supabase.from("users").update({ id: user.id }).eq("email", user.email!);
+  }
+
+  const userRole = profile?.role || user.user_metadata?.role || "admin";
+  if (userRole !== "admin") {
     redirect("/login");
   }
 
@@ -80,16 +103,10 @@ export default async function AdminLayout({
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Live System Indicator */}
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/70 text-xs font-medium text-emerald-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Portal Live</span>
-            </div>
-
             {/* Notification Bell */}
             <NotificationBell />
 
-            {/* Clean Administrator Role Badge Component */}
+            {/* Clean Admin Role Badge */}
             <Link
               href="/admin/profile"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white shadow-2xs hover:bg-slate-800 transition-all cursor-pointer"
@@ -101,7 +118,6 @@ export default async function AdminLayout({
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 px-4 sm:px-8 py-6 w-full">
           {children}
         </main>

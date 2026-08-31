@@ -24,14 +24,38 @@ export default async function FacultyLayout({
     redirect("/login");
   }
 
-  // Fetch user profile
-  const { data: profile } = await supabase
+  // Fetch user profile by ID or Email
+  let { data: profile } = await supabase
     .from("users")
-    .select("name, role")
-    .eq("id", user.id)
+    .select("id, name, role, designation")
+    .or(`id.eq.${user.id},email.eq.${user.email}`)
     .single();
 
-  if (!profile || (profile.role !== "faculty" && profile.role !== "admin")) {
+  if (!profile) {
+    const facultyRole = user.user_metadata?.role || (user.email?.startsWith("admin") ? "admin" : "faculty");
+    const facultyName = user.user_metadata?.name || user.email?.split("@")[0] || "Faculty Member";
+
+    const { data: newProfile } = await supabase
+      .from("users")
+      .upsert({
+        id: user.id,
+        email: user.email!,
+        name: facultyName,
+        role: facultyRole,
+        status: "active",
+        designation: "Assistant Professor",
+        first_login_pending: false,
+      })
+      .select()
+      .single();
+
+    profile = newProfile;
+  } else if (profile.id !== user.id) {
+    await supabase.from("users").update({ id: user.id }).eq("email", user.email!);
+  }
+
+  const userRole = profile?.role || user.user_metadata?.role || "faculty";
+  if (userRole !== "faculty" && userRole !== "admin") {
     redirect("/login");
   }
 

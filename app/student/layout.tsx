@@ -24,14 +24,44 @@ export default async function StudentLayout({
     redirect("/login");
   }
 
-  // Fetch user profile
-  const { data: profile } = await supabase
+  // Fetch user profile by ID or Email
+  let { data: profile } = await supabase
     .from("users")
-    .select("role, branch, current_semester, section")
-    .eq("id", user.id)
+    .select("id, name, role, branch, current_semester, section")
+    .or(`id.eq.${user.id},email.eq.${user.email}`)
     .single();
 
-  if (!profile || profile.role !== "student") {
+  // If not found in public.users, create one from auth session metadata
+  if (!profile) {
+    const studentRole = user.user_metadata?.role || "student";
+    const studentName = user.user_metadata?.name || user.email?.split("@")[0].toUpperCase() || "Student";
+    const rollNumber = user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : null;
+
+    const { data: newProfile } = await supabase
+      .from("users")
+      .upsert({
+        id: user.id,
+        email: user.email!,
+        name: studentName,
+        role: studentRole,
+        status: "active",
+        branch: "CIC",
+        current_semester: 3,
+        section: "A",
+        roll_number: rollNumber,
+        first_login_pending: false,
+      })
+      .select()
+      .single();
+
+    profile = newProfile;
+  } else if (profile.id !== user.id) {
+    // Synchronize ID if email matched an existing record with different UUID
+    await supabase.from("users").update({ id: user.id }).eq("email", user.email!);
+  }
+
+  const userRole = profile?.role || user.user_metadata?.role || "student";
+  if (userRole !== "student" && userRole !== "admin") {
     redirect("/login");
   }
 
@@ -48,8 +78,8 @@ export default async function StudentLayout({
       <Sidebar 
         userRole="student" 
         userScope={{
-          branch: profile.branch || undefined,
-          semester: profile.current_semester || undefined,
+          branch: profile?.branch || "CIC",
+          semester: profile?.current_semester || 3,
         }}
         signOutAction={handleSignOut}
       />
@@ -85,12 +115,10 @@ export default async function StudentLayout({
 
           <div className="flex items-center gap-2.5">
             {/* Scope Badge (Branch/Semester) */}
-            {profile.branch && (
-              <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/70 text-xs font-medium text-blue-800">
-                <span>{profile.branch}</span>
-                {profile.current_semester && <span>• Sem {profile.current_semester}</span>}
-              </div>
-            )}
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/70 text-xs font-medium text-blue-800">
+              <span>{profile?.branch || "CIC"}</span>
+              <span>• Sem {profile?.current_semester || 3}</span>
+            </div>
 
             {/* Notification Bell */}
             <NotificationBell />
