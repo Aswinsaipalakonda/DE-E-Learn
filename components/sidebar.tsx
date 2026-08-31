@@ -139,13 +139,13 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
                 key={item.name}
                 href={item.href}
                 onClick={handleLinkClick}
-                className={`flex items-center gap-3 px-5 py-3.5 rounded-full text-xs font-bold tracking-wide transition-all duration-200 group ${
+                className={`flex items-center gap-3.5 px-5 py-3.5 rounded-full text-sm font-bold tracking-wide transition-all duration-200 group ${
                   isActive 
                     ? "bg-[#f3f4f6] text-[#111827] shadow-lg shadow-black/10 font-extrabold" 
                     : "text-gray-400 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <Icon className={`h-4.5 w-4.5 transition-colors duration-200 ${isActive ? "text-[#111827]" : "text-gray-400 group-hover:text-white"}`} />
+                <Icon className={`h-5 w-5 transition-colors duration-200 ${isActive ? "text-[#111827]" : "text-gray-400 group-hover:text-white"}`} />
                 {item.name}
               </Link>
             );
@@ -156,13 +156,14 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
         <div className="p-4 border-t border-[#1f2937]">
           <button
             onClick={() => signOutAction()}
-            className="w-full flex items-center gap-3 px-5 py-3 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full transition-all duration-200 cursor-pointer"
+            className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full transition-all duration-200 cursor-pointer"
           >
-            <LogOut className="h-4.5 w-4.5" />
+            <LogOut className="h-5 w-5" />
             Sign Out
           </button>
         </div>
       </aside>
+
     </>
   );
 }

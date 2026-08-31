@@ -35,6 +35,13 @@
   --font-sans: var(--font-satoshi);
 }
 
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 html, body, input, select, textarea, button {
   font-family: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
 }
@@ -42,7 +49,10 @@ html, body, input, select, textarea, button {
 body {
   background: var(--background);
   color: var(--foreground);
+  font-size: 0.9375rem; /* 15px default body */
+  line-height: 1.6;
 }
+
 
 /* Lenis Smooth Scroll Rules */
 html.lenis, html.lenis body {

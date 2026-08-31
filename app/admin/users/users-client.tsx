@@ -52,9 +52,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
-  // Slide-over Right Drawer State
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  // Slide-over Right Drawer Animation State
+  const [isDrawerMounted, setIsDrawerMounted] = useState(false);
+  const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+
+  // CSV Modal Animation State
+  const [isCsvMounted, setIsCsvMounted] = useState(false);
+  const [isCsvVisible, setIsCsvVisible] = useState(false);
 
   // Single User Form State
   const [email, setEmail] = useState("");
@@ -80,6 +84,40 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Drawer Open / Close Handlers (500ms smooth cubic-bezier easing)
+  const openDrawer = () => {
+    setIsDrawerMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsDrawerVisible(true);
+      });
+    });
+  };
+
+  const closeDrawer = () => {
+    setIsDrawerVisible(false);
+    setTimeout(() => {
+      setIsDrawerMounted(false);
+    }, 450);
+  };
+
+  // CSV Modal Open / Close Handlers
+  const openCsvModal = () => {
+    setIsCsvMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsCsvVisible(true);
+      });
+    });
+  };
+
+  const closeCsvModal = () => {
+    setIsCsvVisible(false);
+    setTimeout(() => {
+      setIsCsvMounted(false);
+    }, 400);
   };
 
   const filteredUsers = users.filter((u) => {
@@ -145,15 +183,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           `${name} (${role.toUpperCase()}) account has been registered.`
         );
 
-        // Optimistically add user to table list
         if (result.user) {
           setUsers((prev) => [result.user as UserItem, ...prev]);
         }
 
-        // Reset form & close drawer
         setEmail("");
         setName("");
-        setIsDrawerOpen(false);
+        closeDrawer();
       }
     } catch {
       addToast("error", "Error", "An unexpected error occurred while creating user.");
@@ -188,7 +224,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         );
         setCsvFile(null);
         setCsvPreview([]);
-        setIsCsvModalOpen(false);
+        closeCsvModal();
         setTimeout(() => window.location.reload(), 1500);
       }
     } catch {
@@ -226,13 +262,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const getRoleBadge = (userRole: string) => {
     switch (userRole.toLowerCase()) {
       case "student":
-        return <span className="font-extrabold text-secondary tracking-wide text-xs">STUDENT</span>;
+        return <span className="font-extrabold text-secondary tracking-wide text-xs sm:text-sm">STUDENT</span>;
       case "faculty":
-        return <span className="font-extrabold text-primary tracking-wide text-xs">FACULTY</span>;
+        return <span className="font-extrabold text-primary tracking-wide text-xs sm:text-sm">FACULTY</span>;
       case "admin":
-        return <span className="font-extrabold text-accent tracking-wide text-xs">ADMIN</span>;
+        return <span className="font-extrabold text-accent tracking-wide text-xs sm:text-sm">ADMIN</span>;
       default:
-        return <span className="font-extrabold text-primary/60 tracking-wide text-xs">{userRole.toUpperCase()}</span>;
+        return <span className="font-extrabold text-primary/60 tracking-wide text-xs sm:text-sm">{userRole.toUpperCase()}</span>;
     }
   };
 
@@ -244,40 +280,40 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {/* Top Controls Header with Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-primary tracking-tight">Roster Directory</h2>
-          <p className="text-xs text-primary/60 mt-0.5">
+          <h2 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">Roster Directory</h2>
+          <p className="text-sm text-primary/60 mt-1 font-medium">
             Total registered accounts ({users.length}) across all departments.
           </p>
         </div>
 
         <div className="flex items-center gap-3 self-end sm:self-auto">
           <button
-            onClick={() => setIsCsvModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-border bg-surface hover:bg-bg text-primary font-semibold text-xs transition-all shadow-xs cursor-pointer"
+            onClick={openCsvModal}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-surface hover:bg-bg text-primary font-bold text-sm transition-all shadow-xs cursor-pointer"
           >
-            <Upload className="h-4 w-4 text-primary/60" />
+            <Upload className="h-4.5 w-4.5 text-primary/60" />
             <span>Batch Import CSV</span>
           </button>
 
           <button
-            onClick={() => setIsDrawerOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer"
+            onClick={openDrawer}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-bold text-sm transition-all shadow-xs cursor-pointer"
           >
-            <UserPlus className="h-4 w-4" />
+            <UserPlus className="h-4.5 w-4.5" />
             <span>Add User</span>
           </button>
         </div>
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 bg-surface p-4 rounded-2xl border border-border shadow-xs">
+      <div className="flex flex-col sm:flex-row gap-4 bg-surface p-4 sm:p-5 rounded-2xl border border-border shadow-xs">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-primary/40" />
+          <Search className="absolute left-4 top-3.5 h-4.5 w-4.5 text-primary/40" />
           <input
             placeholder="Search user name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 font-medium text-primary"
+            className="w-full pl-11 pr-4 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 font-medium text-primary placeholder:text-primary/40"
           />
         </div>
 
@@ -285,7 +321,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3.5 py-2 text-xs font-semibold bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+            className="px-4 py-2.5 text-sm font-semibold bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
           >
             <option value="">All Roles</option>
             <option value="student">Student</option>
@@ -299,9 +335,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
         {filteredUsers.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-bg/40 text-primary/50 font-bold border-b border-border">
+                <tr className="bg-bg/40 text-primary/60 font-extrabold uppercase tracking-wider text-xs border-b border-border">
                   <th className="p-4 pl-6">Name</th>
                   <th className="p-4">Email</th>
                   <th className="p-4">Role</th>
@@ -314,13 +350,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 {filteredUsers.map((u) => {
                   const isToggling = togglingId === u.id;
                   return (
-                    <tr key={u.id} className="hover:bg-bg/25 transition-all font-medium">
-                      <td className="p-4 pl-6 font-bold text-primary">{u.name}</td>
-                      <td className="p-4 text-primary/70">{u.email}</td>
+                    <tr key={u.id} className="hover:bg-bg/30 transition-colors font-medium">
+                      <td className="p-4 pl-6 font-bold text-primary text-sm sm:text-base">{u.name}</td>
+                      <td className="p-4 text-primary/75 text-sm font-medium">{u.email}</td>
                       <td className="p-4">{getRoleBadge(u.role)}</td>
                       <td className="p-4">
                         {u.branch ? (
-                          <span className="px-2 py-0.5 rounded-md bg-bg border border-border text-[10px] font-bold text-primary/70">
+                          <span className="px-2.5 py-1 rounded-md bg-bg border border-border text-xs font-bold text-primary/80">
                             {u.branch}
                             {u.current_semester ? ` • Sem ${u.current_semester}` : ""}
                           </span>
@@ -330,7 +366,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       </td>
                       <td className="p-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs font-bold ${
                             u.status === "active"
                               ? "bg-success/10 text-success border border-success/20"
                               : "bg-danger/10 text-danger border border-danger/20"
@@ -343,14 +379,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         <button
                           onClick={() => handleStatusToggle(u.id, u.status, u.name)}
                           disabled={isToggling}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer disabled:opacity-50 ${
+                          className={`px-4 py-1.5 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer disabled:opacity-50 ${
                             u.status === "active"
                               ? "bg-surface hover:bg-danger/10 text-primary/70 hover:text-danger border-border hover:border-danger/30"
                               : "bg-success/10 text-success border-success/20 hover:bg-success/20"
                           }`}
                         >
                           {isToggling ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
+                            <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                           ) : u.status === "active" ? (
                             "Deactivate"
                           ) : (
@@ -365,44 +401,50 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             </table>
           </div>
         ) : (
-          <div className="py-20 text-center text-primary/45 font-semibold text-sm">
+          <div className="py-20 text-center text-primary/45 font-semibold text-base">
             No registered users found matching the filter.
           </div>
         )}
       </div>
 
       {/* ========================================================================= */}
-      {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE USER) */}
+      {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE USER) - SMOOTH PREMIUM TRANSITION */}
       {/* ========================================================================= */}
-      {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden transition-all duration-300">
-          {/* Backdrop */}
+      {isDrawerMounted && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop Blur */}
           <div
-            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
-            onClick={() => !loading && setIsDrawerOpen(false)}
+            className={`fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isDrawerVisible ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={() => !loading && closeDrawer()}
           />
 
-          {/* Slide Drawer Panel */}
+          {/* Slide Drawer Panel (Slides Right-to-Left on open, Left-to-Right on close) */}
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-in slide-in-from-right">
+            <div
+              className={`w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+              }`}
+            >
               {/* Drawer Header */}
               <div className="p-6 border-b border-border bg-bg/40 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-primary text-white shadow-xs">
-                    <UserPlus className="h-5 w-5" />
+                  <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
+                    <UserPlus className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-primary">Add New User</h3>
-                    <p className="text-xs text-primary/50 mt-0.5">
+                    <h3 className="text-lg font-bold text-primary leading-tight">Add New User</h3>
+                    <p className="text-xs sm:text-sm text-primary/55 mt-0.5">
                       Provision student, faculty, or admin account
                     </p>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => setIsDrawerOpen(false)}
+                  onClick={closeDrawer}
                   disabled={loading}
-                  className="p-1.5 rounded-xl text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                  className="p-2 rounded-xl text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -410,13 +452,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
               {/* Drawer Form Body */}
               <form id="create-user-form" onSubmit={handleSingleSubmit} className="p-6 space-y-5 flex-1 overflow-y-auto">
-
                 {/* Role Selector Segmented Buttons */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-2">
+                  <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-2.5">
                     Account Role *
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2.5">
                     {(
                       [
                         { id: "student", label: "Student", icon: GraduationCap },
@@ -431,13 +472,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           key={r.id}
                           type="button"
                           onClick={() => setRole(r.id)}
-                          className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-primary text-white border-primary shadow-xs"
+                              ? "bg-primary text-white border-primary shadow-sm"
                               : "bg-bg text-primary/70 border-border hover:border-primary/30"
                           }`}
                         >
-                          <Icon className="h-4 w-4 mb-1" />
+                          <Icon className="h-5 w-5 mb-1.5" />
                           <span>{r.label}</span>
                         </button>
                       );
@@ -447,7 +488,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
                 {/* Name Input */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                  <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
                     Full Name *
                   </label>
                   <input
@@ -456,13 +497,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g., Aswin Sai"
-                    className="w-full px-4 py-2.5 text-xs sm:text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                    className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium placeholder:text-primary/40"
                   />
                 </div>
 
                 {/* Email Address Input */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                  <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
                     Official College Email *
                   </label>
                   <input
@@ -475,7 +516,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         ? "e.g., 23331a4745@mvgrce.edu.in"
                         : "e.g., faculty@mvgrce.edu.in"
                     }
-                    className="w-full px-4 py-2.5 text-xs sm:text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                    className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium placeholder:text-primary/40"
                   />
                 </div>
 
@@ -483,13 +524,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 {role === "student" && (
                   <div className="space-y-4 pt-1">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                      <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
                         Branch Specialization *
                       </label>
                       <select
                         value={branch}
                         onChange={(e) => setBranch(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                        className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium cursor-pointer"
                       >
                         {branches.map((b) => (
                           <option key={b.code} value={b.code}>
@@ -500,13 +541,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                      <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
                         Current Semester *
                       </label>
                       <select
                         value={semester}
                         onChange={(e) => setSemester(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                        className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium cursor-pointer"
                       >
                         {semesters.map((s) => (
                           <option key={s.number} value={s.number.toString()}>
@@ -519,12 +560,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 )}
 
                 {/* Password Policy Info Note */}
-                <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-1 text-xs">
-                  <div className="flex items-center gap-1.5 font-bold text-primary">
-                    <Sparkles className="h-3.5 w-3.5 text-secondary" />
+                <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs sm:text-sm">
+                  <div className="flex items-center gap-2 font-bold text-primary">
+                    <Sparkles className="h-4 w-4 text-secondary shrink-0" />
                     <span>Security & Initial Credentials</span>
                   </div>
-                  <p className="text-[11px] text-primary/70 leading-relaxed">
+                  <p className="text-xs text-primary/70 leading-relaxed pt-0.5">
                     {role === "student"
                       ? "Initial password will default to student's uppercase roll number. Forced password change is required upon first login."
                       : "Initial password will default to 'ChangeMe1234!'. Forced password change is enforced on first sign-in."}
@@ -536,9 +577,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <div className="p-6 border-t border-border bg-bg/40 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsDrawerOpen(false)}
+                  onClick={closeDrawer}
                   disabled={loading}
-                  className="px-5 py-2.5 text-xs font-semibold text-primary/70 hover:text-primary rounded-xl cursor-pointer"
+                  className="px-5 py-3 text-sm font-semibold text-primary/70 hover:text-primary rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -546,17 +587,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   type="submit"
                   form="create-user-form"
                   disabled={loading}
-                  className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white font-semibold text-xs rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+                  className="px-7 py-3 bg-primary hover:bg-primary/95 text-white font-bold text-sm rounded-xl shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
                       <span>Creating...</span>
                     </>
                   ) : (
                     <>
                       <span>Create Account</span>
-                      <ChevronRight className="h-3.5 w-3.5" />
+                      <ChevronRight className="h-4.5 w-4.5" />
                     </>
                   )}
                 </button>
@@ -567,12 +608,20 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       )}
 
       {/* ========================================================================= */}
-      {/* BATCH IMPORT CSV MODAL */}
+      {/* BATCH IMPORT CSV MODAL - SMOOTH TRANSITION */}
       {/* ========================================================================= */}
-      {isCsvModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/40 backdrop-blur-xs animate-in fade-in duration-150">
+      {isCsvMounted && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-6 max-h-[90vh] flex flex-col"
+            className={`fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isCsvVisible ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={() => !csvLoading && closeCsvModal()}
+          />
+          <div
+            className={`bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-6 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isCsvVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-border pb-4">
@@ -581,14 +630,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   <FileSpreadsheet className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-primary">Batch Import Roster (CSV)</h3>
-                  <p className="text-xs text-primary/60 mt-0.5">Bulk provision student and faculty accounts</p>
+                  <h3 className="text-base sm:text-lg font-bold text-primary">Batch Import Roster (CSV)</h3>
+                  <p className="text-xs sm:text-sm text-primary/60 mt-0.5">Bulk provision student and faculty accounts</p>
                 </div>
               </div>
               <button
-                onClick={() => setIsCsvModalOpen(false)}
+                onClick={closeCsvModal}
                 disabled={csvLoading}
-                className="p-1.5 text-primary/50 hover:text-primary rounded-lg"
+                className="p-1.5 text-primary/50 hover:text-primary rounded-lg cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -597,7 +646,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             <div className="space-y-4 overflow-y-auto flex-1 pr-1">
               <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center hover:border-secondary/50 transition-colors bg-bg/50">
                 <Upload className="h-8 w-8 text-primary/40 mx-auto mb-2" />
-                <label className="text-xs font-bold text-secondary hover:underline cursor-pointer block">
+                <label className="text-sm font-bold text-secondary hover:underline cursor-pointer block">
                   Select or drag CSV file
                   <input
                     type="file"
@@ -606,40 +655,40 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     className="hidden"
                   />
                 </label>
-                <span className="text-[11px] text-primary/50 mt-1 block">
+                <span className="text-xs text-primary/50 mt-1 block font-medium">
                   Required columns: <code>email, name, role, branch, semester</code>
                 </span>
               </div>
 
               {csvPreview.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-primary">
+                  <span className="text-sm font-bold text-primary">
                     Preview Data ({csvPreview.length} entries parsed):
                   </span>
                   <div className="max-h-48 overflow-y-auto border border-border rounded-xl">
-                    <table className="w-full text-left text-[11px]">
+                    <table className="w-full text-left text-xs">
                       <thead className="bg-bg font-bold text-primary/50 border-b border-border">
                         <tr>
-                          <th className="p-2">Email</th>
-                          <th className="p-2">Name</th>
-                          <th className="p-2">Role</th>
-                          <th className="p-2">Branch</th>
+                          <th className="p-2.5">Email</th>
+                          <th className="p-2.5">Name</th>
+                          <th className="p-2.5">Role</th>
+                          <th className="p-2.5">Branch</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {csvPreview.slice(0, 10).map((row, i) => (
                           <tr key={i} className="hover:bg-bg/25">
-                            <td className="p-2 font-medium text-primary">{row.email}</td>
-                            <td className="p-2 text-primary/80">{row.name}</td>
-                            <td className="p-2 font-bold uppercase">{row.role || "student"}</td>
-                            <td className="p-2">{row.branch || "-"}</td>
+                            <td className="p-2.5 font-medium text-primary">{row.email}</td>
+                            <td className="p-2.5 text-primary/80">{row.name}</td>
+                            <td className="p-2.5 font-bold uppercase">{row.role || "student"}</td>
+                            <td className="p-2.5">{row.branch || "-"}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                   {csvPreview.length > 10 && (
-                    <span className="text-[10px] text-primary/40 italic block">
+                    <span className="text-xs text-primary/40 italic block">
                       Showing first 10 rows of {csvPreview.length} total.
                     </span>
                   )}
@@ -650,9 +699,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
               <button
                 type="button"
-                onClick={() => setIsCsvModalOpen(false)}
+                onClick={closeCsvModal}
                 disabled={csvLoading}
-                className="px-5 py-2.5 text-xs font-semibold text-primary/70 hover:text-primary rounded-xl"
+                className="px-5 py-2.5 text-sm font-semibold text-primary/70 hover:text-primary rounded-xl cursor-pointer"
               >
                 Cancel
               </button>
@@ -660,7 +709,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 type="button"
                 onClick={handleCsvSubmit}
                 disabled={csvLoading || csvPreview.length === 0}
-                className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white text-sm font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {csvLoading ? (
                   <>
