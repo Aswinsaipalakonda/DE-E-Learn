@@ -33,14 +33,17 @@ export default async function FacultyLayout({
 
   if (!profile) {
     const facultyRole = user.user_metadata?.role || (user.email?.startsWith("admin") ? "admin" : "faculty");
-    const facultyName = user.user_metadata?.name || user.email?.split("@")[0] || "Faculty Member";
+    const rawName = user.user_metadata?.name || user.email?.split("@")[0] || "Faculty";
+    const formattedName = rawName.includes("@") 
+      ? rawName.split("@")[0].replace(/([a-zA-Z]+)(\d+)/, "$1 $2").replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
+      : rawName;
 
     const { data: newProfile } = await supabase
       .from("users")
       .upsert({
         id: user.id,
         email: user.email!,
-        name: facultyName,
+        name: formattedName,
         role: facultyRole,
         status: "active",
         designation: "Assistant Professor",
@@ -57,6 +60,21 @@ export default async function FacultyLayout({
   const userRole = profile?.role || user.user_metadata?.role || "faculty";
   if (userRole !== "faculty" && userRole !== "admin") {
     redirect("/login");
+  }
+
+  let displayName = profile?.name;
+  if (!displayName || displayName === "Faculty Member") {
+    if (user.user_metadata?.name && user.user_metadata.name !== "Faculty Member") {
+      displayName = user.user_metadata.name;
+    } else if (user.email) {
+      const emailPrefix = user.email.split("@")[0];
+      displayName = emailPrefix
+        .replace(/([a-zA-Z]+)(\d+)/, "$1 $2")
+        .replace(/[._]/g, " ")
+        .replace(/\b\w/g, (c: string) => c.toUpperCase());
+    } else {
+      displayName = "Faculty";
+    }
   }
 
   const handleSignOut = async () => {
@@ -107,14 +125,14 @@ export default async function FacultyLayout({
             {/* Notification Bell */}
             <NotificationBell />
 
-            {/* Clean Faculty Role Badge */}
+            {/* Clean Faculty Role Badge with Real Faculty Name */}
             <Link
               href="/faculty/profile"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-2xs hover:bg-primary/95 transition-all cursor-pointer"
               title="Faculty Profile"
             >
               <BookOpen className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-              <span>{profile?.name || "Faculty Member"}</span>
+              <span>{displayName}</span>
             </Link>
           </div>
         </header>

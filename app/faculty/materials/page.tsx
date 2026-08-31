@@ -57,7 +57,7 @@ export default async function FacultyMaterialsPage() {
 
   if (error) {
     return (
-      <div role="alert" className="p-4 bg-danger/10 border border-danger/25 text-danger rounded-xl font-semibold">
+      <div role="alert" className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl font-semibold text-xs">
         Failed to fetch your materials registry.
       </div>
     );
@@ -70,18 +70,20 @@ export default async function FacultyMaterialsPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <Link 
-        href="/faculty" 
-        className="inline-flex items-center gap-1.5 text-xs font-bold text-primary/50 hover:text-secondary transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Dashboard
-      </Link>
+    <div className="space-y-6 sm:space-y-7 w-full max-w-6xl pb-10">
+      <div>
+        <Link 
+          href="/faculty" 
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Return to Dashboard</span>
+        </Link>
+      </div>
 
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-primary tracking-tight">Your Materials Inventory</h1>
-        <p className="text-sm text-primary/60">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Your Materials Inventory</h1>
+        <p className="text-xs sm:text-sm text-slate-500 font-normal">
           Manage your uploaded files, update metadata, archive outdated versions, or replace content with new revisions.
         </p>
       </header>

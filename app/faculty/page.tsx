@@ -6,16 +6,10 @@ import {
   FileText, 
   Eye, 
   Download, 
-  HardDrive,
+  BookOpen,
   Upload,
   Plus,
-  Sparkles,
-  BookOpen,
   ChevronRight,
-  ArrowRight,
-  Clock,
-  Layers,
-  CheckCircle2,
   Megaphone,
   AlertCircle
 } from "lucide-react";
@@ -122,13 +116,14 @@ export default async function FacultyDashboardPage() {
   // Fetch faculty profile
   const { data: profile } = await supabase
     .from("users")
-    .select("name, designation, branch, role")
+    .select("name, designation, role")
     .or(`id.eq.${user.id},email.eq.${user.email}`)
     .single();
 
-  const facultyName = profile?.name || user.user_metadata?.name || user.email?.split("@")[0] || "Faculty Member";
-  const branch = profile?.branch || "CIC";
-  const designation = profile?.designation || "Assistant Professor";
+  const rawFacultyName = profile?.name || user.user_metadata?.name || user.email?.split("@")[0] || "Faculty";
+  const facultyName = rawFacultyName.includes("@")
+    ? rawFacultyName.split("@")[0].replace(/([a-zA-Z]+)(\d+)/, "$1 $2").replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
+    : rawFacultyName;
 
   // Fetch all materials owned by this faculty user
   const { data: materialsData } = await supabase
@@ -142,20 +137,12 @@ export default async function FacultyDashboardPage() {
   const materials = rawMaterials.length > 0 ? rawMaterials : FALLBACK_FACULTY_MATERIALS;
   const totalUploads = materials.length;
 
-  // Calculate storage consumed
-  let totalStorageBytes = 0;
+  // Derive distinct subjects taught/handled
+  const distinctSubjects = new Set<string>();
   materials.forEach((m) => {
-    const files = m.material_files || [];
-    files.forEach((f) => {
-      totalStorageBytes += f.size || 0;
-    });
+    if (m.subject) distinctSubjects.add(m.subject);
   });
-
-  const formatStorage = (bytes: number) => {
-    const mb = bytes / (1024 * 1024);
-    if (mb < 1024) return `${mb.toFixed(1)} MB`;
-    return `${(mb / 1024).toFixed(2)} GB`;
-  };
+  const totalSubjectsCount = distinctSubjects.size > 0 ? distinctSubjects.size : 3;
 
   // Fetch views and downloads from activity events
   let totalViews = 0;
@@ -182,22 +169,14 @@ export default async function FacultyDashboardPage() {
     });
   }
 
-  // Quota percentage (out of 5 GB)
-  const quotaMaxBytes = 5 * 1024 * 1024 * 1024;
-  const quotaPercent = Math.min(Math.max((totalStorageBytes / quotaMaxBytes) * 100, 1), 100).toFixed(1);
-
   return (
-    <div className="space-y-6 sm:space-y-7 w-full pb-8">
+    <div className="space-y-6 sm:space-y-7 w-full max-w-7xl pb-8">
       {/* ========================================================================= */}
       {/* EXECUTIVE FACULTY WELCOME HERO CARD */}
       {/* ========================================================================= */}
-      <div className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+      <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div className="space-y-1.5 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800 mb-1">
-              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-              <span>Academic Educator • {branch} Department</span>
-            </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               Welcome back, {facultyName}!
             </h1>
@@ -273,25 +252,20 @@ export default async function FacultyDashboardPage() {
           </div>
         </div>
 
-        {/* Card 4: Vault Storage Quota */}
+        {/* Card 4: Assigned Course Subjects (Replaces Technical Storage) */}
         <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Storage</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned Subjects</span>
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center">
-              <HardDrive className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+              <BookOpen className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
             </div>
           </div>
           <div>
-            <div className="flex items-baseline justify-between">
-              <span className="block text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">
-                {formatStorage(totalStorageBytes)}
-              </span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                Healthy
-              </span>
-            </div>
+            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {totalSubjectsCount} Subjects
+            </span>
             <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">
-              {quotaPercent}% of 5.0 GB used
+              Curriculum Course Portfolios
             </span>
           </div>
         </div>
