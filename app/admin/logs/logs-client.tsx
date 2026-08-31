@@ -180,7 +180,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                   {!!selectedLog.before_summary && (
                     <div className="space-y-2">
                       <span className="text-primary/50 text-[10px] font-bold uppercase block">Previous State:</span>
-                      <pre className="p-3.5 bg-bg border border-border rounded-xl text-[10px] font-mono text-primary/80 overflow-x-auto">
+                      <pre className="p-3.5 bg-bg border border-border rounded-xl text-[11px] text-primary/80 overflow-x-auto">
                         {JSON.stringify(selectedLog.before_summary, null, 2)}
                       </pre>
                     </div>
@@ -188,11 +188,12 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                   {!!selectedLog.after_summary && (
                     <div className="space-y-2">
                       <span className="text-primary/50 text-[10px] font-bold uppercase block">Updated State:</span>
-                      <pre className="p-3.5 bg-bg border border-border rounded-xl text-[10px] font-mono text-primary/80 overflow-x-auto">
+                      <pre className="p-3.5 bg-bg border border-border rounded-xl text-[11px] text-primary/80 overflow-x-auto">
                         {JSON.stringify(selectedLog.after_summary, null, 2)}
                       </pre>
                     </div>
                   )}
+
                 </div>
               </div>
             </div>

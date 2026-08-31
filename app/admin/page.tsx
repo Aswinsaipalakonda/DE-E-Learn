@@ -174,7 +174,7 @@ export default async function AdminDashboardPage() {
                 href="/admin/users"
                 className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
               >
-                <span>Student Roster Manager</span>
+                <span>User Management</span>
                 <ArrowRight className="h-4 w-4 text-primary/40" />
               </Link>
               <Link
