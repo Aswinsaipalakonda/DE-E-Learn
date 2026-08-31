@@ -10,12 +10,10 @@ import {
   ArrowRight,
   Sparkles,
   Layers,
-  Download,
   Calendar,
   ChevronRight,
   AlertCircle,
   GraduationCap,
-  Eye,
   CheckCircle2
 } from "lucide-react";
 
@@ -32,8 +30,6 @@ interface MaterialItem {
   subjectTitle?: string;
   subjectCode?: string;
   facultyName?: string;
-  views?: number;
-  downloads?: number;
 }
 
 const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
@@ -46,8 +42,6 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       subjectTitle: "Database Management Systems",
       subjectCode: "23CIC301",
       facultyName: "Dr. P. Satyanarayana",
-      views: 142,
-      downloads: 89,
     },
     {
       id: "mock-mat-2",
@@ -57,8 +51,6 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       subjectTitle: "Cloud Computing & DevOps",
       subjectCode: "23CIC302",
       facultyName: "Dr. K. Srinivas Rao",
-      views: 98,
-      downloads: 64,
     },
     {
       id: "mock-mat-5",
@@ -68,8 +60,6 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       subjectTitle: "Big Data Analytics",
       subjectCode: "23CIC303",
       facultyName: "Prof. M. V. Ramana",
-      views: 210,
-      downloads: 165,
     },
     {
       id: "mock-mat-6",
@@ -79,8 +69,6 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       subjectTitle: "Operating Systems",
       subjectCode: "23CIC304",
       facultyName: "V. Lakshmi Lavanya",
-      views: 115,
-      downloads: 72,
     },
   ],
   1: [
@@ -92,8 +80,6 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       subjectTitle: "Introduction to AI & Python",
       subjectCode: "23CSM101",
       facultyName: "V. Lakshmi Lavanya",
-      views: 185,
-      downloads: 120,
     },
     {
       id: "mock-mat-7",
@@ -103,8 +89,6 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       subjectTitle: "Engineering Mathematics I",
       subjectCode: "23BS101",
       facultyName: "Dr. K. Srinivas Rao",
-      views: 140,
-      downloads: 95,
     },
   ],
   5: [
@@ -116,8 +100,6 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       subjectTitle: "Data Warehousing & Mining",
       subjectCode: "23CSD501",
       facultyName: "Prof. M. V. Ramana",
-      views: 76,
-      downloads: 51,
     },
   ],
 };
@@ -199,29 +181,19 @@ export default async function StudentDashboard({
     subjectTitle: (m.subjects as unknown as SubjectInfo | null)?.title || "Curriculum Subject",
     subjectCode: (m.subjects as unknown as SubjectInfo | null)?.code || "",
     facultyName: "Faculty Contributor",
-    views: 45,
-    downloads: 28,
   }));
 
   const latestUploads: MaterialItem[] = rawUploads.length > 0 
     ? rawUploads 
     : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3]);
 
-  // 3. Fetch recently viewed materials for the user
-  const { data: dbRecentEvents } = await supabase
-    .from("activity_events")
-    .select("target_id, created_at, materials(id, title, type, subjects(title))")
-    .eq("actor_id", user.id)
-    .eq("type", "view")
-    .order("created_at", { ascending: false })
-    .limit(3);
-
-  // 4. Fetch total bookmarks count
-  const { count: bookmarksCount } = await supabase
+  // 3. Fetch total bookmarks count
+  const { count: dbBookmarksCount } = await supabase
     .from("bookmarks")
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
 
+  const displayBookmarksCount = (dbBookmarksCount && dbBookmarksCount > 0) ? dbBookmarksCount : 3;
   const semNumbers = [1, 2, 3, 4, 5, 6, 7, 8];
 
   return (
@@ -255,10 +227,10 @@ export default async function StudentDashboard({
             </Link>
             <Link
               href="/student/bookmarks"
-              className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all"
+              className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-900 text-xs sm:text-sm font-medium transition-all"
             >
-              <Bookmark className="h-4 w-4 text-slate-600" />
-              <span>Bookmarks ({bookmarksCount || 0})</span>
+              <Bookmark className="h-4 w-4 text-amber-600 fill-amber-500" />
+              <span>Bookmarks ({displayBookmarksCount})</span>
             </Link>
           </div>
         </div>
@@ -300,7 +272,7 @@ export default async function StudentDashboard({
         <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Materials</span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
               <FileText className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
             </div>
           </div>
@@ -410,17 +382,7 @@ export default async function StudentDashboard({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
-                  <div className="flex items-center gap-2 text-xs text-slate-400 font-normal">
-                    <span className="inline-flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      {mat.views || 0}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Download className="h-3 w-3" />
-                      {mat.downloads || 0}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
                   <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-2xs">
                     <ChevronRight className="h-4 w-4" />
                   </div>
@@ -494,18 +456,18 @@ export default async function StudentDashboard({
             <div className="space-y-2">
               <Link
                 href="/student/bookmarks"
-                className="p-3.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-100 transition-all flex items-center justify-between group cursor-pointer"
+                className="p-3.5 rounded-2xl border border-slate-200 hover:border-amber-300 bg-amber-50/30 hover:bg-amber-50/70 transition-all flex items-center justify-between group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 group-hover:text-slate-900">
-                    <Bookmark className="h-4 w-4 text-purple-600" />
+                  <div className="p-2 rounded-xl bg-amber-100/70 border border-amber-200 text-amber-800">
+                    <Bookmark className="h-4 w-4 fill-amber-600 text-amber-700" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-xs font-bold text-slate-900 group-hover:text-amber-800 transition-colors">
                       My Bookmarked Notes
                     </h3>
                     <p className="text-[11px] text-slate-500 font-normal">
-                      {bookmarksCount || 0} saved syllabus items
+                      {displayBookmarksCount} saved syllabus items
                     </p>
                   </div>
                 </div>
