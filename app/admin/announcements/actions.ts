@@ -53,7 +53,65 @@ export async function createAnnouncement(formData: FormData) {
   revalidatePath("/admin/announcements");
   revalidatePath("/student");
   revalidatePath("/faculty");
-  return { success: true };
+  return { success: true, announcement: data };
+}
+
+export async function updateAnnouncement(id: string, formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const title = (formData.get("title") as string)?.trim();
+  const content = (formData.get("content") as string)?.trim();
+  const scopeBranch = (formData.get("scope_branch") as string) || null;
+  const scopeSemesterRaw = formData.get("scope_semester") as string;
+  const scopeSemester = scopeSemesterRaw ? parseInt(scopeSemesterRaw, 10) : null;
+  const priority = (formData.get("priority") as "normal" | "important") || "normal";
+  const startTime = formData.get("start_time") as string;
+  const endTime = formData.get("end_time") as string;
+
+  if (!title || !content || !startTime || !endTime) {
+    return { error: "Title, content, start time, and end time are required." };
+  }
+
+  const { data: beforeData } = await supabase
+    .from("announcements")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  const { data, error } = await supabase
+    .from("announcements")
+    .update({
+      title,
+      content,
+      scope_branch: scopeBranch === "ALL" ? null : scopeBranch,
+      scope_semester: scopeSemester === 0 ? null : scopeSemester,
+      priority,
+      start_time: startTime,
+      end_time: endTime,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  await logAuditAction(
+    "update_announcement",
+    id,
+    beforeData || {},
+    { title, priority, scope_branch: scopeBranch, scope_semester: scopeSemester }
+  );
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/student");
+  revalidatePath("/faculty");
+  return { success: true, announcement: data };
 }
 
 export async function deleteAnnouncement(id: string) {
@@ -90,4 +148,3 @@ export async function deleteAnnouncement(id: string) {
   revalidatePath("/faculty");
   return { success: true };
 }
-
