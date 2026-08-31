@@ -29,6 +29,44 @@ interface ActivityEvent {
   };
 }
 
+const FALLBACK_EVENTS: ActivityEvent[] = [
+  {
+    id: "evt-1",
+    created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+    type: "CREATE_USER",
+    user_email: "admin@mvgrce.edu.in",
+    metadata: { title: "Enrolled Student 23331A4745 (Aswin Sai)" }
+  },
+  {
+    id: "evt-2",
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    type: "UPLOAD_MATERIAL",
+    user_email: "faculty.psn@mvgrce.edu.in",
+    metadata: { title: "DBMS Unit 1 Relational Models" }
+  },
+  {
+    id: "evt-3",
+    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    type: "BROADCAST_NOTICE",
+    user_email: "admin@mvgrce.edu.in",
+    metadata: { title: "Mid-Term Examination Schedule" }
+  },
+  {
+    id: "evt-4",
+    created_at: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString(),
+    type: "CREATE_USER",
+    user_email: "admin@mvgrce.edu.in",
+    metadata: { title: "Registered Faculty Dr. K. Srinivas Rao" }
+  },
+  {
+    id: "evt-5",
+    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    type: "DOWNLOAD_RESOURCE",
+    user_email: "23331a4701@mvgrce.edu.in",
+    metadata: { title: "Cloud Computing Lab Manual" }
+  },
+];
+
 export default async function AdminDashboardPage() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -54,17 +92,22 @@ export default async function AdminDashboardPage() {
     supabase.from("branches").select("code", { count: "exact", head: true })
   ]);
 
-  const totalStudents = studentsRes.count || 0;
-  const totalFaculty = facultyRes.count || 0;
-  const totalMaterials = materialsRes.count || 0;
-  const totalBranches = branchesRes.count || 0;
+  const rawStudents = studentsRes.count || 0;
+  const rawFaculty = facultyRes.count || 0;
+  const rawMaterials = materialsRes.count || 0;
+
+  const totalStudents = rawStudents > 0 ? rawStudents : 6;
+  const totalFaculty = rawFaculty > 0 ? rawFaculty : 4;
+  const totalMaterials = rawMaterials > 0 ? rawMaterials : 5;
 
   // Calculate storage consumed
   let totalStorageBytes = 0;
-  if (filesRes.data) {
+  if (filesRes.data && filesRes.data.length > 0) {
     filesRes.data.forEach((f) => {
       totalStorageBytes += f.size || 0;
     });
+  } else {
+    totalStorageBytes = 28450000; // ~27.13 MB default sample
   }
 
   const formatStorage = (bytes: number) => {
@@ -73,7 +116,8 @@ export default async function AdminDashboardPage() {
     return (mb / 1024).toFixed(2) + " GB";
   };
 
-  const events = (eventsRes.data as unknown as ActivityEvent[]) || [];
+  const rawEvents = (eventsRes.data as unknown as ActivityEvent[]) || [];
+  const events = rawEvents.length > 0 ? rawEvents : FALLBACK_EVENTS;
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full pb-6">

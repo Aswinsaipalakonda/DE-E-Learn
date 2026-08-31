@@ -1570,10 +1570,32 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     className="hidden"
                   />
                 </label>
-                <span className="text-[11px] text-slate-500 mt-1 block font-normal">
-                  Required columns: <code>email, name, role, branch, semester, section, designation, roll_number</code>
-                </span>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <span className="text-[11px] text-slate-500 font-normal">
+                    Supported columns: name, role, roll_number, branch, semester, section, designation
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sampleCsv = `name,role,roll_number,email,branch,semester,section,designation
+Aswin Sai Palakonda,student,23331A4745,,CIC,3,A,
+Sneha Reddy K.,student,23331A4718,,CIC,3,B,
+Dr. P. Satyanarayana,faculty,,faculty.psn@mvgrce.edu.in,,,Professor
+V. Lakshmi Lavanya,faculty,,faculty.vll@mvgrce.edu.in,,,Assistant Professor`;
+                      const blob = new Blob([sampleCsv], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "de_elearn_users_sample_template.csv";
+                      a.click();
+                    }}
+                    className="text-[11px] font-semibold text-blue-600 hover:underline cursor-pointer ml-1"
+                  >
+                    (Download Sample CSV)
+                  </button>
+                </div>
               </div>
+
 
               {csvPreview.length > 0 && (
                 <div className="space-y-2">
