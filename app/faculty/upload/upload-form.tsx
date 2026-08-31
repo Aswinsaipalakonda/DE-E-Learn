@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { uploadMaterialAction } from "./actions";
 import { 
   ArrowLeft, 
@@ -9,15 +9,10 @@ import {
   Upload, 
   X,
   FileText,
-  BookOpen,
-  Sparkles,
-  Layers,
-  CheckCircle2,
-  FileCode,
-  FolderPlus,
-  Send,
+  AlertCircle,
   Loader2,
-  AlertCircle
+  FileCheck,
+  FileType
 } from "lucide-react";
 
 interface SubjectOption {
@@ -35,6 +30,8 @@ export default function UploadForm({ subjects }: UploadFormProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form Fields State
   const [subjectCode, setSubjectCode] = useState("");
@@ -59,26 +56,68 @@ export default function UploadForm({ subjects }: UploadFormProps) {
     "Code Repository",
   ];
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      
-      const allowedExtensions = [".pdf", ".ppt", ".pptx", ".doc", ".docx", ".zip"];
-      const maxFileSize = 100 * 1024 * 1024; // 100 MB
+  // Allowed extensions: PDF, Word (doc/docx), PowerPoint (ppt/pptx), Text (txt). No zip/rar!
+  const allowedExtensions = [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".txt"];
+  const maxFileSize = 100 * 1024 * 1024; // 100 MB per file
 
-      for (const file of selectedFiles) {
-        const ext = "." + file.name.split(".").pop()?.toLowerCase();
-        if (!allowedExtensions.includes(ext)) {
-          alert(`File type ${ext} is not allowed. Supported: PDF, PPT/X, DOC/X, ZIP.`);
-          return;
-        }
-        if (file.size > maxFileSize) {
-          alert(`File ${file.name} exceeds the 100MB limit.`);
-          return;
-        }
+  const validateAndAddFiles = (incomingFiles: File[]) => {
+    setError(null);
+    const validIncoming: File[] = [];
+
+    for (const file of incomingFiles) {
+      const ext = "." + file.name.split(".").pop()?.toLowerCase();
+      
+      if (!allowedExtensions.includes(ext)) {
+        setError(`File type "${ext}" is not supported. Please upload PDF, Word (.doc/.docx), or PowerPoint (.ppt/.pptx) files only. (Zip/rar files are not allowed).`);
+        return;
       }
 
-      setFiles(prev => [...prev, ...selectedFiles]);
+      if (file.size > maxFileSize) {
+        setError(`File "${file.name}" exceeds the maximum 100MB limit.`);
+        return;
+      }
+
+      // Avoid duplicates by name & size
+      const isDuplicate = files.some(f => f.name === file.name && f.size === file.size);
+      if (!isDuplicate) {
+        validIncoming.push(file);
+      }
+    }
+
+    if (validIncoming.length > 0) {
+      setFiles(prev => [...prev, ...validIncoming]);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      validateAndAddFiles(selectedFiles);
+      // Reset input value so same files can be re-selected if needed
+      e.target.value = "";
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      validateAndAddFiles(droppedFiles);
     }
   };
 
@@ -92,7 +131,14 @@ export default function UploadForm({ subjects }: UploadFormProps) {
   const handleNext = () => {
     setError(null);
     if (step === 1 && !isStep1Valid) return;
-    if (step === 2 && !isStep2Valid) return;
+    if (step === 2 && !isStep2Valid) {
+      if (files.length === 0) {
+        setError("Please attach at least 1 study document (PDF, Word, or PPT).");
+      } else if (!title.trim()) {
+        setError("Please enter a title for the material.");
+      }
+      return;
+    }
     setStep(prev => prev + 1);
   };
 
@@ -127,9 +173,17 @@ export default function UploadForm({ subjects }: UploadFormProps) {
         setLoading(false);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+      setError(err instanceof Error ? err.message : "An unexpected error occurred while uploading.");
       setLoading(false);
     }
+  };
+
+  // Helper to format file size
+  const formatSize = (bytes: number) => {
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1) return mb.toFixed(2) + " MB";
+    const kb = bytes / 1024;
+    return kb.toFixed(1) + " KB";
   };
 
   return (
@@ -186,8 +240,8 @@ export default function UploadForm({ subjects }: UploadFormProps) {
       </div>
 
       {error && (
-        <div role="alert" className="p-4 text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2.5 font-semibold">
-          <AlertCircle className="h-4 w-4 shrink-0" />
+        <div role="alert" className="p-4 text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-2.5 font-semibold">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
@@ -320,61 +374,95 @@ export default function UploadForm({ subjects }: UploadFormProps) {
 
           {/* File Upload Drag & Drop Area */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Attach Verified Study Files *
-            </label>
-            <div className="flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed border-slate-300 hover:border-primary rounded-3xl bg-slate-50/70 hover:bg-slate-100/70 text-center cursor-pointer relative group transition-all">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Attach Verified Study Files *
+              </label>
+              <span className="text-[11px] text-slate-500 font-medium">
+                {files.length} file{files.length === 1 ? "" : "s"} selected
+              </span>
+            </div>
+
+            {/* Dropzone Container */}
+            <div 
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed rounded-3xl text-center cursor-pointer relative transition-all ${
+                isDragging
+                  ? "border-primary bg-blue-50/60 scale-[1.01]"
+                  : "border-slate-300 hover:border-primary bg-slate-50/70 hover:bg-slate-100/70"
+              }`}
+            >
               <input
+                ref={fileInputRef}
                 type="file"
                 multiple
-                onChange={handleFileChange}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                onChange={handleFileInputChange}
+                className="hidden"
               />
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform shadow-2xs">
                 <Upload className="h-6 w-6" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-900">
-                Click to browse or drag files here
+                Click to browse or drag & drop files here
               </span>
               <span className="text-[11px] text-slate-500 mt-1 block font-normal">
-                Supported: PDF, PPT/X, DOC/X, ZIP (Max 100MB per file)
+                Supported formats: PDF, Word (.doc, .docx), PowerPoint (.ppt, .pptx) • Max 100MB per file
               </span>
             </div>
 
             {/* Attached files list */}
             {files.length > 0 && (
               <div className="mt-3 space-y-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Attached Files ({files.length}):
-                </span>
-                {files.map((file, idx) => (
-                  <div 
-                    key={idx} 
-                    className="flex items-center justify-between p-3 sm:p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs"
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Attached Files ({files.length}):
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs font-semibold text-primary hover:underline cursor-pointer"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-                        <FileText className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-slate-900 truncate block max-w-xs sm:max-w-md">
-                          {file.name}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-normal">
-                          {(file.size / (1024 * 1024)).toFixed(2)} MB
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(idx)}
-                      className="p-1.5 hover:bg-red-50 text-red-600 rounded-full cursor-pointer transition-colors"
-                      title="Remove file"
+                    + Add More Files
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {files.map((file, idx) => (
+                    <div 
+                      key={idx} 
+                      className="flex items-center justify-between p-3 sm:p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/90 shadow-2xs"
                     >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-900 truncate block max-w-xs sm:max-w-md">
+                            {file.name}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-normal">
+                            {formatSize(file.size)} • {file.name.split(".").pop()?.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(idx);
+                        }}
+                        className="p-1.5 hover:bg-red-50 text-red-600 rounded-full cursor-pointer transition-colors"
+                        title="Remove file"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -426,8 +514,18 @@ export default function UploadForm({ subjects }: UploadFormProps) {
                 <span className="text-slate-900 font-bold block">{selectedSubject?.branch} • Semester {selectedSubject?.semester}</span>
               </div>
               <div className="space-y-0.5 sm:col-span-2">
-                <span className="text-slate-400 uppercase text-[10px] font-bold block">Attached Files</span>
-                <span className="text-slate-900 font-bold block">{files.length} file(s) ready for distribution</span>
+                <span className="text-slate-400 uppercase text-[10px] font-bold block">Attached Study Files</span>
+                <span className="text-slate-900 font-bold block">
+                  {files.length} document{files.length === 1 ? "" : "s"} ready for distribution
+                </span>
+                <div className="pt-1.5 space-y-1">
+                  {files.map((f, i) => (
+                    <div key={i} className="text-xs text-slate-600 flex items-center gap-1.5">
+                      <FileCheck className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>{f.name} ({formatSize(f.size)})</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
