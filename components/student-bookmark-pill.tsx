@@ -14,21 +14,15 @@ export function StudentBookmarkHeroPill({ initialCount }: StudentBookmarkPillPro
   useEffect(() => {
     setCount(initialCount);
 
-    const handleSync = () => {
-      try {
-        const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
-        const activeCount = Object.values(stored).filter((v) => v === true).length;
-        if (Object.keys(stored).length > 0) {
-          setCount(activeCount);
-        }
-      } catch {}
+    const handleSync = (e: any) => {
+      if (e?.detail?.count !== undefined) {
+        setCount(e.detail.count);
+      }
     };
 
     window.addEventListener("de_bookmark_updated", handleSync);
-    window.addEventListener("storage", handleSync);
     return () => {
       window.removeEventListener("de_bookmark_updated", handleSync);
-      window.removeEventListener("storage", handleSync);
     };
   }, [initialCount]);
 
@@ -49,21 +43,15 @@ export function StudentBookmarkShortcutCard({ initialCount }: StudentBookmarkPil
   useEffect(() => {
     setCount(initialCount);
 
-    const handleSync = () => {
-      try {
-        const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
-        const activeCount = Object.values(stored).filter((v) => v === true).length;
-        if (Object.keys(stored).length > 0) {
-          setCount(activeCount);
-        }
-      } catch {}
+    const handleSync = (e: any) => {
+      if (e?.detail?.count !== undefined) {
+        setCount(e.detail.count);
+      }
     };
 
     window.addEventListener("de_bookmark_updated", handleSync);
-    window.addEventListener("storage", handleSync);
     return () => {
       window.removeEventListener("de_bookmark_updated", handleSync);
-      window.removeEventListener("storage", handleSync);
     };
   }, [initialCount]);
 

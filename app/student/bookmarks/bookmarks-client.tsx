@@ -43,14 +43,15 @@ export default function BookmarksClient({ initialBookmarks }: BookmarksClientPro
     e.stopPropagation();
 
     // Optimistically remove from state
-    setBookmarks((prev) => prev.filter((b) => b.id !== materialId));
+    const nextBookmarks = bookmarks.filter((b) => b.id !== materialId);
+    setBookmarks(nextBookmarks);
     setRemovedIds((prev) => new Set(prev).add(materialId));
 
     try {
       const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
       stored[materialId] = false;
       localStorage.setItem("de_user_bookmarks", JSON.stringify(stored));
-      window.dispatchEvent(new Event("de_bookmark_updated"));
+      window.dispatchEvent(new CustomEvent("de_bookmark_updated", { detail: { count: nextBookmarks.length } }));
     } catch {}
 
     startTransition(async () => {

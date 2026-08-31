@@ -33,6 +33,9 @@ export default function BookmarkButton({ materialId, initialBookmarked }: Bookma
         // Revert on real DB error
         setIsBookmarked(isBookmarked);
       } else {
+        if (result?.count !== undefined) {
+          window.dispatchEvent(new CustomEvent("de_bookmark_updated", { detail: { count: result.count } }));
+        }
         router.refresh();
       }
     });

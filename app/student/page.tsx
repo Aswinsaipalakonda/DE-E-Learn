@@ -17,6 +17,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { StudentBookmarkHeroPill, StudentBookmarkShortcutCard } from "@/components/student-bookmark-pill";
+import { getStudentBookmarks } from "@/utils/bookmarks";
 
 interface SubjectInfo {
   title: string;
@@ -199,26 +200,8 @@ export default async function StudentDashboard({
     ? rawUploads 
     : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3] || []);
 
-  // 3. Read dynamic bookmarks from cookie / DB
-  const cookieVal = cookieStore.get("de_saved_bookmarks")?.value;
-  let savedBookmarkIds: string[] | null = null;
-  if (cookieVal) {
-    try { savedBookmarkIds = JSON.parse(cookieVal); } catch {}
-  }
-
-  const { data: dbBookmarks, count: dbBookmarksCount } = await supabase
-    .from("bookmarks")
-    .select("material_id", { count: "exact" })
-    .eq("user_id", user.id);
-
-  let displayBookmarksCount = 0;
-  if (savedBookmarkIds !== null) {
-    displayBookmarksCount = savedBookmarkIds.length;
-  } else if (typeof dbBookmarksCount === "number") {
-    displayBookmarksCount = dbBookmarksCount;
-  } else if (dbBookmarks && Array.isArray(dbBookmarks)) {
-    displayBookmarksCount = dbBookmarks.length;
-  }
+  // 3. Read dynamic bookmarks from unified source
+  const { count: displayBookmarksCount } = await getStudentBookmarks(supabase, user.id, cookieStore);
 
   // Generate semester tab numbers constrained up to the student's current semester
   const semNumbers = Array.from({ length: maxAllowedSemester }, (_, i) => i + 1);
