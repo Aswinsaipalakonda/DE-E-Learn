@@ -128,7 +128,7 @@ export default async function FacultyLayout({
             {/* Clean Faculty Role Badge with Real Faculty Name */}
             <Link
               href="/faculty/profile"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-2xs hover:bg-primary/95 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-primary text-white shadow-2xs hover:bg-primary/95 transition-all cursor-pointer"
               title="Faculty Profile"
             >
               <BookOpen className="h-3.5 w-3.5 text-slate-300 shrink-0" />
