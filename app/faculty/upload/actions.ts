@@ -5,6 +5,33 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { logAuditAction } from "@/utils/audit-logger";
 
+const VALID_DB_TYPES = [
+  "Notes",
+  "Lecture Slides",
+  "Assignments",
+  "Lab Manuals",
+  "Question Banks",
+  "Model Papers",
+  "Reference Books",
+  "Previous Papers",
+  "Videos",
+  "Other Resources"
+] as const;
+
+function normalizeMaterialType(rawType: string): string {
+  const lower = (rawType || "").toLowerCase().trim();
+  if (lower === "notes" || lower.includes("note")) return "Notes";
+  if (lower.includes("slide")) return "Lecture Slides";
+  if (lower.includes("assignment")) return "Assignments";
+  if (lower.includes("lab") || lower.includes("manual")) return "Lab Manuals";
+  if (lower.includes("question")) return "Question Banks";
+  if (lower.includes("model")) return "Model Papers";
+  if (lower.includes("book") || lower.includes("reference")) return "Reference Books";
+  if (lower.includes("previous")) return "Previous Papers";
+  if (lower.includes("video")) return "Videos";
+  return "Other Resources";
+}
+
 export async function uploadMaterialAction(formData: FormData) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -26,17 +53,19 @@ export async function uploadMaterialAction(formData: FormData) {
   }
 
   // Retrieve fields
-  const title = formData.get("title") as string;
-  const description = formData.get("description") as string;
-  const subject = formData.get("subject") as string;
-  const branch = formData.get("branch") as string;
+  const title = (formData.get("title") as string)?.trim();
+  const description = (formData.get("description") as string)?.trim() || "";
+  const subject = (formData.get("subject") as string)?.trim();
+  const branch = (formData.get("branch") as string)?.trim();
   const semester = parseInt(formData.get("semester") as string, 10);
-  const type = formData.get("type") as string;
+  const rawType = (formData.get("type") as string)?.trim();
   const state = formData.get("state") as "draft" | "published";
   const tagsStr = formData.get("tags") as string;
   const tags = tagsStr ? tagsStr.split(",").map(t => t.trim()).filter(Boolean) : [];
 
-  if (!title || !subject || !branch || !semester || !type || !state) {
+  const normalizedType = normalizeMaterialType(rawType);
+
+  if (!title || !subject || !branch || !semester || !normalizedType || !state) {
     return { error: "Missing required taxonomy fields." };
   }
 
@@ -63,7 +92,7 @@ export async function uploadMaterialAction(formData: FormData) {
     }
   }
 
-  // Step 1: Insert Material record
+  // Step 1: Insert Material record with exact Postgres check constraint type
   const { data: material, error: insertError } = await supabase
     .from("materials")
     .insert({
@@ -72,7 +101,7 @@ export async function uploadMaterialAction(formData: FormData) {
       subject,
       branch,
       semester,
-      type,
+      type: normalizedType,
       state,
       owner: user.id,
       tags,
@@ -102,7 +131,6 @@ export async function uploadMaterialAction(formData: FormData) {
       });
 
     if (uploadError) {
-      // Fallback: If bucket is not accessible or storage has permission issues, we can still record file reference
       console.warn("Storage upload warning, saving file reference:", uploadError.message);
     }
 
@@ -123,7 +151,7 @@ export async function uploadMaterialAction(formData: FormData) {
     }
   }
 
-  await logAuditAction("UPLOAD_MATERIAL", material.id, null, { title, type, subject, filesCount: validFiles.length });
+  await logAuditAction("UPLOAD_MATERIAL", material.id, null, { title, type: normalizedType, subject, filesCount: validFiles.length });
 
   redirect("/faculty/materials");
 }

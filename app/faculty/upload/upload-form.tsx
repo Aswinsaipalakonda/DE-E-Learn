@@ -11,8 +11,7 @@ import {
   FileText,
   AlertCircle,
   Loader2,
-  FileCheck,
-  FileType
+  FileCheck
 } from "lucide-react";
 
 interface SubjectOption {
@@ -26,6 +25,18 @@ interface UploadFormProps {
   subjects: SubjectOption[];
 }
 
+const MATERIAL_TYPES = [
+  { label: "Lecture Notes", value: "Notes" },
+  { label: "Lecture Slides", value: "Lecture Slides" },
+  { label: "Lab Manuals", value: "Lab Manuals" },
+  { label: "Assignments", value: "Assignments" },
+  { label: "Question Banks", value: "Question Banks" },
+  { label: "Model Papers", value: "Model Papers" },
+  { label: "Reference Books", value: "Reference Books" },
+  { label: "Previous Papers", value: "Previous Papers" },
+  { label: "Other Resources", value: "Other Resources" },
+];
+
 export default function UploadForm({ subjects }: UploadFormProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -37,24 +48,13 @@ export default function UploadForm({ subjects }: UploadFormProps) {
   const [subjectCode, setSubjectCode] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState("Lecture Notes");
+  const [type, setType] = useState("Notes");
   const [tagsStr, setTagsStr] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [state, setState] = useState<"draft" | "published">("published");
 
   // Selected subject metadata derived
   const selectedSubject = subjects.find(s => s.code === subjectCode);
-
-  const materialTypes = [
-    "Lecture Notes",
-    "Lecture Slides",
-    "Lab Manual",
-    "Assignments",
-    "Question Bank",
-    "Model Papers",
-    "Reference Books",
-    "Code Repository",
-  ];
 
   // Allowed extensions: PDF, Word (doc/docx), PowerPoint (ppt/pptx), Text (txt). No zip/rar!
   const allowedExtensions = [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".txt"];
@@ -93,7 +93,6 @@ export default function UploadForm({ subjects }: UploadFormProps) {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
       validateAndAddFiles(selectedFiles);
-      // Reset input value so same files can be re-selected if needed
       e.target.value = "";
     }
   };
@@ -178,13 +177,14 @@ export default function UploadForm({ subjects }: UploadFormProps) {
     }
   };
 
-  // Helper to format file size
   const formatSize = (bytes: number) => {
     const mb = bytes / (1024 * 1024);
     if (mb >= 1) return mb.toFixed(2) + " MB";
     const kb = bytes / 1024;
     return kb.toFixed(1) + " KB";
   };
+
+  const selectedTypeLabel = MATERIAL_TYPES.find(t => t.value === type)?.label || type;
 
   return (
     <div className="w-full max-w-3xl mx-auto bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-6 sm:p-8 space-y-6 sm:space-y-8">
@@ -338,8 +338,8 @@ export default function UploadForm({ subjects }: UploadFormProps) {
                 onChange={(e) => setType(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
               >
-                {materialTypes.map(t => (
-                  <option key={t} value={t}>{t}</option>
+                {MATERIAL_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
             </div>
@@ -503,7 +503,7 @@ export default function UploadForm({ subjects }: UploadFormProps) {
               </div>
               <div className="space-y-0.5">
                 <span className="text-slate-400 uppercase text-[10px] font-bold block">Category</span>
-                <span className="text-blue-700 font-bold block">{type}</span>
+                <span className="text-blue-700 font-bold block">{selectedTypeLabel}</span>
               </div>
               <div className="space-y-0.5">
                 <span className="text-slate-400 uppercase text-[10px] font-bold block">Material Title</span>
