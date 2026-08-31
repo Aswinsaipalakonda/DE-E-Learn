@@ -340,13 +340,6 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
                     <span>Cohort Matrix</span>
                   </button>
 
-                  <Link
-                    href={`/student/materials/${m.id}`}
-                    className="px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-white text-xs font-semibold rounded-full shadow-2xs transition-all"
-                  >
-                    View
-                  </Link>
-
                   <button
                     onClick={() => handleDelete(m.id)}
                     className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-full border border-red-200 cursor-pointer transition-all"
