@@ -42,7 +42,7 @@ export async function createUserAction(
     auth: { persistSession: false }
   });
 
-  const defaultPassword = role === "student" && rollNumber ? rollNumber.toUpperCase().trim() : "ChangeMe1234!";
+  const defaultPassword = role === "student" && rollNumber ? rollNumber.toUpperCase().trim() : "Password@789";
 
   const { data: authData, error: authError } = await statelessClient.auth.signUp({
     email,
@@ -299,7 +299,7 @@ export async function batchCreateUsersAction(
     try {
       const defaultPassword = item.role === "student" && item.rollNumber 
         ? item.rollNumber.toUpperCase().trim() 
-        : (item.role === "student" ? "ChangeMe1234!" : "Password@789");
+        : "Password@789";
 
       const { data: authData, error: authErr } = await statelessClient.auth.signUp({
         email: item.email.trim().toLowerCase(),
