@@ -60,8 +60,9 @@ export default function AnalyticsClient({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Drawer Modal State for Cohort Progress Matrix
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Smooth Drawer Animation States (Like Add New User)
+  const [isDrawerMounted, setIsDrawerMounted] = useState(false);
+  const [isDrawerVisible, setIsDrawerVisible] = useState(false);
   const [inspectingMaterial, setInspectingMaterial] = useState<MaterialWithMetrics | null>(null);
 
   // Scroll Container Ref
@@ -70,14 +71,26 @@ export default function AnalyticsClient({
   // Toast Notifications State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Focus scroll container on open
+  // Body Scroll Lock when Drawer is open
   useEffect(() => {
-    if (isModalOpen && scrollContainerRef.current) {
+    if (isDrawerMounted) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isDrawerMounted]);
+
+  // Focus scroll container when drawer becomes visible
+  useEffect(() => {
+    if (isDrawerVisible && scrollContainerRef.current) {
       scrollContainerRef.current.focus();
     }
-  }, [isModalOpen]);
+  }, [isDrawerVisible]);
 
-  // Native wheel scroll bridge to guarantee wheel works 100% on Windows/Chrome
+  // Direct wheel scroll bridge
   const handleScrollWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop += e.deltaY;
@@ -101,14 +114,24 @@ export default function AnalyticsClient({
     return Array.from(types).sort();
   }, [materials]);
 
+  // Smooth open drawer (matched to Add New User)
   const openInspectModal = (material: MaterialWithMetrics) => {
     setInspectingMaterial(material);
-    setIsModalOpen(true);
+    setIsDrawerMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsDrawerVisible(true);
+      });
+    });
   };
 
+  // Smooth close drawer (matched to Add New User with 500ms exit transition)
   const closeInspectModal = () => {
-    setIsModalOpen(false);
-    setInspectingMaterial(null);
+    setIsDrawerVisible(false);
+    setTimeout(() => {
+      setIsDrawerMounted(false);
+      setInspectingMaterial(null);
+    }, 500);
   };
 
   const filtered = useMemo(() => {
@@ -495,19 +518,25 @@ export default function AnalyticsClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* RIGHT-SIDE SLIDE-OVER WINDOW (DRAWER) WITH DIRECT HARDWARE WHEEL SCROLL */}
+      {/* LUXURIOUS SMOOTH SLIDE-OVER DRAWER (MATCHED TO ADD NEW USER ANIMATION) */}
       {/* ========================================================================= */}
-      {isModalOpen && inspectingMaterial && (
+      {isDrawerMounted && inspectingMaterial && (
         <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop */}
+          {/* Backdrop with 500ms smooth cubic-bezier transition */}
           <div 
             onClick={closeInspectModal}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity cursor-pointer animate-in fade-in duration-200"
+            className={`fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer ${
+              isDrawerVisible ? "opacity-100" : "opacity-0"
+            }`}
           />
 
-          {/* Right Slide-over Panel */}
+          {/* Right Slide-over Panel with 500ms smooth cubic-bezier slide */}
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-12 z-50">
-            <div className="w-screen max-w-2xl sm:max-w-3xl lg:max-w-4xl bg-white shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-250">
+            <div 
+              className={`w-screen max-w-2xl sm:max-w-3xl lg:max-w-4xl bg-white shadow-2xl flex flex-col border-l border-slate-200 transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+                isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+              }`}
+            >
               
               {/* Fixed Header */}
               <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50 shrink-0">
