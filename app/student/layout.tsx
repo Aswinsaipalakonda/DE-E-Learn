@@ -27,7 +27,7 @@ export default async function StudentLayout({
   // Fetch user profile by ID or Email
   let { data: profile } = await supabase
     .from("users")
-    .select("id, name, role, branch, current_semester, section")
+    .select("id, name, role, branch, current_semester, section, roll_number")
     .or(`id.eq.${user.id},email.eq.${user.email}`)
     .single();
 
@@ -35,7 +35,7 @@ export default async function StudentLayout({
   if (!profile) {
     const studentRole = user.user_metadata?.role || "student";
     const studentName = user.user_metadata?.name || user.email?.split("@")[0].toUpperCase() || "Student";
-    const rollNumber = user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : null;
+    const rollNumber = user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : "23331A4701";
 
     const { data: newProfile } = await supabase
       .from("users")
@@ -64,6 +64,8 @@ export default async function StudentLayout({
   if (userRole !== "student" && userRole !== "admin") {
     redirect("/login");
   }
+
+  const studentRollNumber = profile?.roll_number || (user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : "23331A4701");
 
   const handleSignOut = async () => {
     "use server";
@@ -123,14 +125,14 @@ export default async function StudentLayout({
             {/* Notification Bell */}
             <NotificationBell />
 
-            {/* Clean Student Role Badge */}
+            {/* Student Roll Number Badge */}
             <Link
               href="/student/profile"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-700 text-white shadow-2xs hover:bg-blue-800 transition-all cursor-pointer"
               title="Student Profile"
             >
               <GraduationCap className="h-3.5 w-3.5 text-blue-200 shrink-0" />
-              <span>Student</span>
+              <span>{studentRollNumber}</span>
             </Link>
           </div>
         </header>
@@ -140,11 +142,7 @@ export default async function StudentLayout({
         </main>
       </div>
 
-      <BottomNav 
-        userRole="student" 
-        signOutAction={handleSignOut}
-      />
-      <GlobalSearch />
+      <BottomNav userRole="student" signOutAction={handleSignOut} />
     </div>
   );
 }
