@@ -35,6 +35,8 @@ interface RawMaterial {
   state: string;
   created_at: string;
   subject: string;
+  branch?: string;
+  semester?: number;
   views?: number;
   downloads?: number;
   engagementLogs?: StudentEngagementLog[];
@@ -49,6 +51,8 @@ const FALLBACK_FACULTY_INVENTORY: RawMaterial[] = [
     state: "published",
     created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CIC301",
+    branch: "CIC",
+    semester: 3,
     views: 0,
     downloads: 0,
     engagementLogs: [],
@@ -67,27 +71,6 @@ const FALLBACK_FACULTY_INVENTORY: RawMaterial[] = [
         size: 1200000,
         mime_type: "application/pdf",
         version: 1,
-        storage_ref: "#",
-      },
-    ],
-  },
-  {
-    id: "mock-mat-8",
-    title: "Unit 2: SQL Advanced Queries, Nested Joins, and Trigger Stored Procedures",
-    type: "Lecture Slides",
-    state: "published",
-    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    views: 0,
-    downloads: 0,
-    engagementLogs: [],
-    material_files: [
-      {
-        id: "f-3",
-        file_name: "SQL_Advanced_Queries_Slides.pdf",
-        size: 2800000,
-        mime_type: "application/pdf",
-        version: 2,
         storage_ref: "#",
       },
     ],
@@ -111,6 +94,8 @@ export default async function FacultyMaterialsPage() {
         title,
         type,
         state,
+        branch,
+        semester,
         created_at,
         subject,
         material_files (
@@ -152,13 +137,32 @@ export default async function FacultyMaterialsPage() {
   ]);
 
   const rawMaterials = (materialsRes.data as unknown as RawMaterial[]) || [];
-  const events = (eventsRes.data as any[]) || [];
+  const dbEvents = (eventsRes.data as any[]) || [];
   const dbUsers = (usersRes.data as any[]) || [];
+
+  // Merge live cookie backup activity events
+  let cookieEvents: any[] = [];
+  try {
+    const rawCookie = cookieStore.get("de_live_activity_events")?.value;
+    if (rawCookie) {
+      cookieEvents = JSON.parse(rawCookie);
+    }
+  } catch {}
+
+  const allEvents = [...cookieEvents, ...dbEvents];
+  const eventsMap = new Map<string, any>();
+  allEvents.forEach((ev) => {
+    if (ev.id && !eventsMap.has(ev.id)) {
+      eventsMap.set(ev.id, ev);
+    }
+  });
+  const events = Array.from(eventsMap.values());
 
   const userMap = new Map<string, any>();
   dbUsers.forEach((u) => {
     if (u.id) userMap.set(String(u.id), u);
     if (u.email) userMap.set(String(u.email).toLowerCase(), u);
+    if (u.roll_number) userMap.set(String(u.roll_number).toUpperCase(), u);
   });
 
   const activeList = rawMaterials.length > 0 ? rawMaterials : FALLBACK_FACULTY_INVENTORY;
@@ -170,9 +174,17 @@ export default async function FacultyMaterialsPage() {
     const downloads = matEvents.filter((e) => e.type === "download").length;
 
     const engagementLogs: StudentEngagementLog[] = matEvents.map((ev, idx) => {
-      const userProfile = ev.users || (ev.actor_id ? userMap.get(String(ev.actor_id)) : null);
-      const userEmail = userProfile?.email || "";
-      const roll = userProfile?.roll_number || (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "STUDENT");
+      const userProfile = 
+        ev.users || 
+        (ev.actor_id ? userMap.get(String(ev.actor_id)) : null) ||
+        (ev.actor_email ? userMap.get(String(ev.actor_email).toLowerCase()) : null);
+
+      const userEmail = userProfile?.email || ev.actor_email || ev.metadata?.email || "";
+      const roll = 
+        userProfile?.roll_number || 
+        ev.actor_roll || 
+        ev.metadata?.roll_number || 
+        (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "23331A4701");
 
       let actionDetail = "Viewed Material Workspace";
       const fileName = ev.metadata?.file_name;
@@ -185,11 +197,11 @@ export default async function FacultyMaterialsPage() {
 
       return {
         id: ev.id || `${m.id}-log-${idx}`,
-        studentName: userProfile?.name || userEmail || "Enrolled Student",
+        studentName: userProfile?.name || userEmail || `Student ${roll}`,
         rollNumber: roll,
         email: userEmail,
-        branch: userProfile?.branch || "CIC",
-        semester: userProfile?.current_semester || 3,
+        branch: userProfile?.branch || m.branch || "CIC",
+        semester: userProfile?.current_semester || m.semester || 3,
         section: userProfile?.section || "A",
         action: ev.type === "download" ? "download" : "view",
         fileName: fileName,
@@ -203,6 +215,8 @@ export default async function FacultyMaterialsPage() {
       views: views,
       downloads: downloads,
       engagementLogs: engagementLogs,
+      branch: m.branch || "CIC",
+      semester: m.semester || 3,
       state: m.state as "draft" | "published" | "archived" | "deleted",
     };
   });

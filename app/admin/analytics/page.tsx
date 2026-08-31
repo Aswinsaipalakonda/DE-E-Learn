@@ -3,6 +3,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AnalyticsClient from "./analytics-client";
 
+interface MaterialFileItem {
+  id: string;
+  file_name: string;
+  size?: number;
+}
+
 interface MaterialItem {
   id: string;
   title: string;
@@ -10,6 +16,7 @@ interface MaterialItem {
   branch: string;
   semester: number;
   created_at: string;
+  material_files?: MaterialFileItem[];
   users: {
     name: string;
     email: string;
@@ -21,6 +28,8 @@ interface ActivityEvent {
   type: string;
   target_id: string;
   actor_id?: string;
+  actor_email?: string;
+  actor_roll?: string;
   created_at?: string;
   metadata?: {
     file_id?: string;
@@ -28,6 +37,8 @@ interface ActivityEvent {
     action?: string;
     mode?: string;
     material_title?: string;
+    roll_number?: string;
+    email?: string;
   };
   users?: {
     id?: string;
@@ -82,6 +93,11 @@ export default async function AdminAnalyticsPage() {
         users:owner (
           name,
           email
+        ),
+        material_files (
+          id,
+          file_name,
+          size
         )
       `)
       .neq("state", "deleted")
@@ -125,7 +141,7 @@ export default async function AdminAnalyticsPage() {
   }
 
   const dbMaterials = (materialsRes.data as unknown as MaterialItem[]) || [];
-  const events = (eventsRes.data as unknown as ActivityEvent[]) || [];
+  const dbEvents = (eventsRes.data as unknown as ActivityEvent[]) || [];
   const dbUsers = (usersRes.data as unknown as Record<string, unknown>[]) || [];
   const branches = (branchesRes.data as unknown as BranchItem[]) || [
     { code: "CIC", name: "Cyber Security & IoT" },
@@ -133,11 +149,31 @@ export default async function AdminAnalyticsPage() {
     { code: "CSM", name: "AI & Machine Learning" },
   ];
 
-  // User lookup map by ID and Email
+  // Merge live cookie backup activity events
+  let cookieEvents: ActivityEvent[] = [];
+  try {
+    const rawCookie = cookieStore.get("de_live_activity_events")?.value;
+    if (rawCookie) {
+      cookieEvents = JSON.parse(rawCookie);
+    }
+  } catch {}
+
+  const allEvents = [...cookieEvents, ...dbEvents];
+  // Deduplicate events by id
+  const eventsMap = new Map<string, ActivityEvent>();
+  allEvents.forEach((ev) => {
+    if (ev.id && !eventsMap.has(ev.id)) {
+      eventsMap.set(ev.id, ev);
+    }
+  });
+  const events = Array.from(eventsMap.values());
+
+  // User lookup map by ID, Email, and Roll Number
   const userMap = new Map<string, Record<string, unknown>>();
   dbUsers.forEach((u) => {
     if (u.id) userMap.set(String(u.id), u);
     if (u.email) userMap.set(String(u.email).toLowerCase(), u);
+    if (u.roll_number) userMap.set(String(u.roll_number).toUpperCase(), u);
   });
 
   const materialsWithMetrics = dbMaterials.map((m) => {
@@ -146,9 +182,17 @@ export default async function AdminAnalyticsPage() {
     const downloads = matEvents.filter((e) => e.type === "download").length;
 
     const engagementLogs: StudentEngagementLog[] = matEvents.map((ev, idx) => {
-      const userProfile = (ev.users as Record<string, unknown>) || (ev.actor_id ? userMap.get(String(ev.actor_id)) : null);
-      const userEmail = (userProfile?.email as string) || "";
-      const roll = (userProfile?.roll_number as string) || (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "STUDENT");
+      const userProfile = 
+        (ev.users as Record<string, unknown>) || 
+        (ev.actor_id ? userMap.get(String(ev.actor_id)) : null) ||
+        (ev.actor_email ? userMap.get(String(ev.actor_email).toLowerCase()) : null);
+
+      const userEmail = (userProfile?.email as string) || ev.actor_email || ev.metadata?.email || "";
+      const roll = 
+        (userProfile?.roll_number as string) || 
+        ev.actor_roll || 
+        ev.metadata?.roll_number || 
+        (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "23331A4701");
 
       let actionDetail = "Viewed Material Workspace";
       const fileName = ev.metadata?.file_name;
@@ -161,7 +205,7 @@ export default async function AdminAnalyticsPage() {
 
       return {
         id: ev.id || `${m.id}-log-${idx}`,
-        studentName: (userProfile?.name as string) || userEmail || "Enrolled Student",
+        studentName: (userProfile?.name as string) || userEmail || `Student ${roll}`,
         rollNumber: roll,
         email: userEmail,
         branch: (userProfile?.branch as string) || m.branch,
@@ -179,6 +223,7 @@ export default async function AdminAnalyticsPage() {
       views: views,
       downloads: downloads,
       engagementLogs: engagementLogs,
+      material_files: m.material_files || [],
     };
   });
 

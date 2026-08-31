@@ -1,8 +1,8 @@
 -- =========================================================================
 -- DATA ENGINEERING E-LEARNING PORTAL: SUBJECT TAXONOMY SEED & ACCESS RLS
 -- =========================================================================
--- Run this in your Supabase Dashboard -> SQL Editor to seed subjects
--- and configure student/faculty access policies.
+-- Run this in your Supabase Dashboard -> SQL Editor to seed subjects,
+-- configure student/faculty access policies, and enable activity analytics.
 
 -- 1. Ensure core academic branches exist
 INSERT INTO public.branches (code, name, active) VALUES
@@ -38,35 +38,54 @@ ON CONFLICT (code) DO UPDATE SET
     semester = EXCLUDED.semester,
     active = true;
 
--- 4. Enable Read Access for all authenticated users to active subjects
-DROP POLICY IF EXISTS "View active subjects" ON public.subjects;
-DROP POLICY IF EXISTS "Faculty and Admins manage subjects" ON public.subjects;
-CREATE POLICY "View active subjects" ON public.subjects 
-    FOR SELECT TO authenticated USING (active = true);
-CREATE POLICY "Faculty and Admins manage subjects" ON public.subjects 
-    FOR ALL TO authenticated USING (
-        EXISTS (
-            SELECT 1 FROM public.users u 
-            WHERE u.id = auth.uid() AND u.role IN ('faculty', 'admin')
-        )
-    );
+-- 4. Set up Row-Level Security for Materials
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
 
--- 5. Enable Read Access for all authenticated students/faculty to published materials
 DROP POLICY IF EXISTS "Students view published materials matching scope" ON public.materials;
 CREATE POLICY "Students view published materials matching scope" ON public.materials 
     FOR SELECT TO authenticated USING (state = 'published');
 
--- 6. Enable Read Access for all authenticated students/faculty to published material files
+DROP POLICY IF EXISTS "Faculty manage their own materials" ON public.materials;
+CREATE POLICY "Faculty manage their own materials" ON public.materials 
+    FOR ALL TO authenticated USING (owner = auth.uid() OR auth.role() = 'service_role');
+
+-- 5. Set up Row-Level Security for Material Files
+ALTER TABLE public.material_files ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS "Students view material files matching scope" ON public.material_files;
 CREATE POLICY "Students view material files matching scope" ON public.material_files 
     FOR SELECT TO authenticated USING (
         EXISTS (
             SELECT 1 FROM public.materials m 
             WHERE m.id = material_files.material_id AND m.state = 'published'
+        ) OR auth.role() = 'service_role'
+    );
+
+DROP POLICY IF EXISTS "Faculty manage their material files" ON public.material_files;
+CREATE POLICY "Faculty manage their material files" ON public.material_files 
+    FOR ALL TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.materials m 
+            WHERE m.id = material_files.material_id AND (m.owner = auth.uid() OR auth.role() = 'service_role')
         )
     );
 
--- 7. Ensure Storage Access for published material files
+-- 6. Set up Row-Level Security for Activity Events (Student Tracking)
+ALTER TABLE public.activity_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users create own activity events" ON public.activity_events;
+CREATE POLICY "Users create own activity events" ON public.activity_events
+    FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Faculty/Admins view activity events" ON public.activity_events;
+CREATE POLICY "Faculty/Admins view activity events" ON public.activity_events
+    FOR SELECT TO authenticated USING (true);
+
+-- 7. Ensure Storage Access
 DROP POLICY IF EXISTS "Students download bucket files matching scope" ON storage.objects;
 CREATE POLICY "Students download bucket files matching scope" ON storage.objects
     FOR SELECT TO authenticated USING (bucket_id = 'materials');
+
+DROP POLICY IF EXISTS "Faculty manage storage files" ON storage.objects;
+CREATE POLICY "Faculty manage storage files" ON storage.objects
+    FOR ALL TO authenticated USING (bucket_id = 'materials');
