@@ -9,7 +9,6 @@ import {
   Upload, 
   Search, 
   X, 
-  Check, 
   Loader2, 
   GraduationCap, 
   BookOpen, 
@@ -76,7 +75,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [role, setRole] = useState<"student" | "faculty" | "admin">("student");
   const [branch, setBranch] = useState(branches[0]?.code || "CIC");
   const [semester, setSemester] = useState("1");
-  const [section, setSection] = useState("A"); // Default section "A"
+  const [section, setSection] = useState("A");
   const [availableSections, setAvailableSections] = useState<string[]>(["A", "B"]);
   const [customSectionInput, setCustomSectionInput] = useState("");
   const [isAddingNewSection, setIsAddingNewSection] = useState(false);
@@ -101,7 +100,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Drawer Open / Close Handlers (500ms smooth cubic-bezier easing)
+  // Drawer Open / Close Handlers
   const openDrawer = () => {
     setIsDrawerMounted(true);
     requestAnimationFrame(() => {
@@ -348,26 +347,26 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     switch (userRole.toLowerCase()) {
       case "student":
         return {
-          avatarBg: "bg-blue-50 text-blue-700 border-blue-200/80",
-          badge: "bg-blue-50 text-blue-700 border border-blue-200/70",
+          avatarBg: "bg-blue-50 text-blue-700 border-blue-200/80 font-bold",
+          badge: "bg-blue-50 text-blue-700 border border-blue-200/70 font-semibold",
           label: "STUDENT",
         };
       case "faculty":
         return {
-          avatarBg: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
-          badge: "bg-emerald-50 text-emerald-700 border border-emerald-200/70",
+          avatarBg: "bg-emerald-50 text-emerald-700 border-emerald-200/80 font-bold",
+          badge: "bg-emerald-50 text-emerald-700 border border-emerald-200/70 font-semibold",
           label: "FACULTY",
         };
       case "admin":
         return {
-          avatarBg: "bg-slate-100 text-slate-800 border-slate-300",
-          badge: "bg-slate-100 text-slate-800 border border-slate-300",
+          avatarBg: "bg-slate-100 text-slate-800 border-slate-300 font-bold",
+          badge: "bg-slate-100 text-slate-800 border border-slate-300 font-semibold",
           label: "ADMIN",
         };
       default:
         return {
-          avatarBg: "bg-gray-100 text-gray-700 border-gray-200",
-          badge: "bg-gray-100 text-gray-700 border border-gray-200",
+          avatarBg: "bg-gray-100 text-gray-700 border-gray-200 font-bold",
+          badge: "bg-gray-100 text-gray-700 border border-gray-200 font-semibold",
           label: userRole.toUpperCase(),
         };
     }
@@ -382,57 +381,57 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {/* UNIFIED EXECUTIVE PAGE HEADER */}
       {/* ========================================================================= */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-surface p-6 sm:p-7 rounded-3xl border border-border shadow-xs">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
-              <UsersIcon className="h-6 w-6" />
+            <div className="p-2.5 rounded-2xl bg-primary text-white shadow-xs">
+              <UsersIcon className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-primary tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">
                 User Management & Roster
               </h1>
-              <p className="text-sm text-primary/60 mt-0.5 font-medium">
-                Provision students, faculty members, and administrators with branch, semester, and section cohorts.
+              <p className="text-xs sm:text-sm text-primary/60 font-normal leading-relaxed mt-0.5">
+                Provision students, faculty members, and administrators across department specializations.
               </p>
             </div>
           </div>
 
           {/* Stat Counter Badges */}
-          <div className="flex flex-wrap items-center gap-2 pt-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-bg border border-border text-xs font-bold text-primary">
-              <span className="h-2 w-2 rounded-full bg-primary/60" />
-              Total: {counts.total}
+          <div className="flex flex-wrap items-center gap-2 pt-1.5">
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-bg border border-border text-xs font-medium text-primary">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+              Total: <span className="font-semibold">{counts.total}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-bold text-blue-700">
-              <span className="h-2 w-2 rounded-full bg-blue-600" />
-              Students: {counts.students}
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-medium text-blue-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+              Students: <span className="font-semibold">{counts.students}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-bold text-emerald-700">
-              <span className="h-2 w-2 rounded-full bg-emerald-600" />
-              Faculty: {counts.faculty}
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-medium text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+              Faculty: <span className="font-semibold">{counts.faculty}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-xs font-bold text-slate-800">
-              <span className="h-2 w-2 rounded-full bg-slate-700" />
-              Admins: {counts.admins}
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-100 border border-slate-300 text-xs font-medium text-slate-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-700" />
+              Admins: <span className="font-semibold">{counts.admins}</span>
             </span>
           </div>
         </div>
 
         {/* Header Action Buttons */}
-        <div className="flex items-center gap-3 self-start lg:self-center shrink-0">
+        <div className="flex items-center gap-2.5 self-start lg:self-center shrink-0">
           <button
             onClick={openCsvModal}
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl border border-border bg-bg hover:bg-surface text-primary font-bold text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-2xl border border-border bg-bg hover:bg-surface text-primary font-medium text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
           >
-            <Upload className="h-4.5 w-4.5 text-primary/70" />
+            <Upload className="h-4 w-4 text-primary/70" />
             <span>Batch Import (CSV)</span>
           </button>
 
           <button
             onClick={openDrawer}
-            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-primary hover:bg-primary/95 text-white font-bold text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary hover:bg-primary/95 text-white font-medium text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
           >
-            <UserPlus className="h-5 w-5" />
+            <UserPlus className="h-4 w-4" />
             <span>Add User</span>
           </button>
         </div>
@@ -443,7 +442,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {/* ========================================================================= */}
       <div className="bg-surface p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-4">
         {/* Role Tabs */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3.5">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3">
           {[
             { id: "all", label: "All Users", count: counts.total },
             { id: "student", label: "Students", count: counts.students },
@@ -455,15 +454,15 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <button
                 key={tab.id}
                 onClick={() => handleRoleTabChange(tab.id)}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
                   isActive
-                    ? "bg-primary text-white shadow-xs"
-                    : "bg-bg text-primary/70 hover:text-primary hover:bg-border/60"
+                    ? "bg-primary text-white shadow-xs font-semibold"
+                    : "bg-bg text-primary/70 hover:text-primary hover:bg-border/60 font-normal"
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`px-2 py-0.5 rounded-md text-[11px] font-extrabold ${
+                  className={`px-1.5 py-0.5 rounded-md text-[11px] font-semibold ${
                     isActive ? "bg-white/20 text-white" : "bg-surface border border-border text-primary/60"
                   }`}
                 >
@@ -478,19 +477,19 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           {/* Search Box */}
           <div className="sm:col-span-5 relative">
-            <Search className="absolute left-4 top-3.5 h-4.5 w-4.5 text-primary/40" />
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-primary/40" />
             <input
               placeholder="Search by user name or official email..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-11 pr-10 py-3 text-sm bg-bg border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-secondary/40 font-medium text-primary placeholder:text-primary/40 transition-all"
+              className="w-full pl-10 pr-9 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 font-normal text-primary placeholder:text-primary/40 transition-all"
             />
             {searchQuery && (
               <button
                 onClick={() => handleSearchChange("")}
-                className="absolute right-3.5 top-3.5 text-primary/40 hover:text-primary p-0.5 rounded-full hover:bg-border cursor-pointer"
+                className="absolute right-3 top-3 text-primary/40 hover:text-primary p-0.5 rounded-full hover:bg-border cursor-pointer"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -503,7 +502,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 setBranchFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-4 py-3 text-sm font-semibold bg-bg border border-border rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+              className="w-full px-3.5 py-2.5 text-sm font-normal bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
             >
               <option value="all">All Branches</option>
               {branches.map((b) => (
@@ -522,7 +521,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 setSectionFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-4 py-3 text-sm font-semibold bg-bg border border-border rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+              className="w-full px-3.5 py-2.5 text-sm font-normal bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
             >
               <option value="all">All Sections</option>
               {allKnownSections.map((sec) => (
@@ -541,7 +540,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-4 py-3 text-sm font-semibold bg-bg border border-border rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+              className="w-full px-3.5 py-2.5 text-sm font-normal bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
             >
               <option value="all">All Statuses</option>
               <option value="active">Active</option>
@@ -559,13 +558,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-bg/60 text-primary/60 font-extrabold uppercase tracking-wider text-xs border-b border-border">
-                  <th className="py-4.5 pl-6 pr-4">User</th>
-                  <th className="py-4.5 px-4">Official Email</th>
-                  <th className="py-4.5 px-4">Role</th>
-                  <th className="py-4.5 px-4">Scope, Term & Section</th>
-                  <th className="py-4.5 px-4">Status</th>
-                  <th className="py-4.5 pl-4 pr-6 text-right">Actions</th>
+                <tr className="bg-bg/50 text-primary/50 font-semibold uppercase tracking-wider text-xs border-b border-border">
+                  <th className="py-3.5 pl-6 pr-4">User</th>
+                  <th className="py-3.5 px-4">Official Email</th>
+                  <th className="py-3.5 px-4">Role</th>
+                  <th className="py-3.5 px-4">Scope, Term & Section</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -575,20 +574,20 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   const initials = getInitials(u.name);
 
                   return (
-                    <tr key={u.id} className="hover:bg-bg/40 transition-colors font-medium group">
+                    <tr key={u.id} className="hover:bg-bg/30 transition-colors group">
                       {/* Name & Initials Avatar */}
-                      <td className="py-4 pl-6 pr-4">
-                        <div className="flex items-center gap-3.5">
+                      <td className="py-3.5 pl-6 pr-4">
+                        <div className="flex items-center gap-3">
                           <div
-                            className={`w-10 h-10 rounded-2xl border flex items-center justify-center font-black text-xs shrink-0 shadow-2xs ${roleStyle.avatarBg}`}
+                            className={`w-9 h-9 rounded-xl border flex items-center justify-center text-xs shrink-0 ${roleStyle.avatarBg}`}
                           >
                             {initials}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-bold text-primary text-sm sm:text-base leading-tight group-hover:text-secondary transition-colors">
+                            <h3 className="font-semibold text-primary text-sm leading-snug group-hover:text-secondary transition-colors">
                               {u.name}
                             </h3>
-                            <span className="text-[11px] text-primary/50 font-semibold block mt-0.5">
+                            <span className="text-[11px] text-primary/50 font-normal block mt-0.5">
                               Registered: {new Date(u.created_at).toLocaleDateString()}
                             </span>
                           </div>
@@ -596,7 +595,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       </td>
 
                       {/* Email */}
-                      <td className="py-4 px-4 text-primary/75 text-sm font-medium">
+                      <td className="py-3.5 px-4 text-primary/70 text-sm font-normal">
                         <div className="flex items-center gap-2">
                           <Mail className="h-3.5 w-3.5 text-primary/40 shrink-0" />
                           <span className="truncate max-w-[220px]">{u.email}</span>
@@ -604,67 +603,67 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       </td>
 
                       {/* Role Badge */}
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wide ${roleStyle.badge}`}>
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs ${roleStyle.badge}`}>
                           {roleStyle.label}
                         </span>
                       </td>
 
                       {/* Scope, Term & Section */}
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         {u.branch ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="px-2.5 py-1 rounded-lg bg-bg border border-border text-xs font-bold text-primary">
+                            <span className="px-2 py-0.5 rounded-md bg-bg border border-border text-xs font-medium text-primary">
                               {u.branch}
                             </span>
                             {u.current_semester ? (
-                              <span className="px-2 py-0.5 rounded-md bg-secondary/10 border border-secondary/20 text-[11px] font-bold text-secondary">
+                              <span className="px-2 py-0.5 rounded-md bg-secondary/10 border border-secondary/20 text-[11px] font-medium text-secondary">
                                 Sem {u.current_semester}
                               </span>
                             ) : null}
                             {u.section ? (
-                              <span className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-[11px] font-bold text-primary">
+                              <span className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-[11px] font-medium text-primary">
                                 Sec {u.section}
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10 text-[11px] font-bold text-primary/70">
+                              <span className="px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10 text-[11px] font-medium text-primary/70">
                                 Sec A
                               </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-primary/30 font-semibold text-xs">— Department Wide</span>
+                          <span className="text-primary/35 font-normal text-xs">— Department Wide</span>
                         )}
                       </td>
 
                       {/* Status */}
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         {u.status === "active" ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
-                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200/70">
-                            <span className="h-2 w-2 rounded-full bg-red-500" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200/70">
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                             Deactivated
                           </span>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td className="py-4 pl-4 pr-6 text-right">
+                      <td className="py-3.5 pl-4 pr-6 text-right">
                         <button
                           onClick={() => handleStatusToggle(u.id, u.status, u.name)}
                           disabled={isToggling}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-50 ${
+                          className={`px-3.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
                             u.status === "active"
                               ? "bg-surface hover:bg-red-50 text-primary/70 hover:text-red-700 border-border hover:border-red-200/80 shadow-2xs"
                               : "bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border-emerald-200/80 shadow-2xs"
                           }`}
                         >
                           {isToggling ? (
-                            <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
                           ) : u.status === "active" ? (
                             "Deactivate"
                           ) : (
@@ -679,14 +678,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             </table>
           </div>
         ) : (
-          <div className="py-24 text-center space-y-3">
-            <div className="w-14 h-14 mx-auto rounded-3xl bg-bg border border-border flex items-center justify-center text-primary/40">
-              <UsersIcon className="h-7 w-7" />
+          <div className="py-20 text-center space-y-2.5">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-bg border border-border flex items-center justify-center text-primary/40">
+              <UsersIcon className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-bold text-primary text-base">No Users Found</h3>
-              <p className="text-xs sm:text-sm text-primary/50 mt-1 max-w-sm mx-auto">
-                No registered accounts match your current filter or search criteria.
+              <h3 className="font-semibold text-primary text-sm">No Users Found</h3>
+              <p className="text-xs text-primary/50 mt-0.5 max-w-sm mx-auto font-normal">
+                No registered accounts match your current filter criteria.
               </p>
             </div>
             {(searchQuery || roleFilter !== "all" || branchFilter !== "all" || sectionFilter !== "all" || statusFilter !== "all") && (
@@ -699,9 +698,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   setStatusFilter("all");
                   setCurrentPage(1);
                 }}
-                className="px-4 py-2 rounded-xl bg-bg hover:bg-border text-xs font-bold text-primary transition-all cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg bg-bg hover:bg-border text-xs font-medium text-primary transition-all cursor-pointer"
               >
-                Clear All Filters
+                Clear Filters
               </button>
             )}
           </div>
@@ -711,18 +710,18 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         {/* PAGINATION CONTROLS */}
         {/* ========================================================================= */}
         {filteredUsers.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-border bg-bg/30">
-            <div className="flex items-center gap-4 text-xs font-semibold text-primary/60">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-bg/20">
+            <div className="flex items-center gap-3 text-xs font-normal text-primary/60">
               <span>
                 Showing{" "}
-                <strong className="text-primary font-bold">
+                <span className="text-primary font-semibold">
                   {Math.min((currentPage - 1) * pageSize + 1, filteredUsers.length)}
-                </strong>{" "}
+                </span>{" "}
                 to{" "}
-                <strong className="text-primary font-bold">
+                <span className="text-primary font-semibold">
                   {Math.min(currentPage * pageSize, filteredUsers.length)}
-                </strong>{" "}
-                of <strong className="text-primary font-bold">{filteredUsers.length}</strong> accounts
+                </span>{" "}
+                of <span className="text-primary font-semibold">{filteredUsers.length}</span> accounts
               </span>
 
               <div className="flex items-center gap-1.5">
@@ -734,7 +733,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     setPageSize(parseInt(e.target.value, 10));
                     setCurrentPage(1);
                   }}
-                  className="px-2.5 py-1 text-xs font-bold bg-surface border border-border rounded-lg text-primary focus:outline-none cursor-pointer"
+                  className="px-2 py-0.5 text-xs font-medium bg-surface border border-border rounded-md text-primary focus:outline-none cursor-pointer"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -743,11 +742,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-2 rounded-xl border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
                 aria-label="Previous Page"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -758,14 +757,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 .map((p, idx, arr) => {
                   const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
                   return (
-                    <div key={p} className="flex items-center gap-1.5">
-                      {showEllipsis && <span className="px-1 text-xs text-primary/40 font-bold">...</span>}
+                    <div key={p} className="flex items-center gap-1">
+                      {showEllipsis && <span className="px-1 text-xs text-primary/40 font-normal">...</span>}
                       <button
                         onClick={() => setCurrentPage(p)}
-                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        className={`w-7 h-7 rounded-lg text-xs transition-all cursor-pointer ${
                           currentPage === p
-                            ? "bg-primary text-white shadow-2xs"
-                            : "bg-surface border border-border text-primary/70 hover:text-primary hover:bg-bg"
+                            ? "bg-primary text-white shadow-2xs font-semibold"
+                            : "bg-surface border border-border text-primary/70 hover:text-primary hover:bg-bg font-normal"
                         }`}
                       >
                         {p}
@@ -777,7 +776,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-2 rounded-xl border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
                 aria-label="Next Page"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -809,14 +808,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               }`}
             >
               {/* Drawer Header */}
-              <div className="p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
+              <div className="p-5 sm:p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
-                    <UserPlus className="h-6 w-6" />
+                  <div className="p-2.5 rounded-xl bg-primary text-white shadow-xs">
+                    <UserPlus className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-primary leading-tight">Add New User</h3>
-                    <p className="text-xs sm:text-sm text-primary/55 mt-0.5 font-medium">
+                    <h3 className="text-base sm:text-lg font-bold text-primary leading-tight">Add New User</h3>
+                    <p className="text-xs text-primary/55 font-normal mt-0.5">
                       Provision student, faculty, or admin account
                     </p>
                   </div>
@@ -825,7 +824,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 <button
                   onClick={closeDrawer}
                   disabled={loading}
-                  className="p-2 rounded-xl text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -836,14 +835,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 id="create-user-form" 
                 data-lenis-prevent
                 onSubmit={handleSingleSubmit} 
-                className="p-6 space-y-5 flex-1 overflow-y-auto overscroll-contain"
+                className="p-5 sm:p-6 space-y-4.5 flex-1 overflow-y-auto overscroll-contain"
               >
                 {/* Role Selector Segmented Buttons */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-2.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-2">
                     Account Role *
                   </label>
-                  <div className="grid grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-3 gap-2">
                     {(
                       [
                         { id: "student", label: "Student", icon: GraduationCap },
@@ -858,13 +857,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           key={r.id}
                           type="button"
                           onClick={() => setRole(r.id)}
-                          className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-primary text-white border-primary shadow-sm"
-                              : "bg-bg text-primary/70 border-border hover:border-primary/30"
+                              ? "bg-primary text-white border-primary shadow-2xs font-semibold"
+                              : "bg-bg text-primary/70 border-border hover:border-primary/30 font-medium"
                           }`}
                         >
-                          <Icon className="h-5 w-5 mb-1.5" />
+                          <Icon className="h-4 w-4 mb-1" />
                           <span>{r.label}</span>
                         </button>
                       );
@@ -874,7 +873,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
                 {/* Name Input */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
                     Full Name *
                   </label>
                   <input
@@ -883,13 +882,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g., Aswin Sai"
-                    className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium placeholder:text-primary/40"
+                    className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40"
                   />
                 </div>
 
                 {/* Email Address Input */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
                     Official College Email *
                   </label>
                   <input
@@ -902,22 +901,22 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         ? "e.g., 23331a4745@mvgrce.edu.in"
                         : "e.g., faculty@mvgrce.edu.in"
                     }
-                    className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium placeholder:text-primary/40"
+                    className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40"
                   />
                 </div>
 
                 {/* Conditional Fields for Students */}
                 {role === "student" && (
-                  <div className="space-y-4 pt-1">
+                  <div className="space-y-3.5 pt-0.5">
                     {/* Branch */}
                     <div>
-                      <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
                         Branch Specialization *
                       </label>
                       <select
                         value={branch}
                         onChange={(e) => setBranch(e.target.value)}
-                        className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium cursor-pointer"
+                        className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
                       >
                         {branches.map((b) => (
                           <option key={b.code} value={b.code}>
@@ -929,13 +928,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
                     {/* Semester */}
                     <div>
-                      <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
                         Current Semester *
                       </label>
                       <select
                         value={semester}
                         onChange={(e) => setSemester(e.target.value)}
-                        className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium cursor-pointer"
+                        className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
                       >
                         {semesters.map((s) => (
                           <option key={s.number} value={s.number.toString()}>
@@ -945,19 +944,19 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       </select>
                     </div>
 
-                    {/* Section Selector (Default "A", with "B" and custom addition) */}
+                    {/* Section Selector */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
                           Section Cohort *
                         </label>
                         {!isAddingNewSection && (
                           <button
                             type="button"
                             onClick={() => setIsAddingNewSection(true)}
-                            className="text-xs font-bold text-secondary hover:underline cursor-pointer flex items-center gap-1"
+                            className="text-xs font-medium text-secondary hover:underline cursor-pointer flex items-center gap-1"
                           >
-                            <Plus className="h-3.5 w-3.5" />
+                            <Plus className="h-3 w-3" />
                             <span>Add Section</span>
                           </button>
                         )}
@@ -972,10 +971,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                               key={sec}
                               type="button"
                               onClick={() => setSection(sec)}
-                              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer ${
+                              className={`px-3.5 py-1.5 rounded-lg text-xs border transition-all cursor-pointer ${
                                 isSecSelected
-                                  ? "bg-primary text-white border-primary shadow-2xs"
-                                  : "bg-bg text-primary/70 border-border hover:border-primary/40"
+                                  ? "bg-primary text-white border-primary shadow-2xs font-semibold"
+                                  : "bg-bg text-primary/70 border-border hover:border-primary/40 font-medium"
                               }`}
                             >
                               Section {sec}
@@ -986,20 +985,20 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
                       {/* Inline Input for New Section */}
                       {isAddingNewSection && (
-                        <div className="flex items-center gap-2 mt-2.5 p-2 bg-bg border border-border rounded-xl animate-in fade-in">
+                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-bg border border-border rounded-xl animate-in fade-in">
                           <input
                             type="text"
                             maxLength={3}
                             placeholder="e.g. C"
                             value={customSectionInput}
                             onChange={(e) => setCustomSectionInput(e.target.value.toUpperCase())}
-                            className="px-3 py-1.5 text-xs sm:text-sm bg-surface border border-border rounded-lg uppercase font-bold text-primary w-24 focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                            className="px-2.5 py-1 text-xs bg-surface border border-border rounded-lg uppercase font-semibold text-primary w-20 focus:outline-none focus:ring-2 focus:ring-secondary/40"
                           />
                           <button
                             type="button"
                             onClick={handleAddCustomSection}
                             disabled={!customSectionInput.trim()}
-                            className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg cursor-pointer disabled:opacity-40"
+                            className="px-3 py-1 bg-primary text-white text-xs font-medium rounded-lg cursor-pointer disabled:opacity-40"
                           >
                             Add & Select
                           </button>
@@ -1008,7 +1007,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                             onClick={() => setIsAddingNewSection(false)}
                             className="p-1 text-primary/40 hover:text-primary cursor-pointer"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       )}
@@ -1017,12 +1016,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 )}
 
                 {/* Password Policy Info Note */}
-                <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs sm:text-sm">
-                  <div className="flex items-center gap-2 font-bold text-primary">
-                    <Sparkles className="h-4 w-4 text-secondary shrink-0" />
+                <div className="p-3.5 bg-primary/5 border border-primary/10 rounded-xl space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 font-semibold text-primary">
+                    <Sparkles className="h-3.5 w-3.5 text-secondary shrink-0" />
                     <span>Security & Initial Credentials</span>
                   </div>
-                  <p className="text-xs text-primary/70 leading-relaxed pt-0.5">
+                  <p className="text-[11px] text-primary/65 leading-relaxed font-normal">
                     {role === "student"
                       ? "Initial password will default to student's uppercase roll number. Forced password change is required upon first login."
                       : "Initial password will default to 'ChangeMe1234!'. Forced password change is enforced on first sign-in."}
@@ -1031,12 +1030,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </form>
 
               {/* Drawer Footer */}
-              <div className="p-6 border-t border-border bg-bg/40 flex items-center justify-end gap-3 shrink-0">
+              <div className="p-5 sm:p-6 border-t border-border bg-bg/40 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={closeDrawer}
                   disabled={loading}
-                  className="px-5 py-3 text-sm font-semibold text-primary/70 hover:text-primary rounded-xl cursor-pointer"
+                  className="px-4 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1044,17 +1043,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   type="submit"
                   form="create-user-form"
                   disabled={loading}
-                  className="px-7 py-3 bg-primary hover:bg-primary/95 text-white font-bold text-sm rounded-xl shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+                  className="px-5 py-2.5 bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       <span>Creating...</span>
                     </>
                   ) : (
                     <>
                       <span>Create Account</span>
-                      <ChevronRight className="h-4.5 w-4.5" />
+                      <ChevronRight className="h-4 w-4" />
                     </>
                   )}
                 </button>
@@ -1077,34 +1076,34 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           />
           <div
             data-lenis-prevent
-            className={`bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-2xl p-6 sm:p-7 space-y-6 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+            className={`bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-2xl p-6 space-y-5 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
               isCsvVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-border pb-4 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-secondary/10 text-secondary">
-                  <FileSpreadsheet className="h-6 w-6" />
+                <div className="p-2.5 rounded-xl bg-secondary/10 text-secondary">
+                  <FileSpreadsheet className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-primary">Batch Import Roster (CSV)</h3>
-                  <p className="text-xs sm:text-sm text-primary/60 mt-0.5 font-medium">Bulk provision student and faculty accounts</p>
+                  <h3 className="text-base font-bold text-primary">Batch Import Roster (CSV)</h3>
+                  <p className="text-xs text-primary/60 font-normal mt-0.5">Bulk provision student and faculty accounts</p>
                 </div>
               </div>
               <button
                 onClick={closeCsvModal}
                 disabled={csvLoading}
-                className="p-2 text-primary/50 hover:text-primary rounded-xl cursor-pointer hover:bg-bg"
+                className="p-1.5 text-primary/50 hover:text-primary rounded-lg cursor-pointer hover:bg-bg"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             <div data-lenis-prevent className="space-y-4 overflow-y-auto flex-1 pr-1 overscroll-contain">
               <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center hover:border-secondary/50 transition-colors bg-bg/50">
-                <Upload className="h-8 w-8 text-primary/40 mx-auto mb-2" />
-                <label className="text-sm font-bold text-secondary hover:underline cursor-pointer block">
+                <Upload className="h-7 w-7 text-primary/40 mx-auto mb-2" />
+                <label className="text-xs font-semibold text-secondary hover:underline cursor-pointer block">
                   Select or drag CSV file
                   <input
                     type="file"
@@ -1113,55 +1112,50 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     className="hidden"
                   />
                 </label>
-                <span className="text-xs text-primary/50 mt-1 block font-medium">
+                <span className="text-[11px] text-primary/50 mt-1 block font-normal">
                   Required columns: <code>email, name, role, branch, semester, section</code>
                 </span>
               </div>
 
               {csvPreview.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-sm font-bold text-primary">
+                  <span className="text-xs font-semibold text-primary">
                     Preview Data ({csvPreview.length} entries parsed):
                   </span>
-                  <div className="max-h-48 overflow-y-auto border border-border rounded-2xl">
+                  <div className="max-h-48 overflow-y-auto border border-border rounded-xl">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-bg font-bold text-primary/50 border-b border-border">
+                      <thead className="bg-bg font-semibold text-primary/50 border-b border-border">
                         <tr>
-                          <th className="p-3">Email</th>
-                          <th className="p-3">Name</th>
-                          <th className="p-3">Role</th>
-                          <th className="p-3">Branch</th>
-                          <th className="p-3">Section</th>
+                          <th className="p-2.5">Email</th>
+                          <th className="p-2.5">Name</th>
+                          <th className="p-2.5">Role</th>
+                          <th className="p-2.5">Branch</th>
+                          <th className="p-2.5">Section</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {csvPreview.slice(0, 10).map((row, i) => (
                           <tr key={i} className="hover:bg-bg/25">
-                            <td className="p-3 font-medium text-primary">{row.email}</td>
-                            <td className="p-3 text-primary/80">{row.name}</td>
-                            <td className="p-3 font-bold uppercase">{row.role || "student"}</td>
-                            <td className="p-3">{row.branch || "-"}</td>
-                            <td className="p-3">{row.section || "A"}</td>
+                            <td className="p-2.5 font-normal text-primary">{row.email}</td>
+                            <td className="p-2.5 text-primary/80 font-normal">{row.name}</td>
+                            <td className="p-2.5 font-medium uppercase">{row.role || "student"}</td>
+                            <td className="p-2.5 font-normal">{row.branch || "-"}</td>
+                            <td className="p-2.5 font-normal">{row.section || "A"}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  {csvPreview.length > 10 && (
-                    <span className="text-xs text-primary/40 italic block">
-                      Showing first 10 rows of {csvPreview.length} total.
-                    </span>
-                  )}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border shrink-0">
+            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border shrink-0">
               <button
                 type="button"
                 onClick={closeCsvModal}
                 disabled={csvLoading}
-                className="px-5 py-2.5 text-sm font-semibold text-primary/70 hover:text-primary rounded-xl cursor-pointer"
+                className="px-4 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-xl cursor-pointer"
               >
                 Cancel
               </button>
@@ -1169,7 +1163,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 type="button"
                 onClick={handleCsvSubmit}
                 disabled={csvLoading || csvPreview.length === 0}
-                className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white text-sm font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-5 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs sm:text-sm font-medium rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {csvLoading ? (
                   <>
