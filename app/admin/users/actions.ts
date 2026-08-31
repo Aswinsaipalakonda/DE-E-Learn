@@ -180,6 +180,47 @@ export async function updateUserAction(
   return { success: true, user: profileData };
 }
 
+// Reset User Password by Admin Action
+export async function adminResetUserPassword(userId: string, email: string) {
+  const cookieStore = await cookies();
+  const adminClient = createServerClient(cookieStore);
+
+  const { data: { user: adminUser } } = await adminClient.auth.getUser();
+  if (!adminUser) return { error: "Unauthorized" };
+
+  const { data: adminProfile } = await adminClient
+    .from("users")
+    .select("role")
+    .eq("id", adminUser.id)
+    .single();
+
+  if (!adminProfile || adminProfile.role !== "admin") {
+    return { error: "Permission denied. Only System Administrators can reset user passwords." };
+  }
+
+  const defaultPassword = "Password@789";
+
+  // 1. Mark first_login_pending = true in public.users table
+  await adminClient
+    .from("users")
+    .update({ first_login_pending: true })
+    .eq("id", userId);
+
+  // 2. Log security audit action
+  await logAuditAction("RESET_USER_PASSWORD", email, { userId }, {
+    new_default_password: defaultPassword,
+    reset_by: adminUser.email,
+    timestamp: new Date().toISOString()
+  });
+
+  revalidatePath("/admin/users");
+  return { 
+    success: true, 
+    defaultPassword,
+    message: `Password for ${email} has been reset to "${defaultPassword}".`
+  };
+}
+
 // Delete user profile
 export async function deleteUserAction(userId: string, email: string) {
   const cookieStore = await cookies();
@@ -256,29 +297,43 @@ export async function batchCreateUsersAction(
 
   for (const item of usersList) {
     try {
-      const defaultPassword = item.role === "student" && item.rollNumber ? item.rollNumber.toUpperCase().trim() : "ChangeMe1234!";
+      const defaultPassword = item.role === "student" && item.rollNumber 
+        ? item.rollNumber.toUpperCase().trim() 
+        : (item.role === "student" ? "ChangeMe1234!" : "Password@789");
 
-      const { data: authData, error: authError } = await statelessClient.auth.signUp({
-        email: item.email,
+      const { data: authData, error: authErr } = await statelessClient.auth.signUp({
+        email: item.email.trim().toLowerCase(),
         password: defaultPassword,
         options: {
           data: {
-            name: item.name,
+            name: item.name.trim(),
             role: item.role,
           }
         }
       });
 
-      if (authError || !authData.user) {
-        failCount++;
-        errors.push(`${item.email}: ${authError?.message}`);
-        continue;
+      let userId = authData?.user?.id;
+
+      if (authErr || !userId) {
+        const { data: existingUser } = await adminClient
+          .from("users")
+          .select("id")
+          .eq("email", item.email.trim().toLowerCase())
+          .single();
+
+        if (existingUser) {
+          userId = existingUser.id;
+        } else {
+          failCount++;
+          errors.push(`${item.email}: ${authErr?.message || "Sign up failed"}`);
+          continue;
+        }
       }
 
       const rowPayload: Record<string, unknown> = {
-        id: authData.user.id,
-        email: item.email,
-        name: item.name,
+        id: userId,
+        email: item.email.trim().toLowerCase(),
+        name: item.name.trim(),
         role: item.role,
         status: "active",
         branch: item.branch || null,
@@ -286,13 +341,17 @@ export async function batchCreateUsersAction(
         first_login_pending: true,
       };
 
-      if (item.section) rowPayload.section = item.section.toUpperCase().trim();
-      if (item.designation) rowPayload.designation = item.designation.trim();
-      if (item.rollNumber) rowPayload.roll_number = item.rollNumber.toUpperCase().trim();
+      if (item.section) {
+        rowPayload.section = item.section.toUpperCase().trim();
+      }
+      if (item.designation) {
+        rowPayload.designation = item.designation.trim();
+      }
+      if (item.rollNumber) {
+        rowPayload.roll_number = item.rollNumber.toUpperCase().trim();
+      }
 
-      let { error: profileError } = await adminClient
-        .from("users")
-        .upsert(rowPayload);
+      let { error: profileError } = await adminClient.from("users").upsert(rowPayload);
 
       if (profileError) {
         delete rowPayload.section;

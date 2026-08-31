@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { createUserAction, updateUserAction, deleteUserAction, batchCreateUsersAction, toggleUserStatus } from "./actions";
+import { createUserAction, updateUserAction, deleteUserAction, batchCreateUsersAction, toggleUserStatus, adminResetUserPassword } from "./actions";
 import { ToastContainer, ToastMessage } from "@/components/toast";
 import { 
   Users as UsersIcon, 
@@ -20,7 +20,11 @@ import {
   Plus,
   Pencil,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  KeyRound,
+  RotateCcw,
+  Copy,
+  Check
 } from "lucide-react";
 
 interface BranchOption {
@@ -115,6 +119,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [isAddingNewDesignation, setIsAddingNewDesignation] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isPasswordResetDone, setIsPasswordResetDone] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // CSV State
@@ -185,6 +191,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setSection("A");
     setDesignation("Assistant Professor");
     setStatus("active");
+    setIsPasswordResetDone(false);
     setIsDrawerMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -205,6 +212,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setSection(user.section || "A");
     setDesignation(user.designation || "Assistant Professor");
     setStatus(user.status);
+    setIsPasswordResetDone(false);
 
     if (user.designation && !availableDesignations.includes(user.designation)) {
       setAvailableDesignations((prev) => [...prev, user.designation!]);
@@ -226,7 +234,36 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setTimeout(() => {
       setIsDrawerMounted(false);
       setEditingUser(null);
+      setIsPasswordResetDone(false);
     }, 450);
+  };
+
+  // Reset Password Handler
+  const handleResetPassword = async () => {
+    if (!editingUser) return;
+    setIsResettingPassword(true);
+    try {
+      const res = await adminResetUserPassword(editingUser.id, editingUser.email);
+      if (res.error) {
+        addToast("error", "Password Reset Failed", res.error);
+      } else {
+        setIsPasswordResetDone(true);
+        addToast(
+          "success",
+          "Password Reset Successful",
+          `Password for ${editingUser.name} has been reset to "Password@789".`
+        );
+        if (navigator.clipboard) {
+          try {
+            await navigator.clipboard.writeText("Password@789");
+          } catch {}
+        }
+      }
+    } catch {
+      addToast("error", "Error", "Failed to reset password.");
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   // CSV Modal Open / Close Handlers
@@ -1421,20 +1458,67 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 )}
 
-                {/* 6. Edit Mode: Account Status */}
+                {/* 6. Edit Mode: Account Status & Reset Password */}
                 {editingUser && (
-                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Account Status
-                    </label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as "active" | "deactivated")}
-                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
-                    >
-                      <option value="active">Active (Access Enabled)</option>
-                      <option value="deactivated">Deactivated (Locked Out)</option>
-                    </select>
+                  <div className="space-y-4 pt-3 border-t border-slate-100">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Account Status
+                      </label>
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as "active" | "deactivated")}
+                        className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+                      >
+                        <option value="active">Active (Access Enabled)</option>
+                        <option value="deactivated">Deactivated (Locked Out)</option>
+                      </select>
+                    </div>
+
+                    {/* Reset Password Card */}
+                    <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/90 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <KeyRound className="h-4 w-4 text-amber-700" />
+                          <span className="text-xs font-bold text-amber-950">Credential Recovery</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
+                          Admin Reset
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-900/85 font-normal leading-relaxed">
+                        If this user forgot their password, click below to immediately reset their password to{" "}
+                        <code className="px-1.5 py-0.5 rounded-md bg-white border border-amber-200 font-bold text-amber-950">
+                          Password@789
+                        </code>
+                        .
+                      </p>
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={handleResetPassword}
+                          disabled={isResettingPassword}
+                          className="w-full py-2.5 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs hover:shadow-md cursor-pointer disabled:opacity-50"
+                        >
+                          {isResettingPassword ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>Resetting Password...</span>
+                            </>
+                          ) : isPasswordResetDone ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-400" />
+                              <span>Password Reset to Password@789 (Copied)</span>
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
+                              <span>Reset Password to &ldquo;Password@789&rdquo;</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </form>
