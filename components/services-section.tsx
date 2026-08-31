@@ -27,7 +27,7 @@ export const departmentBranches: BranchTrackItem[] = [
     badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
     icon: Shield,
     highlights: ["Network Cryptography", "IoT Embedded Systems", "Ethical Hacking & Defense", "Autonomous Syllabi Sem 1-8"],
-    image: "/cic-track.webp",
+    image: "/cic-track.png",
   },
   {
     code: "CSD",
@@ -38,7 +38,7 @@ export const departmentBranches: BranchTrackItem[] = [
     badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
     icon: Database,
     highlights: ["Data Warehousing & Mining", "Big Data Analytics", "Statistical Modeling", "Autonomous Syllabi Sem 1-8"],
-    image: "/csd-track.webp",
+    image: "/csd-track.png",
   },
   {
     code: "CSM",
@@ -49,7 +49,7 @@ export const departmentBranches: BranchTrackItem[] = [
     badgeBg: "bg-indigo-50 text-indigo-700 border-indigo-200",
     icon: Brain,
     highlights: ["Deep Neural Networks", "Computer Vision & NLP", "Reinforcement Learning", "Autonomous Syllabi Sem 1-8"],
-    image: "/csm-track.webp",
+    image: "/csm-track.png",
   },
 ];
 
@@ -93,38 +93,21 @@ export function Services02Section() {
             
             {/* Left Dynamic Visual Preview Card (5-cols) */}
             <div className="w-full col-span-12 lg:col-span-5">
-              <div className="rounded-3xl bg-white border border-slate-200/90 shadow-md overflow-hidden flex flex-col justify-between min-h-[380px] transition-all duration-300">
+              <div className="rounded-3xl bg-white border border-slate-200/90 shadow-md overflow-hidden flex flex-col justify-between min-h-[400px] transition-all duration-300">
                 
                 {/* Image Container with Smooth Transition */}
-                <div className="relative w-full h-52 bg-slate-100 flex items-center justify-center overflow-hidden border-b border-slate-100">
+                <div className="relative w-full h-60 bg-gradient-to-b from-slate-50 to-slate-100/60 flex items-center justify-center overflow-hidden border-b border-slate-100 p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     key={activeBranch.image}
                     src={activeBranch.image}
-                    alt={`${activeBranch.heading} Preview`}
-                    className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300"
-                    onError={(e) => {
-                      // Fallback visual illustration if file not yet uploaded
-                      const target = e.target as HTMLElement;
-                      target.style.display = "none";
-                      const fallback = target.nextElementSibling as HTMLElement;
-                      if (fallback) fallback.style.display = "flex";
-                    }}
+                    alt={`${activeBranch.heading} 3D Asset Preview`}
+                    className="w-full h-full object-contain rounded-2xl animate-in fade-in zoom-in-95 duration-300"
                   />
-                  <div
-                    style={{ display: "none" }}
-                    className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center bg-slate-50"
-                  >
-                    <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border font-extrabold text-lg", activeBranch.badgeBg)}>
-                      {activeBranch.code}
-                    </div>
-                    <span className="text-xs font-bold text-slate-700">{activeBranch.heading}</span>
-                    <span className="text-[10px] text-slate-400">Add {activeBranch.image} to public folder</span>
-                  </div>
 
                   {/* Top Badge Overlay */}
                   <div className="absolute top-4 left-4">
-                    <span className={cn("px-3 py-1 rounded-full text-xs font-bold shadow-xs border", activeBranch.badgeBg)}>
+                    <span className={cn("px-3 py-1 rounded-full text-xs font-bold shadow-xs border bg-white/90 backdrop-blur-sm", activeBranch.badgeBg)}>
                       {activeBranch.code} Track
                     </span>
                   </div>
