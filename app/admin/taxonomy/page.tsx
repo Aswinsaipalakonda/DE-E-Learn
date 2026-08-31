@@ -51,19 +51,11 @@ export default async function AdminTaxonomyPage() {
   const subjects = (subjectsRes.data as unknown as SubjectItem[]) || [];
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-primary tracking-tight">Courses & Branches Manager</h1>
-        <p className="text-sm text-primary/60">
-          Maintain the course catalogs, academic branches, semester timelines, and subject records.
-        </p>
-      </header>
-
-      <TaxonomyClient 
-        branches={branches} 
-        semesters={semesters} 
-        subjects={subjects} 
-      />
-    </div>
+    <TaxonomyClient 
+      branches={branches} 
+      semesters={semesters} 
+      subjects={subjects} 
+    />
   );
 }
+

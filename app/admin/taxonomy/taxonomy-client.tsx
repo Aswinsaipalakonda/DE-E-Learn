@@ -1,8 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { createSubjectAction, toggleSubjectActiveAction, createBranchAction } from "./actions";
-import { BookOpen, Plus, FolderPlus, ToggleLeft, ToggleRight } from "lucide-react";
+import { ToastContainer, ToastMessage } from "@/components/toast";
+import { 
+  BookOpen, 
+  FolderPlus, 
+  Plus, 
+  Search, 
+  X, 
+  Loader2, 
+  GraduationCap, 
+  Calendar, 
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  ToggleLeft,
+  ToggleRight,
+  CheckCircle2,
+  AlertCircle,
+  Hash,
+  Layers
+} from "lucide-react";
 
 interface Branch {
   code: string;
@@ -30,302 +49,942 @@ interface TaxonomyClientProps {
   subjects: Subject[];
 }
 
-export default function TaxonomyClient({ branches, semesters, subjects }: TaxonomyClientProps) {
-  const [activeTab, setActiveTab] = useState<"subjects" | "branches">("subjects");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+export default function TaxonomyClient({ branches: initialBranches, semesters, subjects: initialSubjects }: TaxonomyClientProps) {
+  const [activeTab, setActiveTab] = useState<"subjects" | "branches" | "semesters">("subjects");
+  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
+  const [branches, setBranches] = useState<Branch[]>(initialBranches);
+
+  // Filter States for Subjects
+  const [searchQuery, setSearchQuery] = useState("");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [semesterFilter, setSemesterFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Pagination for Subjects
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Slide-over Right Drawer for Subject Creation
+  const [isSubjectDrawerMounted, setIsSubjectDrawerMounted] = useState(false);
+  const [isSubjectDrawerVisible, setIsSubjectDrawerVisible] = useState(false);
+
+  // Modal for Branch Creation
+  const [isBranchModalMounted, setIsBranchModalMounted] = useState(false);
+  const [isBranchModalVisible, setIsBranchModalVisible] = useState(false);
 
   // Subject Form State
   const [subCode, setSubCode] = useState("");
   const [subTitle, setSubTitle] = useState("");
-  const [subBranch, setSubBranch] = useState("");
-  const [subSemester, setSubSemester] = useState("");
+  const [subBranch, setSubBranch] = useState(initialBranches[0]?.code || "CIC");
+  const [subSemester, setSubSemester] = useState("1");
+  const [subjectLoading, setSubjectLoading] = useState(false);
 
   // Branch Form State
   const [branchCode, setBranchCode] = useState("");
   const [branchName, setBranchName] = useState("");
+  const [branchLoading, setBranchLoading] = useState(false);
 
+  // Toggling State
+  const [togglingCode, setTogglingCode] = useState<string | null>(null);
+
+  // Toast Notifications State
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (type: "success" | "error" | "info", title: string, description?: string) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, title, description }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Drawer Animation Handlers
+  const openSubjectDrawer = () => {
+    setIsSubjectDrawerMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsSubjectDrawerVisible(true);
+      });
+    });
+  };
+
+  const closeSubjectDrawer = () => {
+    setIsSubjectDrawerVisible(false);
+    setTimeout(() => {
+      setIsSubjectDrawerMounted(false);
+    }, 450);
+  };
+
+  const openBranchModal = () => {
+    setIsBranchModalMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsBranchModalVisible(true);
+      });
+    });
+  };
+
+  const closeBranchModal = () => {
+    setIsBranchModalVisible(false);
+    setTimeout(() => {
+      setIsBranchModalMounted(false);
+    }, 400);
+  };
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    const totalSubjects = subjects.length;
+    const activeSubjects = subjects.filter((s) => s.active).length;
+    const totalBranches = branches.length;
+    const totalSemesters = semesters.length;
+    return { totalSubjects, activeSubjects, totalBranches, totalSemesters };
+  }, [subjects, branches, semesters]);
+
+  // Filtered Subjects
+  const filteredSubjects = useMemo(() => {
+    return subjects.filter((s) => {
+      const matchesSearch =
+        s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesBranch = branchFilter === "all" ? true : s.branch === branchFilter;
+      const matchesSemester = semesterFilter === "all" ? true : s.semester.toString() === semesterFilter;
+      const matchesStatus =
+        statusFilter === "all"
+          ? true
+          : statusFilter === "active"
+          ? s.active
+          : !s.active;
+
+      return matchesSearch && matchesBranch && matchesSemester && matchesStatus;
+    });
+  }, [subjects, searchQuery, branchFilter, semesterFilter, statusFilter]);
+
+  // Paginated Subjects
+  const totalPages = Math.max(1, Math.ceil(filteredSubjects.length / pageSize));
+  const paginatedSubjects = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize;
+    return filteredSubjects.slice(startIdx, startIdx + pageSize);
+  }, [filteredSubjects, currentPage, pageSize]);
+
+  // Submit Handlers
   const handleSubjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage(null);
+    setSubjectLoading(true);
 
-    const result = await createSubjectAction(
-      subCode,
-      subTitle,
-      subBranch,
-      parseInt(subSemester, 10)
-    );
+    const semNum = parseInt(subSemester, 10);
+    const formattedCode = subCode.toUpperCase().trim();
 
-    setLoading(false);
-    if (result.error) {
-      setMessage({ text: result.error, type: "error" });
-    } else {
-      setMessage({ text: "Subject created successfully!", type: "success" });
-      setSubCode("");
-      setSubTitle("");
-      setSubBranch("");
-      setSubSemester("");
-      window.location.reload();
+    try {
+      const result = await createSubjectAction(
+        formattedCode,
+        subTitle.trim(),
+        subBranch,
+        semNum
+      );
+
+      if (result.error) {
+        addToast("error", "Subject Creation Failed", result.error);
+      } else {
+        addToast(
+          "success",
+          "Subject Created Successfully",
+          `${formattedCode} - ${subTitle} added to ${subBranch}.`
+        );
+        // Optimistically add
+        setSubjects((prev) => [
+          {
+            code: formattedCode,
+            title: subTitle.trim(),
+            branch: subBranch,
+            semester: semNum,
+            active: true,
+          },
+          ...prev,
+        ]);
+        setSubCode("");
+        setSubTitle("");
+        closeSubjectDrawer();
+      }
+    } catch {
+      addToast("error", "Error", "An unexpected error occurred.");
+    } finally {
+      setSubjectLoading(false);
     }
   };
 
   const handleBranchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage(null);
+    setBranchLoading(true);
 
-    const result = await createBranchAction(branchCode, branchName);
-    setLoading(false);
+    const formattedCode = branchCode.toUpperCase().trim();
+    const formattedName = branchName.trim();
 
-    if (result.error) {
-      setMessage({ text: result.error, type: "error" });
-    } else {
-      setMessage({ text: "Branch created successfully!", type: "success" });
-      setBranchCode("");
-      setBranchName("");
-      window.location.reload();
+    try {
+      const result = await createBranchAction(formattedCode, formattedName);
+      if (result.error) {
+        addToast("error", "Branch Creation Failed", result.error);
+      } else {
+        addToast(
+          "success",
+          "Branch Created Successfully",
+          `${formattedCode} (${formattedName}) is now registered.`
+        );
+        setBranches((prev) => [
+          ...prev,
+          { code: formattedCode, name: formattedName, active: true },
+        ]);
+        setBranchCode("");
+        setBranchName("");
+        closeBranchModal();
+      }
+    } catch {
+      addToast("error", "Error", "Failed to create branch.");
+    } finally {
+      setBranchLoading(false);
     }
   };
 
   const handleToggleSubject = async (code: string, branch: string, currentActive: boolean) => {
-    const result = await toggleSubjectActiveAction(code, branch, currentActive);
-    if (result.error) {
-      alert(result.error);
+    setTogglingCode(`${code}-${branch}`);
+    try {
+      const result = await toggleSubjectActiveAction(code, branch, currentActive);
+      if (result.error) {
+        addToast("error", "Status Toggle Failed", result.error);
+      } else {
+        setSubjects((prev) =>
+          prev.map((s) =>
+            s.code === code && s.branch === branch
+              ? { ...s, active: !currentActive }
+              : s
+          )
+        );
+        addToast(
+          "info",
+          "Subject Status Updated",
+          `${code} is now ${!currentActive ? "ACTIVE" : "INACTIVE"}.`
+        );
+      }
+    } catch {
+      addToast("error", "Error", "Failed to update subject status.");
+    } finally {
+      setTogglingCode(null);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex border-b border-border">
-        <button
-          onClick={() => setActiveTab("subjects")}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "subjects" ? "border-primary text-primary" : "border-transparent text-primary/50 hover:text-primary"
-          }`}
-        >
-          <BookOpen className="h-4 w-4" /> Manage Subjects ({subjects.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("branches")}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "branches" ? "border-primary text-primary" : "border-transparent text-primary/50 hover:text-primary"
-          }`}
-        >
-          <FolderPlus className="h-4 w-4" /> Manage Branches ({branches.length})
-        </button>
+    <div className="space-y-6 relative pb-10">
+      {/* Toast Alert Notifications Container */}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+
+      {/* ========================================================================= */}
+      {/* UNIFIED EXECUTIVE HEADER */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-surface p-6 sm:p-7 rounded-3xl border border-border shadow-xs">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
+              <Layers className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-primary tracking-tight">
+                Courses & Academic Taxonomy
+              </h1>
+              <p className="text-sm text-primary/60 mt-0.5 font-medium">
+                Configure curriculum catalogs, departmental branches, semesters, and course syllabus codes.
+              </p>
+            </div>
+          </div>
+
+          {/* Stat Badges */}
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-bold text-blue-700">
+              <span className="h-2 w-2 rounded-full bg-blue-600" />
+              Subjects: {stats.totalSubjects} ({stats.activeSubjects} Active)
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-bold text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-600" />
+              Branches: {stats.totalBranches}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-xs font-bold text-slate-800">
+              <span className="h-2 w-2 rounded-full bg-slate-700" />
+              Semesters: {stats.totalSemesters}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 self-start lg:self-center shrink-0">
+          <button
+            onClick={openBranchModal}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl border border-border bg-bg hover:bg-surface text-primary font-bold text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
+          >
+            <FolderPlus className="h-4.5 w-4.5 text-primary/70" />
+            <span>Add Branch</span>
+          </button>
+
+          <button
+            onClick={openSubjectDrawer}
+            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-primary hover:bg-primary/95 text-white font-bold text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+          >
+            <BookOpen className="h-5 w-5" />
+            <span>Add Subject</span>
+          </button>
+        </div>
       </div>
 
-      {message && (
-        <div role="alert" className={`p-4 rounded-xl border text-sm font-semibold ${
-          message.type === "success" ? "bg-success/10 border-success/20 text-success" : "bg-danger/10 border-danger/20 text-danger"
-        }`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* Subjects tab */}
-      {activeTab === "subjects" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Create Subject Form */}
-          <div className="bg-surface p-6 rounded-2xl border border-border shadow-xs h-fit space-y-6">
-            <h3 className="font-bold text-primary text-sm flex items-center gap-2">
-              <Plus className="h-4 w-4 text-secondary" /> Add New Subject
-            </h3>
-            <form onSubmit={handleSubjectSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="code" className="block text-[10px] font-bold text-primary/50 uppercase tracking-wider mb-1.5">Subject Code</label>
-                <input
-                  id="code"
-                  required
-                  placeholder="e.g., 23CI3001"
-                  value={subCode}
-                  onChange={(e) => setSubCode(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="title" className="block text-[10px] font-bold text-primary/50 uppercase tracking-wider mb-1.5">Subject Title</label>
-                <input
-                  id="title"
-                  required
-                  placeholder="e.g., Database Management Systems"
-                  value={subTitle}
-                  onChange={(e) => setSubTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="sub-branch" className="block text-[10px] font-bold text-primary/50 uppercase tracking-wider mb-1.5">Branch</label>
-                  <select
-                    id="sub-branch"
-                    required
-                    value={subBranch}
-                    onChange={(e) => setSubBranch(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs focus:outline-none"
-                  >
-                    <option value="">-- Code --</option>
-                    {branches.map(b => (
-                      <option key={b.code} value={b.code}>{b.code}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="sub-semester" className="block text-[10px] font-bold text-primary/50 uppercase tracking-wider mb-1.5">Semester</label>
-                  <select
-                    id="sub-semester"
-                    required
-                    value={subSemester}
-                    onChange={(e) => setSubSemester(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs focus:outline-none"
-                  >
-                    <option value="">-- Sem --</option>
-                    {semesters.map(s => (
-                      <option key={s.number} value={s.number}>Sem {s.number}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
+      {/* ========================================================================= */}
+      {/* NAVIGATION TABS */}
+      {/* ========================================================================= */}
+      <div className="bg-surface p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3.5">
+          {[
+            { id: "subjects", label: "Subjects Catalog", count: subjects.length, icon: BookOpen },
+            { id: "branches", label: "Department Branches", count: branches.length, icon: FolderPlus },
+            { id: "semesters", label: "Semester Timelines", count: semesters.length, icon: Calendar },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2 bg-primary hover:bg-primary/95 text-white font-semibold text-xs rounded-lg disabled:opacity-50 transition-all cursor-pointer"
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id as "subjects" | "branches" | "semesters");
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  isActive
+                    ? "bg-primary text-white shadow-xs"
+                    : "bg-bg text-primary/70 hover:text-primary hover:bg-border/60"
+                }`}
               >
-                Create Subject
+                <Icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+                <span
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-extrabold ${
+                    isActive ? "bg-white/20 text-white" : "bg-surface border border-border text-primary/60"
+                  }`}
+                >
+                  {tab.count}
+                </span>
               </button>
-            </form>
-          </div>
+            );
+          })}
+        </div>
 
-          {/* Subjects Inventory List */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-bold text-primary text-sm">Subject Directory</h3>
-            <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
-              {subjects.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-bg/40 text-primary/50 font-bold border-b border-border">
-                        <th className="p-3">Code</th>
-                        <th className="p-3">Title</th>
-                        <th className="p-3">Branch</th>
-                        <th className="p-3">Semester</th>
-                        <th className="p-3 text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {subjects.map((sub) => (
-                        <tr key={`${sub.code}-${sub.branch}`} className="hover:bg-bg/25 transition-all font-medium">
-                          <td className="p-3 font-bold text-primary">{sub.code}</td>
-                          <td className="p-3 text-primary/80">{sub.title}</td>
-                          <td className="p-3 font-bold text-secondary">{sub.branch}</td>
-                          <td className="p-3 font-semibold">Sem {sub.semester}</td>
-                          <td className="p-3 text-right">
-                            <button
-                              onClick={() => handleToggleSubject(sub.code, sub.branch, sub.active)}
-                              className="focus:outline-none cursor-pointer text-primary"
-                              aria-label={sub.active ? "Deactivate subject" : "Activate subject"}
-                            >
-                              {sub.active ? (
-                                <ToggleRight className="h-6 w-6 text-success" />
-                              ) : (
-                                <ToggleLeft className="h-6 w-6 text-primary/30" />
-                              )}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="py-16 text-center text-primary/45 font-semibold">
-                  No subjects registered.
-                </div>
+        {/* Subjects Tab Toolbar Filter Controls */}
+        {activeTab === "subjects" && (
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+            {/* Search Box */}
+            <div className="sm:col-span-5 relative">
+              <Search className="absolute left-4 top-3.5 h-4.5 w-4.5 text-primary/40" />
+              <input
+                placeholder="Search subject code or title..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-11 pr-10 py-3 text-sm bg-bg border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-secondary/40 font-medium text-primary placeholder:text-primary/40 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-3.5 top-3.5 text-primary/40 hover:text-primary p-0.5 rounded-full hover:bg-border cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               )}
             </div>
+
+            {/* Branch Selector */}
+            <div className="sm:col-span-3">
+              <select
+                value={branchFilter}
+                onChange={(e) => {
+                  setBranchFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-3 text-sm font-semibold bg-bg border border-border rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+              >
+                <option value="all">All Branches</option>
+                {branches.map((b) => (
+                  <option key={b.code} value={b.code}>
+                    {b.code} ({b.name})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Semester Selector */}
+            <div className="sm:col-span-2">
+              <select
+                value={semesterFilter}
+                onChange={(e) => {
+                  setSemesterFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-3 text-sm font-semibold bg-bg border border-border rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+              >
+                <option value="all">All Semesters</option>
+                {semesters.map((s) => (
+                  <option key={s.number} value={s.number.toString()}>
+                    Sem {s.number}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Selector */}
+            <div className="sm:col-span-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-3 text-sm font-semibold bg-bg border border-border rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SUBJECTS CATALOG VIEW */}
+      {/* ========================================================================= */}
+      {activeTab === "subjects" && (
+        <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
+          {paginatedSubjects.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-bg/60 text-primary/60 font-extrabold uppercase tracking-wider text-xs border-b border-border">
+                    <th className="py-4.5 pl-6 pr-4">Course Code</th>
+                    <th className="py-4.5 px-4">Subject Title</th>
+                    <th className="py-4.5 px-4">Branch Specialization</th>
+                    <th className="py-4.5 px-4">Semester</th>
+                    <th className="py-4.5 px-4">Status</th>
+                    <th className="py-4.5 pl-4 pr-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {paginatedSubjects.map((sub) => {
+                    const isToggling = togglingCode === `${sub.code}-${sub.branch}`;
+
+                    return (
+                      <tr key={`${sub.code}-${sub.branch}`} className="hover:bg-bg/40 transition-colors font-medium group">
+                        {/* Course Code Badge */}
+                        <td className="py-4 pl-6 pr-4">
+                          <div className="flex items-center gap-3">
+                            <span className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200/80 text-blue-700 font-extrabold text-xs sm:text-sm tracking-wide">
+                              {sub.code}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Title */}
+                        <td className="py-4 px-4 font-bold text-primary text-sm sm:text-base leading-tight group-hover:text-secondary transition-colors">
+                          {sub.title}
+                        </td>
+
+                        {/* Branch */}
+                        <td className="py-4 px-4">
+                          <span className="px-2.5 py-1 rounded-lg bg-bg border border-border text-xs font-bold text-primary">
+                            {sub.branch}
+                          </span>
+                        </td>
+
+                        {/* Semester */}
+                        <td className="py-4 px-4">
+                          <span className="px-2.5 py-1 rounded-lg bg-secondary/10 border border-secondary/20 text-xs font-bold text-secondary">
+                            Semester {sub.semester}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-4 px-4">
+                          {sub.active ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-300">
+                              <span className="h-2 w-2 rounded-full bg-slate-400" />
+                              Inactive
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-4 pl-4 pr-6 text-right">
+                          <button
+                            onClick={() => handleToggleSubject(sub.code, sub.branch, sub.active)}
+                            disabled={isToggling}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-50 ${
+                              sub.active
+                                ? "bg-surface hover:bg-red-50 text-primary/70 hover:text-red-700 border-border hover:border-red-200/80 shadow-2xs"
+                                : "bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border-emerald-200/80 shadow-2xs"
+                            }`}
+                          >
+                            {isToggling ? (
+                              <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                            ) : sub.active ? (
+                              "Deactivate"
+                            ) : (
+                              "Activate"
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-24 text-center space-y-3">
+              <div className="w-14 h-14 mx-auto rounded-3xl bg-bg border border-border flex items-center justify-center text-primary/40">
+                <BookOpen className="h-7 w-7" />
+              </div>
+              <div>
+                <h3 className="font-bold text-primary text-base">No Subjects Registered</h3>
+                <p className="text-xs sm:text-sm text-primary/50 mt-1 max-w-sm mx-auto">
+                  No curriculum subject records match your current filter criteria.
+                </p>
+              </div>
+              <button
+                onClick={openSubjectDrawer}
+                className="px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary/95 transition-all cursor-pointer"
+              >
+                + Add First Subject
+              </button>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {filteredSubjects.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-border bg-bg/30">
+              <div className="flex items-center gap-4 text-xs font-semibold text-primary/60">
+                <span>
+                  Showing{" "}
+                  <strong className="text-primary font-bold">
+                    {Math.min((currentPage - 1) * pageSize + 1, filteredSubjects.length)}
+                  </strong>{" "}
+                  to{" "}
+                  <strong className="text-primary font-bold">
+                    {Math.min(currentPage * pageSize, filteredSubjects.length)}
+                  </strong>{" "}
+                  of <strong className="text-primary font-bold">{filteredSubjects.length}</strong> subjects
+                </span>
+
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="taxPageSize" className="text-primary/50">Rows:</label>
+                  <select
+                    id="taxPageSize"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(parseInt(e.target.value, 10));
+                      setCurrentPage(1);
+                    }}
+                    className="px-2.5 py-1 text-xs font-bold bg-surface border border-border rounded-lg text-primary focus:outline-none cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-xl border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .map((p, idx, arr) => {
+                    const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
+                    return (
+                      <div key={p} className="flex items-center gap-1.5">
+                        {showEllipsis && <span className="px-1 text-xs text-primary/40 font-bold">...</span>}
+                        <button
+                          onClick={() => setCurrentPage(p)}
+                          className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            currentPage === p
+                              ? "bg-primary text-white shadow-2xs"
+                              : "bg-surface border border-border text-primary/70 hover:text-primary hover:bg-bg"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-xl border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* BRANCHES DIRECTORY VIEW */}
+      {/* ========================================================================= */}
+      {activeTab === "branches" && (
+        <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
+          <div className="p-6 border-b border-border/80 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-primary">Department Branch Specializations</h3>
+              <p className="text-xs sm:text-sm text-primary/60 mt-0.5">
+                Specializations under Data Engineering and Computer Science
+              </p>
+            </div>
+            <button
+              onClick={openBranchModal}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary text-white font-bold text-xs shadow-xs hover:bg-primary/95 transition-all cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Branch</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="bg-bg/60 text-primary/60 font-extrabold uppercase tracking-wider text-xs border-b border-border">
+                  <th className="py-4.5 pl-6 pr-4">Branch Code</th>
+                  <th className="py-4.5 px-4">Full Program Name</th>
+                  <th className="py-4.5 pl-4 pr-6 text-right">Operational Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {branches.map((b) => (
+                  <tr key={b.code} className="hover:bg-bg/40 transition-colors font-medium">
+                    <td className="py-4.5 pl-6 pr-4">
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 font-extrabold text-xs sm:text-sm">
+                        {b.code}
+                      </span>
+                    </td>
+                    <td className="py-4.5 px-4 font-bold text-primary text-sm sm:text-base">
+                      {b.name}
+                    </td>
+                    <td className="py-4.5 pl-4 pr-6 text-right">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        Active
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Branches tab */}
-      {activeTab === "branches" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Create Branch Form */}
-          <div className="bg-surface p-6 rounded-2xl border border-border shadow-xs h-fit space-y-6">
-            <h3 className="font-bold text-primary text-sm flex items-center gap-2">
-              <FolderPlus className="h-4 w-4 text-secondary" /> Add New Branch
-            </h3>
-            <form onSubmit={handleBranchSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="b-code" className="block text-[10px] font-bold text-primary/50 uppercase tracking-wider mb-1.5">Branch Code (3 chars)</label>
-                <input
-                  id="b-code"
-                  required
-                  placeholder="e.g., CIC"
-                  maxLength={5}
-                  value={branchCode}
-                  onChange={(e) => setBranchCode(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="b-name" className="block text-[10px] font-bold text-primary/50 uppercase tracking-wider mb-1.5">Branch Name</label>
-                <input
-                  id="b-name"
-                  required
-                  placeholder="e.g., Computer Science & Design"
-                  value={branchName}
-                  onChange={(e) => setBranchName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2 bg-primary hover:bg-primary/95 text-white font-semibold text-xs rounded-lg disabled:opacity-50 transition-all cursor-pointer"
-              >
-                Create Branch
-              </button>
-            </form>
+      {/* ========================================================================= */}
+      {/* SEMESTERS VIEW */}
+      {/* ========================================================================= */}
+      {activeTab === "semesters" && (
+        <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
+          <div className="p-6 border-b border-border/80">
+            <h3 className="text-lg font-bold text-primary">Academic Semester Timelines</h3>
+            <p className="text-xs sm:text-sm text-primary/60 mt-0.5">
+              Standardized 4-Year B.Tech Curriculum Term Cycle
+            </p>
           </div>
 
-          {/* Branches list */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-bold text-primary text-sm">Branch Directory</h3>
-            <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-bg/40 text-primary/50 font-bold border-b border-border">
-                      <th className="p-3">Code</th>
-                      <th className="p-3">Branch Name</th>
-                      <th className="p-3 text-right">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {branches.map((b) => (
-                      <tr key={b.code} className="hover:bg-bg/25 transition-all font-medium">
-                        <td className="p-3 font-bold text-primary">{b.code}</td>
-                        <td className="p-3 text-primary/80">{b.name}</td>
-                        <td className="p-3 text-right">
-                          <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold bg-success/10 text-success border border-success/15">
-                            {b.active ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6">
+            {semesters.map((s) => (
+              <div
+                key={s.number}
+                className="p-5 rounded-2xl border border-border bg-bg/50 hover:bg-surface hover:shadow-xs transition-all space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-black text-xs">
+                    TERM 0{s.number}
+                  </span>
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                </div>
+                <h4 className="font-bold text-primary text-base">{s.name}</h4>
+                <p className="text-xs text-primary/50 font-medium">B.Tech Year {Math.ceil(s.number / 2)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SLIDE-OVER RIGHT DRAWER (ADD SUBJECT) - SMOOTH 500MS ANIMATION */}
+      {/* ========================================================================= */}
+      {isSubjectDrawerMounted && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className={`fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isSubjectDrawerVisible ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={() => !subjectLoading && closeSubjectDrawer()}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div
+              data-lenis-prevent
+              className={`w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+                isSubjectDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+              }`}
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
+                    <BookOpen className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-primary leading-tight">Add New Subject</h3>
+                    <p className="text-xs sm:text-sm text-primary/55 mt-0.5 font-medium">
+                      Register curriculum course syllabus code
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={closeSubjectDrawer}
+                  disabled={subjectLoading}
+                  className="p-2 rounded-xl text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <form
+                id="create-subject-form"
+                data-lenis-prevent
+                onSubmit={handleSubjectSubmit}
+                className="p-6 space-y-5 flex-1 overflow-y-auto overscroll-contain"
+              >
+                <div>
+                  <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                    Subject Course Code *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={subCode}
+                    onChange={(e) => setSubCode(e.target.value)}
+                    placeholder="e.g., 23CI3001"
+                    className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium placeholder:text-primary/40 uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                    Subject Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={subTitle}
+                    onChange={(e) => setSubTitle(e.target.value)}
+                    placeholder="e.g., Database Management Systems"
+                    className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium placeholder:text-primary/40"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                      Branch *
+                    </label>
+                    <select
+                      value={subBranch}
+                      onChange={(e) => setSubBranch(e.target.value)}
+                      className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium cursor-pointer"
+                    >
+                      {branches.map((b) => (
+                        <option key={b.code} value={b.code}>
+                          {b.code}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                      Semester *
+                    </label>
+                    <select
+                      value={subSemester}
+                      onChange={(e) => setSubSemester(e.target.value)}
+                      className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium cursor-pointer"
+                    >
+                      {semesters.map((s) => (
+                        <option key={s.number} value={s.number.toString()}>
+                          Sem {s.number}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs sm:text-sm">
+                  <div className="flex items-center gap-2 font-bold text-primary">
+                    <Sparkles className="h-4 w-4 text-secondary shrink-0" />
+                    <span>Curriculum Alignment</span>
+                  </div>
+                  <p className="text-xs text-primary/70 leading-relaxed pt-0.5">
+                    Once created, students enrolled in this branch and semester will automatically see this subject on their learning dashboard.
+                  </p>
+                </div>
+              </form>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-border bg-bg/40 flex items-center justify-end gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={closeSubjectDrawer}
+                  disabled={subjectLoading}
+                  className="px-5 py-3 text-sm font-semibold text-primary/70 hover:text-primary rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="create-subject-form"
+                  disabled={subjectLoading}
+                  className="px-7 py-3 bg-primary hover:bg-primary/95 text-white font-bold text-sm rounded-xl shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+                >
+                  {subjectLoading ? (
+                    <>
+                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Create Subject</span>
+                      <ChevronRight className="h-4.5 w-4.5" />
+                    </>
+                  )}
+                </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL (ADD BRANCH) */}
+      {/* ========================================================================= */}
+      {isBranchModalMounted && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className={`fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isBranchModalVisible ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={() => !branchLoading && closeBranchModal()}
+          />
+          <div
+            data-lenis-prevent
+            className={`bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-7 space-y-6 relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+              isBranchModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-secondary/10 text-secondary">
+                  <FolderPlus className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-primary">Add Department Branch</h3>
+                  <p className="text-xs sm:text-sm text-primary/60 mt-0.5 font-medium">
+                    Register a new specialization program
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={closeBranchModal}
+                disabled={branchLoading}
+                className="p-2 text-primary/50 hover:text-primary rounded-xl cursor-pointer hover:bg-bg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleBranchSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                  Branch Code (e.g. CIC, CSD) *
+                </label>
+                <input
+                  required
+                  maxLength={6}
+                  value={branchCode}
+                  onChange={(e) => setBranchCode(e.target.value)}
+                  placeholder="e.g., CIC"
+                  className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                  Full Branch Specialization Name *
+                </label>
+                <input
+                  required
+                  value={branchName}
+                  onChange={(e) => setBranchName(e.target.value)}
+                  placeholder="e.g., Computer Science & Design"
+                  className="w-full px-4 py-3 text-sm sm:text-base bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border shrink-0">
+                <button
+                  type="button"
+                  onClick={closeBranchModal}
+                  disabled={branchLoading}
+                  className="px-5 py-2.5 text-sm font-semibold text-primary/70 hover:text-primary rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={branchLoading}
+                  className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white text-sm font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {branchLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Register Branch"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
