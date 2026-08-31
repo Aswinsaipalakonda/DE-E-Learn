@@ -83,9 +83,9 @@ export default function StudentProfileClient({ profile }: StudentProfileClientPr
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">
       {/* ========================================================================= */}
-      {/* EXECUTIVE HEADER BANNER */}
+      {/* EXECUTIVE HEADER BANNER (HIDDEN ON MOBILE, VISIBLE ON DESKTOP) */}
       {/* ========================================================================= */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="hidden md:flex p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800">
             <Sparkles className="h-3.5 w-3.5 text-blue-600" />
