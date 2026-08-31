@@ -17,15 +17,9 @@ import {
   Download, 
   Loader2, 
   Plus, 
-  Layers, 
-  Calendar, 
-  Sparkles, 
   FolderOpen, 
   Users, 
-  Search, 
   X, 
-  FileSpreadsheet, 
-  ChevronRight,
   GraduationCap 
 } from "lucide-react";
 
@@ -78,11 +72,11 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [downloadingRef, setDownloadingRef] = useState<string | null>(null);
 
-  // Modal State for Cohort Progress Matrix
+  // Drawer Modal State for Cohort Progress Matrix
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inspectingMaterial, setInspectingMaterial] = useState<MaterialItem | null>(null);
 
-  // Body scroll locking when modal is open
+  // Body scroll locking when drawer is open
   useEffect(() => {
     if (isModalOpen || isPreviewOpen || replaceTarget) {
       document.body.style.overflow = "hidden";
@@ -461,67 +455,78 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
       )}
 
       {/* ========================================================================= */}
-      {/* NATURAL PAGE-FLOW MODAL FOR FACULTY: SCROLLS LIKE A NORMAL WEBPAGE */}
+      {/* RIGHT-SIDE SLIDE-OVER WINDOW (DRAWER) FOR FACULTY WITH DEDICATED SCROLL */}
       {/* ========================================================================= */}
       {isModalOpen && inspectingMaterial && (
-        <div 
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeInspectModal();
-          }}
-          className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-md p-3 sm:p-6 md:p-8"
-        >
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full mx-auto my-4 sm:my-8 overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50 sticky top-0 z-20">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200">
-                  <GraduationCap className="h-5 w-5" />
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div 
+            onClick={closeInspectModal}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity cursor-pointer animate-in fade-in duration-200"
+          />
+
+          {/* Right Slide-over Panel */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-12 z-50">
+            <div className="w-screen max-w-2xl sm:max-w-3xl lg:max-w-4xl bg-white shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-250">
+              
+              {/* Fixed Header */}
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200">
+                    <GraduationCap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                      Student Cohort Progress Matrix
+                    </h2>
+                    <p className="text-xs text-slate-500 font-normal">
+                      Real-time class engagement analytics and per-file audit trails.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                    Student Cohort Progress Matrix
-                  </h2>
-                  <p className="text-xs text-slate-500 font-normal">
-                    Real-time class engagement analytics and per-file audit trails.
-                  </p>
-                </div>
+
+                <button
+                  type="button"
+                  onClick={closeInspectModal}
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
+                  title="Close Window"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={closeInspectModal}
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
-                title="Close Modal"
+              {/* Dedicated Full-Height Scrolling Viewport */}
+              <div 
+                tabIndex={0}
+                className="flex-1 overflow-y-scroll p-6 sm:p-8 space-y-6 focus:outline-none"
+                style={{ WebkitOverflowScrolling: "touch" }}
               >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+                <StudentCohortProgressMatrix
+                  materialId={inspectingMaterial.id}
+                  materialTitle={inspectingMaterial.title}
+                  branch={inspectingMaterial.branch || "CIC"}
+                  semester={inspectingMaterial.semester || 3}
+                  files={inspectingMaterial.material_files || []}
+                  activityLogs={inspectingMaterial.engagementLogs || []}
+                  uploaderName="You (Faculty)"
+                />
+                <div className="h-16" />
+              </div>
 
-            {/* Modal Content - Natural Height, Scrolls Effortlessly */}
-            <div className="p-6 sm:p-8 space-y-6">
-              <StudentCohortProgressMatrix
-                materialId={inspectingMaterial.id}
-                materialTitle={inspectingMaterial.title}
-                branch={inspectingMaterial.branch || "CIC"}
-                semester={inspectingMaterial.semester || 3}
-                files={inspectingMaterial.material_files || []}
-                activityLogs={inspectingMaterial.engagementLogs || []}
-                uploaderName="You (Faculty)"
-              />
-            </div>
+              {/* Fixed Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+                <span className="text-xs text-slate-500 font-normal">
+                  Total Tracked Events: <strong className="text-slate-900 font-semibold">{inspectingMaterial.engagementLogs?.length || 0}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={closeInspectModal}
+                  className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-full shadow-xs cursor-pointer"
+                >
+                  Close Window
+                </button>
+              </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between sticky bottom-0 z-20">
-              <span className="text-xs text-slate-500 font-normal">
-                Total Tracked Events: <strong className="text-slate-900 font-semibold">{inspectingMaterial.engagementLogs?.length || 0}</strong>
-              </span>
-              <button
-                type="button"
-                onClick={closeInspectModal}
-                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-full shadow-xs cursor-pointer"
-              >
-                Close Matrix
-              </button>
             </div>
           </div>
         </div>
