@@ -141,5 +141,5 @@ export async function login(formData: FormData) {
   }
 
   // Return success payload with direct role dashboard redirection path
-  return { success: true, redirectTo: `/${userRole}` };
+  return { success: true, redirectTo: `/${userRole}`, role: userRole };
 }
