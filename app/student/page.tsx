@@ -72,12 +72,32 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       facultyName: "V. Lakshmi Lavanya",
     },
   ],
+  2: [
+    {
+      id: "mock-mat-10",
+      title: "Data Structures & Algorithms in Java - Unit 2 Trees and Graphs",
+      type: "Lecture Notes",
+      created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      subjectTitle: "Data Structures & Algorithms",
+      subjectCode: "23CS201",
+      facultyName: "Dr. P. Satyanarayana",
+    },
+    {
+      id: "mock-mat-11",
+      title: "Digital Logic Design & Computer Organization - Lab Manual",
+      type: "Lab Manual",
+      created_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
+      subjectTitle: "Digital Logic & Microprocessors",
+      subjectCode: "23EC202",
+      facultyName: "Dr. K. Srinivas Rao",
+    },
+  ],
   1: [
     {
       id: "mock-mat-4",
       title: "Machine Learning with Python - Jupyter Notebook Reference",
       type: "Code Repository",
-      created_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+      created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
       subjectTitle: "Introduction to AI & Python",
       subjectCode: "23CSM101",
       facultyName: "V. Lakshmi Lavanya",
@@ -86,21 +106,10 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       id: "mock-mat-7",
       title: "Linear Algebra & Probability Theory - Assignment 1 Solutions",
       type: "Assignment",
-      created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+      created_at: new Date(Date.now() - 65 * 24 * 60 * 60 * 1000).toISOString(),
       subjectTitle: "Engineering Mathematics I",
       subjectCode: "23BS101",
       facultyName: "Dr. K. Srinivas Rao",
-    },
-  ],
-  5: [
-    {
-      id: "mock-mat-3",
-      title: "Data Warehousing & Dimensional Modeling Guidelines",
-      type: "Lecture Notes",
-      created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Data Warehousing & Mining",
-      subjectCode: "23CSD501",
-      facultyName: "Prof. M. V. Ramana",
     },
   ],
 };
@@ -143,11 +152,13 @@ export default async function StudentDashboard({
 
   const studentName = profile?.name || user.user_metadata?.name || user.email?.split("@")[0] || "Student";
   const branch = profile?.branch || "CIC";
-  const rollNumber = profile?.roll_number || (user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : "23331A4745");
+  const rollNumber = profile?.roll_number || (user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : "23331A4701");
   
-  // Resolve selected semester from search params, default to user profile semester or Sem 3
+  // Enforce student constraint: Student can access only up to their current enrolled semester
+  const maxAllowedSemester = profile?.current_semester || 3;
   const resolvedParams = await searchParams;
-  const selectedSemester = resolvedParams.sem ? parseInt(resolvedParams.sem, 10) : (profile?.current_semester || 3);
+  const requestedSem = resolvedParams.sem ? parseInt(resolvedParams.sem, 10) : maxAllowedSemester;
+  const selectedSemester = Math.min(Math.max(1, requestedSem), maxAllowedSemester);
 
   // 1. Fetch announcements active today matching scope
   const nowStr = new Date().toISOString();
@@ -186,7 +197,7 @@ export default async function StudentDashboard({
 
   const latestUploads: MaterialItem[] = rawUploads.length > 0 
     ? rawUploads 
-    : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3]);
+    : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3] || []);
 
   // 3. Read dynamic bookmarks from cookie / DB
   const cookieVal = cookieStore.get("de_saved_bookmarks")?.value;
@@ -204,7 +215,8 @@ export default async function StudentDashboard({
     ? savedBookmarkIds.length 
     : ((dbBookmarksCount && dbBookmarksCount > 0) ? dbBookmarksCount : 3);
 
-  const semNumbers = [1, 2, 3, 4, 5, 6, 7, 8];
+  // Generate semester tab numbers constrained up to the student's current semester
+  const semNumbers = Array.from({ length: maxAllowedSemester }, (_, i) => i + 1);
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full pb-8">
@@ -268,7 +280,7 @@ export default async function StudentDashboard({
           </div>
           <div>
             <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Sem {selectedSemester}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Active Academic Term</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Enrolled up to Sem {maxAllowedSemester}</span>
           </div>
         </div>
 
@@ -302,12 +314,12 @@ export default async function StudentDashboard({
       </section>
 
       {/* ========================================================================= */}
-      {/* INTERACTIVE SEMESTER SELECTOR TABS */}
+      {/* INTERACTIVE SEMESTER SELECTOR TABS (CONSTRAINED UP TO STUDENT'S CURRENT TERM) */}
       {/* ========================================================================= */}
       <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Explore Semester Curriculum
+            Explore Semester Curriculum (Up to Semester {maxAllowedSemester})
           </span>
           <span className="text-xs text-slate-400 font-normal">
             Viewing: <strong className="text-slate-900 font-semibold">Semester {selectedSemester}</strong>

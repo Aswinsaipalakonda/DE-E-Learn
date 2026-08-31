@@ -9,7 +9,8 @@ import {
   ArrowLeft,
   BookOpen,
   ChevronRight,
-  Layers
+  Layers,
+  Sparkles
 } from "lucide-react";
 
 interface PageProps {
@@ -44,6 +45,27 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
         created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["Transactions", "ACID", "2PL Locking"],
       },
+      {
+        id: "mock-mat-14",
+        title: "DBMS Lab Manual: MySQL & PostgreSQL Hands-on Practice",
+        type: "Lab Manuals",
+        created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["MySQL", "PostgreSQL", "DDL/DML"],
+      },
+      {
+        id: "mock-mat-15",
+        title: "DBMS Mid-Term 1 & End-Semester Model Question Bank",
+        type: "Question Banks",
+        created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Question Bank", "Mid-1", "Exam Prep"],
+      },
+      {
+        id: "mock-mat-16",
+        title: "Assignment 1: Complex ER Modeling & BCNF Decomposition Problems",
+        type: "Assignments",
+        created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Assignment", "BCNF", "Normalization"],
+      },
     ],
   },
   "23CIC302": {
@@ -54,9 +76,23 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
       {
         id: "mock-mat-2",
         title: "Cloud Infrastructure & Distributed Computing - Complete Lab Manual",
-        type: "Lab Manual",
+        type: "Lab Manuals",
         created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["Docker", "Kubernetes", "AWS"],
+      },
+      {
+        id: "mock-mat-17",
+        title: "Unit 1: Cloud Service Models (IaaS, PaaS, SaaS) & Virtualization Slides",
+        type: "Lecture Slides",
+        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["IaaS", "PaaS", "Virtualization"],
+      },
+      {
+        id: "mock-mat-18",
+        title: "Unit 2: AWS Elastic Compute Cloud (EC2) & S3 Storage Architecture",
+        type: "Lecture Notes",
+        created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["AWS", "EC2", "S3"],
       },
     ],
   },
@@ -68,9 +104,93 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
       {
         id: "mock-mat-5",
         title: "Apache Spark RDD & DataFrames - Mid-Term Question Bank",
-        type: "Question Bank",
+        type: "Question Banks",
         created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["Spark", "Hadoop", "MapReduce"],
+      },
+      {
+        id: "mock-mat-19",
+        title: "Unit 1: Hadoop Distributed File System (HDFS) & MapReduce Notes",
+        type: "Lecture Notes",
+        created_at: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["HDFS", "MapReduce", "Big Data"],
+      },
+      {
+        id: "mock-mat-20",
+        title: "Unit 2: Real-Time Streaming with Apache Kafka Slides",
+        type: "Lecture Slides",
+        created_at: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Kafka", "Streaming", "Producers/Consumers"],
+      },
+    ],
+  },
+  "23CIC304": {
+    title: "Operating Systems & Linux Kernel Architecture",
+    branch: "CIC",
+    semester: 3,
+    materials: [
+      {
+        id: "mock-mat-6",
+        title: "Operating Systems & Linux Kernel Architecture - Complete Slide Deck",
+        type: "Lecture Slides",
+        created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Linux", "Kernel", "Processes"],
+      },
+      {
+        id: "mock-mat-21",
+        title: "Unit 1: CPU Scheduling Algorithms & Process Synchronization Notes",
+        type: "Lecture Notes",
+        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Scheduling", "Semaphores", "Mutex"],
+      },
+      {
+        id: "mock-mat-22",
+        title: "Linux System Programming & Shell Scripting Lab Manual",
+        type: "Lab Manuals",
+        created_at: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Bash", "System Calls", "POSIX"],
+      },
+    ],
+  },
+  "23CIC305": {
+    title: "Computer Networks & IoT Protocols",
+    branch: "CIC",
+    semester: 3,
+    materials: [
+      {
+        id: "mock-mat-23",
+        title: "Unit 1: OSI 7-Layer Architecture & TCP/IP Protocol Stack Notes",
+        type: "Lecture Notes",
+        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["OSI", "TCP/IP", "Subnetting"],
+      },
+      {
+        id: "mock-mat-24",
+        title: "Unit 2: Wireless Sensor Networks & MQTT / CoAP IoT Protocols Slides",
+        type: "Lecture Slides",
+        created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["MQTT", "CoAP", "IoT"],
+      },
+      {
+        id: "mock-mat-25",
+        title: "Cisco Packet Tracer Network Topology Simulation Lab Manual",
+        type: "Lab Manuals",
+        created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Packet Tracer", "Routing", "VLANs"],
+      },
+      {
+        id: "mock-mat-26",
+        title: "Computer Networks Question Bank & Solved Numerical Problems",
+        type: "Question Banks",
+        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Question Bank", "Subnet Calculations", "Exams"],
+      },
+      {
+        id: "mock-mat-27",
+        title: "Assignment 1: IP Subnetting & CIDR Address Planning",
+        type: "Assignments",
+        created_at: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Assignment", "CIDR", "Subnets"],
       },
     ],
   },
@@ -81,8 +201,8 @@ export default async function SubjectDetailPage(props: PageProps) {
   const searchParams = await props.searchParams;
   
   const code = params.code;
-  const query = searchParams.q || "";
-  const selectedType = searchParams.type || "";
+  const query = (searchParams.q || "").trim();
+  const selectedType = (searchParams.type || "").trim();
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -120,16 +240,28 @@ export default async function SubjectDetailPage(props: PageProps) {
     .eq("subject", code)
     .eq("state", "published");
 
-  if (selectedType) {
-    dbQuery = dbQuery.eq("type", selectedType);
+  const { data: dbMaterials } = await dbQuery.order("created_at", { ascending: false });
+  const rawMaterials = (dbMaterials && dbMaterials.length > 0) ? dbMaterials : fallbackData.materials;
+
+  // Apply robust category and search filtering
+  const normalizeType = (t: string) => t.toLowerCase().replace(/s$/, "").trim();
+
+  let materials = rawMaterials;
+
+  if (selectedType && selectedType !== "All") {
+    const target = normalizeType(selectedType);
+    materials = materials.filter((m: any) => normalizeType(m.type) === target);
   }
 
   if (query) {
-    dbQuery = dbQuery.ilike("title", `%${query}%`);
+    const q = query.toLowerCase();
+    materials = materials.filter(
+      (m: any) =>
+        m.title.toLowerCase().includes(q) ||
+        m.type.toLowerCase().includes(q) ||
+        m.tags?.some((t: string) => t.toLowerCase().includes(q))
+    );
   }
-
-  const { data: dbMaterials } = await dbQuery.order("created_at", { ascending: false });
-  const materials = (dbMaterials && dbMaterials.length > 0) ? dbMaterials : fallbackData.materials;
 
   const materialTypes = [
     "All",
@@ -159,26 +291,26 @@ export default async function SubjectDetailPage(props: PageProps) {
 
         <Link
           href="/student/subjects"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all self-start md:self-auto border border-slate-200"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all self-start md:self-auto border border-slate-200 cursor-pointer shadow-xs"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>All Subjects</span>
         </Link>
       </div>
 
-      {/* Category Pills */}
+      {/* Category Filter Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         {materialTypes.map((type) => {
-          const isSelected = (!selectedType && type === "All") || selectedType === type;
+          const isSelected = (!selectedType && type === "All") || (selectedType && normalizeType(selectedType) === normalizeType(type));
           const href = type === "All" 
-            ? `/student/subjects/${code}` 
-            : `/student/subjects/${code}?type=${encodeURIComponent(type)}`;
+            ? `/student/subjects/${code}${query ? `?q=${encodeURIComponent(query)}` : ""}` 
+            : `/student/subjects/${code}?type=${encodeURIComponent(type)}${query ? `&q=${encodeURIComponent(query)}` : ""}`;
 
           return (
             <Link
               key={type}
               href={href}
-              className={`px-4 py-2 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+              className={`px-4.5 py-2 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
                 isSelected
                   ? "bg-slate-900 text-white shadow-xs"
                   : "bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-normal"
@@ -232,8 +364,9 @@ export default async function SubjectDetailPage(props: PageProps) {
             </Link>
           ))
         ) : (
-          <div className="p-12 text-center text-xs text-slate-400 font-normal">
-            No study materials matched the selected filter.
+          <div className="p-12 text-center text-xs text-slate-400 font-normal space-y-2">
+            <p className="font-semibold text-slate-700 text-sm">No materials found for &quot;{selectedType || query}&quot;</p>
+            <p>Try selecting another category pill or clear the search query.</p>
           </div>
         )}
       </div>
