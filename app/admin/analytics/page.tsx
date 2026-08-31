@@ -167,12 +167,13 @@ export default async function AdminAnalyticsPage() {
   const allRawEvents = [...serverEvents, ...cookieEvents, ...dbEvents];
   const eventsMap = new Map<string, any>();
   allRawEvents.forEach((ev) => {
-    const key = `${ev.type}-${ev.target_id || ev.targetId}-${ev.actor_roll || ev.metadata?.roll_number || ev.actor_id}-${ev.file_name || ev.metadata?.file_name || "page"}-${ev.created_at?.slice(0, 16)}`;
+    const key = ev.id || `${ev.type}-${ev.target_id || ev.targetId}-${ev.actor_roll || ev.metadata?.roll_number || ev.actor_id}-${ev.file_name || ev.metadata?.file_name || "page"}-${ev.created_at}`;
     if (!eventsMap.has(key)) {
       eventsMap.set(key, ev);
     }
   });
   const events = Array.from(eventsMap.values());
+  events.sort((a, b) => new Date(b.created_at || b.timestamp || 0).getTime() - new Date(a.created_at || a.timestamp || 0).getTime());
 
   // User lookup map by ID, Email, and Roll Number
   const userMap = new Map<string, Record<string, unknown>>();

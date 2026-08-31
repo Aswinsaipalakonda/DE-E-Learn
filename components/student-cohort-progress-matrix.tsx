@@ -88,6 +88,26 @@ function normalizeFileName(name?: string): string {
   }
 }
 
+// Format timestamp helper
+function formatTimestamp(isoString?: string): string {
+  if (!isoString) return "";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleString("en-US", {
+      month: "numeric",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return "";
+  }
+}
+
 // Generate complete cohort of 71 roll numbers for CIC Semester 3
 function generateCohortRolls(branch: string, semester: number): { roll: string; name: string; section: string }[] {
   const cohort: { roll: string; name: string; section: string }[] = [];
@@ -159,7 +179,7 @@ export default function StudentCohortProgressMatrix({
     ];
   }, [files]);
 
-  // Compute Full Cohort Records with per-file status
+  // Compute Full Cohort Records with per-file status & accurate latest timestamps
   const cohortRecords: StudentProgressRecord[] = useMemo(() => {
     const rawCohort = generateCohortRolls(branch, semester);
 
@@ -173,6 +193,9 @@ export default function StudentCohortProgressMatrix({
         return r1 === r2 || emailMatch || nameMatch;
       });
 
+      // Sort student events by timestamp descending (newest first)
+      studentEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
       // Compute status for each file
       const fileStatuses: StudentFileStatus[] = normalizedFiles.map((f) => {
         const normTarget = normalizeFileName(f.file_name);
@@ -183,8 +206,14 @@ export default function StudentCohortProgressMatrix({
           return normEv === normTarget || normEv.includes(normTarget) || normTarget.includes(normEv);
         });
 
-        const viewEvents = fileEvents.filter((e) => e.action === "view");
-        const downloadEvents = fileEvents.filter((e) => e.action === "download");
+        // Separate and sort view and download events descending (newest first)
+        const viewEvents = fileEvents
+          .filter((e) => e.action === "view")
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        const downloadEvents = fileEvents
+          .filter((e) => e.action === "download")
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         const lastView = viewEvents.length > 0 ? viewEvents[0].timestamp : undefined;
         const lastDownload = downloadEvents.length > 0 ? downloadEvents[0].timestamp : undefined;
@@ -273,10 +302,15 @@ export default function StudentCohortProgressMatrix({
       "Section",
       "Downloaded Any",
       "Viewed Any",
-      ...normalizedFiles.flatMap((f) => [`${f.file_name} (Viewed)`, `${f.file_name} (Downloaded)`]),
+      ...normalizedFiles.flatMap((f) => [
+        `${f.file_name} (Viewed)`,
+        `${f.file_name} (Last Viewed Time)`,
+        `${f.file_name} (Downloaded)`,
+        `${f.file_name} (Last Downloaded Time)`
+      ]),
       "Total Views",
       "Total Downloads",
-      "Last Activity Timestamp",
+      "Last Overall Activity",
     ];
 
     const rows = cohortRecords.map((r) => [
@@ -290,11 +324,13 @@ export default function StudentCohortProgressMatrix({
       r.hasViewed ? "YES" : "NO",
       ...r.files.flatMap((f) => [
         f.viewed ? `YES (${f.viewCount})` : "NO",
+        f.lastViewedAt ? `"${formatTimestamp(f.lastViewedAt)}"` : '"N/A"',
         f.downloaded ? `YES (${f.downloadCount})` : "NO",
+        f.lastDownloadedAt ? `"${formatTimestamp(f.lastDownloadedAt)}"` : '"N/A"',
       ]),
       r.totalViews,
       r.totalDownloads,
-      r.lastActivityAt ? `"${new Date(r.lastActivityAt).toLocaleString()}"` : '"N/A"',
+      r.lastActivityAt ? `"${formatTimestamp(r.lastActivityAt)}"` : '"N/A"',
     ]);
 
     const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
@@ -686,7 +722,7 @@ export default function StudentCohortProgressMatrix({
       )}
 
       {/* ========================================================================= */}
-      {/* 6. STUDENT DETAILED PER-FILE AUDIT MODAL */}
+      {/* 6. STUDENT DETAILED PER-FILE AUDIT MODAL WITH DUAL INDEPENDENT TIMESTAMPS */}
       {/* ========================================================================= */}
       {inspectingStudent && (
         <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -727,12 +763,12 @@ export default function StudentCohortProgressMatrix({
               </button>
             </div>
 
-            {/* Per-File Breakdown List */}
-            <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+            {/* Per-File Breakdown List with Explicit View & Download Timestamps */}
+            <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
               {inspectingStudent.files.map((file) => (
                 <div
                   key={file.fileId}
-                  className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 space-y-2"
+                  className="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/80 space-y-2.5"
                 >
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-blue-600 shrink-0" />
@@ -741,44 +777,54 @@ export default function StudentCohortProgressMatrix({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 text-xs">
-                    <div>
+                  {/* Status & Timestamps Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200/80 text-xs">
+                    {/* View Action Status & Timestamp */}
+                    <div className="p-2 rounded-xl bg-white border border-slate-200/60 space-y-1">
                       {file.viewed ? (
-                        <div className="flex items-center gap-1.5 text-blue-700 font-bold">
-                          <Eye className="h-3.5 w-3.5 text-blue-600" />
-                          <span>Viewed ({file.viewCount}x)</span>
-                        </div>
+                        <>
+                          <div className="flex items-center gap-1.5 text-blue-700 font-bold">
+                            <Eye className="h-3.5 w-3.5 text-blue-600" />
+                            <span>Viewed ({file.viewCount}x)</span>
+                          </div>
+                          {file.lastViewedAt && (
+                            <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                              <Clock className="h-2.5 w-2.5 text-slate-400 shrink-0" />
+                              <span>{formatTimestamp(file.lastViewedAt)}</span>
+                            </div>
+                          )}
+                        </>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-slate-400 font-normal">
+                        <div className="flex items-center gap-1.5 text-slate-400 font-normal py-0.5">
                           <MinusCircle className="h-3.5 w-3.5" />
                           <span>Not Viewed</span>
                         </div>
                       )}
                     </div>
 
-                    <div>
+                    {/* Download Action Status & Timestamp */}
+                    <div className="p-2 rounded-xl bg-white border border-slate-200/60 space-y-1">
                       {file.downloaded ? (
-                        <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                          <span>Downloaded ({file.downloadCount}x)</span>
-                        </div>
+                        <>
+                          <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                            <span>Downloaded ({file.downloadCount}x)</span>
+                          </div>
+                          {file.lastDownloadedAt && (
+                            <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                              <Clock className="h-2.5 w-2.5 text-slate-400 shrink-0" />
+                              <span>{formatTimestamp(file.lastDownloadedAt)}</span>
+                            </div>
+                          )}
+                        </>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-slate-400 font-normal">
+                        <div className="flex items-center gap-1.5 text-slate-400 font-normal py-0.5">
                           <MinusCircle className="h-3.5 w-3.5" />
                           <span>Not Downloaded</span>
                         </div>
                       )}
                     </div>
                   </div>
-
-                  {(file.lastViewedAt || file.lastDownloadedAt) && (
-                    <div className="text-[10px] text-slate-400 pt-0.5 flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" />
-                      <span>
-                        Last active: {new Date(file.lastDownloadedAt || file.lastViewedAt || "").toLocaleString()}
-                      </span>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
