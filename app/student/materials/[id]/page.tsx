@@ -27,7 +27,7 @@ const FALLBACK_MATERIALS: Record<string, any> = {
     id: "mock-mat-1",
     title: "Database Management Systems (DBMS) - Unit 1 Relational Models",
     description: "Comprehensive lecture notes covering relational data model foundations, ER to relational schema mapping, tuple and domain relational calculus, and Boyce-Codd Normal Form (BCNF) decomposition rules.",
-    type: "Lecture Notes",
+    type: "Notes",
     created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CIC301",
     branch: "CIC",
@@ -56,107 +56,19 @@ const FALLBACK_MATERIALS: Record<string, any> = {
     id: "mock-mat-2",
     title: "Cloud Infrastructure & Distributed Computing - Lab Manual",
     description: "Official departmental lab manual with step-by-step setup guides for Docker container orchestration, Kubernetes cluster provisioning, and AWS Elastic Compute Cloud instances.",
-    type: "Lab Manual",
+    type: "Lab Manuals",
     created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CIC302",
     branch: "CIC",
     semester: 3,
     state: "published",
     facultyName: "Dr. K. Srinivas Rao",
-    subjectTitle: "Cloud Computing & DevOps",
+    subjectTitle: "Cloud Infrastructure & Distributed Systems",
     material_files: [
       {
         id: "file-3",
-        file_name: "Cloud_Lab_Manual_v2.pdf",
+        file_name: "Cloud_Lab_Manual_2026.pdf",
         size: 4200000,
-        mime_type: "application/pdf",
-        storage_ref: "#",
-      },
-    ],
-  },
-  "mock-mat-3": {
-    id: "mock-mat-3",
-    title: "Data Warehousing & Dimensional Modeling Guidelines",
-    description: "Structured design reference for building star schemas, snowflake schemas, ETL pipeline architectures, and OLAP cubes for enterprise decision support systems.",
-    type: "Lecture Notes",
-    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CSD501",
-    branch: "CSD",
-    semester: 5,
-    state: "published",
-    facultyName: "Prof. M. V. Ramana",
-    subjectTitle: "Data Warehousing & Mining",
-    material_files: [
-      {
-        id: "file-4",
-        file_name: "Dimensional_Modeling_Guidelines.pdf",
-        size: 2800000,
-        mime_type: "application/pdf",
-        storage_ref: "#",
-      },
-    ],
-  },
-  "mock-mat-4": {
-    id: "mock-mat-4",
-    title: "Machine Learning with Python - Jupyter Notebook Reference",
-    description: "Hands-on implementation notebook containing supervised classification algorithms, gradient descent optimization, and Scikit-Learn evaluation pipelines.",
-    type: "Code Repository",
-    created_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CSM101",
-    branch: "CSM",
-    semester: 1,
-    state: "published",
-    facultyName: "V. Lakshmi Lavanya",
-    subjectTitle: "Introduction to AI & Python",
-    material_files: [
-      {
-        id: "file-5",
-        file_name: "Machine_Learning_Python_Labs.pdf",
-        size: 5100000,
-        mime_type: "application/pdf",
-        storage_ref: "#",
-      },
-    ],
-  },
-  "mock-mat-5": {
-    id: "mock-mat-5",
-    title: "Big Data Processing with Apache Spark - Mid-Term Question Bank",
-    description: "Collection of curated question bank problems, RDD transformation queries, Spark SQL benchmarks, and previous mid-term solutions.",
-    type: "Question Bank",
-    created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC303",
-    branch: "CIC",
-    semester: 3,
-    state: "published",
-    facultyName: "Prof. M. V. Ramana",
-    subjectTitle: "Big Data Analytics",
-    material_files: [
-      {
-        id: "file-6",
-        file_name: "Spark_Question_Bank_2026.pdf",
-        size: 1900000,
-        mime_type: "application/pdf",
-        storage_ref: "#",
-      },
-    ],
-  },
-  "mock-mat-6": {
-    id: "mock-mat-6",
-    title: "Operating Systems & Linux Kernel Architecture - Slide Deck",
-    description: "Presentation slides outlining multi-threaded scheduling, virtual memory management, page replacement algorithms, and deadlock avoidance.",
-    type: "Lecture Slides",
-    created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC304",
-    branch: "CIC",
-    semester: 3,
-    state: "published",
-    facultyName: "V. Lakshmi Lavanya",
-    subjectTitle: "Operating Systems",
-    material_files: [
-      {
-        id: "file-7",
-        file_name: "OS_Linux_Kernel_Slides.pdf",
-        size: 6300000,
         mime_type: "application/pdf",
         storage_ref: "#",
       },
@@ -194,6 +106,22 @@ export default async function MaterialDetailsPage(props: PageProps) {
     `)
     .eq("id", id)
     .maybeSingle();
+
+  // If real material found in database, track view event for the student
+  if (user && dbMaterial) {
+    try {
+      await supabase.from("activity_events").insert({
+        type: "view",
+        actor_id: user.id,
+        target_id: dbMaterial.id,
+        metadata: {
+          action: "material_page_view",
+          material_title: dbMaterial.title,
+          subject: dbMaterial.subject,
+        },
+      });
+    } catch {}
+  }
 
   // Resilient fallback for preview and sample items
   const material = dbMaterial || FALLBACK_MATERIALS[id] || FALLBACK_MATERIALS["mock-mat-1"];

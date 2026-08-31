@@ -14,6 +14,20 @@ interface FileItem {
   storage_ref: string;
 }
 
+export interface StudentEngagementLog {
+  id: string;
+  studentName: string;
+  rollNumber: string;
+  email: string;
+  branch: string;
+  semester: number;
+  section: string;
+  action: "view" | "download";
+  fileName?: string;
+  actionDetail?: string;
+  timestamp: string;
+}
+
 interface RawMaterial {
   id: string;
   title: string;
@@ -21,6 +35,9 @@ interface RawMaterial {
   state: string;
   created_at: string;
   subject: string;
+  views?: number;
+  downloads?: number;
+  engagementLogs?: StudentEngagementLog[];
   material_files: FileItem[];
 }
 
@@ -32,6 +49,9 @@ const FALLBACK_FACULTY_INVENTORY: RawMaterial[] = [
     state: "published",
     created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CIC301",
+    views: 0,
+    downloads: 0,
+    engagementLogs: [],
     material_files: [
       {
         id: "f-1",
@@ -58,6 +78,9 @@ const FALLBACK_FACULTY_INVENTORY: RawMaterial[] = [
     state: "published",
     created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CIC301",
+    views: 0,
+    downloads: 0,
+    engagementLogs: [],
     material_files: [
       {
         id: "f-3",
@@ -65,78 +88,6 @@ const FALLBACK_FACULTY_INVENTORY: RawMaterial[] = [
         size: 2800000,
         mime_type: "application/pdf",
         version: 2,
-        storage_ref: "#",
-      },
-    ],
-  },
-  {
-    id: "mock-mat-9",
-    title: "Unit 3: Transaction Processing, ACID Properties, and Concurrency Control",
-    type: "Lecture Notes",
-    state: "published",
-    created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    material_files: [
-      {
-        id: "f-4",
-        file_name: "Transaction_Processing_Notes.pdf",
-        size: 3100000,
-        mime_type: "application/pdf",
-        version: 1,
-        storage_ref: "#",
-      },
-    ],
-  },
-  {
-    id: "mock-mat-14",
-    title: "DBMS Lab Manual: MySQL & PostgreSQL Hands-on Practice",
-    type: "Lab Manual",
-    state: "published",
-    created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    material_files: [
-      {
-        id: "f-5",
-        file_name: "DBMS_Lab_Manual_v2.pdf",
-        size: 4500000,
-        mime_type: "application/pdf",
-        version: 2,
-        storage_ref: "#",
-      },
-    ],
-  },
-  {
-    id: "mock-mat-15",
-    title: "DBMS Mid-Term 1 & End-Semester Model Question Bank",
-    type: "Question Bank",
-    state: "draft",
-    created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    material_files: [
-      {
-        id: "f-6",
-        file_name: "DBMS_Question_Bank_2026.pdf",
-        size: 1900000,
-        mime_type: "application/pdf",
-        version: 1,
-        storage_ref: "#",
-      },
-    ],
-  },
-  {
-    id: "mock-mat-16",
-    title: "Legacy Relational Database Architecture (Archived 2025)",
-    type: "Reference Books",
-    state: "archived",
-    created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    material_files: [
-      {
-        id: "f-7",
-        file_name: "Legacy_RDBMS_Design.pdf",
-        size: 5600000,
-        mime_type: "application/pdf",
-        version: 1,
         storage_ref: "#",
       },
     ],
@@ -151,37 +102,110 @@ export default async function FacultyMaterialsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch materials owned by uploader (excluding deleted state)
-  const { data, error } = await supabase
-    .from("materials")
-    .select(`
-      id,
-      title,
-      type,
-      state,
-      created_at,
-      subject,
-      material_files (
+  // Fetch materials, activity events, and student users in parallel
+  const [materialsRes, eventsRes, usersRes] = await Promise.all([
+    supabase
+      .from("materials")
+      .select(`
         id,
-        file_name,
-        size,
-        mime_type,
-        version,
-        storage_ref
-      )
-    `)
-    .eq("owner", user.id)
-    .neq("state", "deleted")
-    .order("created_at", { ascending: false });
+        title,
+        type,
+        state,
+        created_at,
+        subject,
+        material_files (
+          id,
+          file_name,
+          size,
+          mime_type,
+          version,
+          storage_ref
+        )
+      `)
+      .eq("owner", user.id)
+      .neq("state", "deleted")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("activity_events")
+      .select(`
+        id,
+        type,
+        target_id,
+        actor_id,
+        metadata,
+        created_at,
+        users:actor_id (
+          id,
+          name,
+          email,
+          role,
+          branch,
+          current_semester,
+          section,
+          roll_number
+        )
+      `)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("users")
+      .select("id, name, email, role, branch, current_semester, section, roll_number"),
+  ]);
 
-  const rawMaterials = (data as unknown as RawMaterial[]) || [];
+  const rawMaterials = (materialsRes.data as unknown as RawMaterial[]) || [];
+  const events = (eventsRes.data as any[]) || [];
+  const dbUsers = (usersRes.data as any[]) || [];
+
+  const userMap = new Map<string, any>();
+  dbUsers.forEach((u) => {
+    if (u.id) userMap.set(String(u.id), u);
+    if (u.email) userMap.set(String(u.email).toLowerCase(), u);
+  });
+
   const activeList = rawMaterials.length > 0 ? rawMaterials : FALLBACK_FACULTY_INVENTORY;
 
-  // Cast values safely
-  const materials = activeList.map(m => ({
-    ...m,
-    state: m.state as "draft" | "published" | "archived" | "deleted",
-  }));
+  // Compute real engagement analytics for each material
+  const materials = activeList.map(m => {
+    const matEvents = events.filter((e) => e.target_id === m.id);
+    const views = matEvents.filter((e) => e.type === "view").length;
+    const downloads = matEvents.filter((e) => e.type === "download").length;
+
+    const engagementLogs: StudentEngagementLog[] = matEvents.map((ev, idx) => {
+      const userProfile = ev.users || (ev.actor_id ? userMap.get(String(ev.actor_id)) : null);
+      const userEmail = userProfile?.email || "";
+      const roll = userProfile?.roll_number || (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "STUDENT");
+
+      let actionDetail = "Viewed Material Workspace";
+      const fileName = ev.metadata?.file_name;
+
+      if (ev.type === "download") {
+        actionDetail = fileName ? `Downloaded: ${fileName}` : "Downloaded Study File";
+      } else if (ev.metadata?.action === "file_preview") {
+        actionDetail = fileName ? `Previewed: ${fileName}` : "Previewed Study Document";
+      }
+
+      return {
+        id: ev.id || `${m.id}-log-${idx}`,
+        studentName: userProfile?.name || userEmail || "Enrolled Student",
+        rollNumber: roll,
+        email: userEmail,
+        branch: userProfile?.branch || "CIC",
+        semester: userProfile?.current_semester || 3,
+        section: userProfile?.section || "A",
+        action: ev.type === "download" ? "download" : "view",
+        fileName: fileName,
+        actionDetail: actionDetail,
+        timestamp: ev.created_at || new Date().toISOString(),
+      };
+    });
+
+    return {
+      ...m,
+      views: views,
+      downloads: downloads,
+      engagementLogs: engagementLogs,
+      state: m.state as "draft" | "published" | "archived" | "deleted",
+    };
+  });
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-6xl pb-10">
@@ -209,7 +233,7 @@ export default async function FacultyMaterialsPage() {
       <header className="space-y-1">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Your Materials Inventory</h1>
         <p className="text-xs sm:text-sm text-slate-500 font-normal">
-          Manage your uploaded files, update metadata, archive outdated versions, or replace content with new revisions.
+          Manage your uploaded files, monitor live student engagement, and inspect verified file downloads.
         </p>
       </header>
 

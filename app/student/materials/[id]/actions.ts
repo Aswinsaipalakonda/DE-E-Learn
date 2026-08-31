@@ -18,7 +18,6 @@ export async function toggleBookmark(materialId: string, currentStatus: boolean)
   if (cookieVal) {
     try { savedList = JSON.parse(cookieVal); } catch {}
   } else {
-    // Default initial mock list
     savedList = ["mock-mat-1", "mock-mat-2", "mock-mat-5"];
   }
 
@@ -51,28 +50,68 @@ export async function toggleBookmark(materialId: string, currentStatus: boolean)
   return { success: true, count: savedList.length };
 }
 
-// Log Download Activity and Get Storage Link
-export async function trackDownloadAndGetUrl(fileId: string, materialId: string, storageRef: string) {
+// Log Material View Event
+export async function trackMaterialPageView(materialId: string, materialTitle?: string) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  // Log download activity event
-  await supabase
-    .from("activity_events")
-    .insert({
-      type: "download",
-      actor_id: user.id,
-      target_id: materialId,
-      metadata: { file_id: fileId },
-    });
+  try {
+    await supabase
+      .from("activity_events")
+      .insert({
+        type: "view",
+        actor_id: user.id,
+        target_id: materialId,
+        metadata: {
+          action: "material_page_view",
+          material_title: materialTitle || "Course Study Material",
+        },
+      });
+  } catch (err) {
+    console.warn("Failed to log page view event:", err);
+  }
+
+  return { success: true };
+}
+
+// Log Download Activity and Get Storage Link
+export async function trackDownloadAndGetUrl(fileId: string, materialId: string, storageRef: string, fileName?: string) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  // Log download activity event with specific file name
+  try {
+    await supabase
+      .from("activity_events")
+      .insert({
+        type: "download",
+        actor_id: user.id,
+        target_id: materialId,
+        metadata: { 
+          file_id: fileId,
+          file_name: fileName || "Study Document",
+          action: "file_download" 
+        },
+      });
+  } catch (err) {
+    console.warn("Activity download log notice:", err);
+  }
+
+  // If storageRef is mock "#", provide simulated download link
+  if (!storageRef || storageRef === "#") {
+    return { downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" };
+  }
 
   // Get signed URL for the protected file in storage bucket
   const { data, error } = await supabase.storage
     .from("materials")
-    .createSignedUrl(storageRef, 60); // URL valid for 60 seconds
+    .createSignedUrl(storageRef, 60);
 
   if (error || !data) {
     return { error: error?.message || "Failed to generate download URL." };
@@ -82,27 +121,39 @@ export async function trackDownloadAndGetUrl(fileId: string, materialId: string,
 }
 
 // Log Preview Activity and Get Storage Link for In-Browser Viewing
-export async function trackPreviewAndGetUrl(fileId: string, materialId: string, storageRef: string) {
+export async function trackPreviewAndGetUrl(fileId: string, materialId: string, storageRef: string, fileName?: string) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  // Log preview activity event
-  await supabase
-    .from("activity_events")
-    .insert({
-      type: "view",
-      actor_id: user.id,
-      target_id: materialId,
-      metadata: { file_id: fileId, mode: "preview_modal" },
-    });
+  // Log preview activity event with specific file name
+  try {
+    await supabase
+      .from("activity_events")
+      .insert({
+        type: "view",
+        actor_id: user.id,
+        target_id: materialId,
+        metadata: { 
+          file_id: fileId,
+          file_name: fileName || "Study Document",
+          action: "file_preview",
+          mode: "preview_modal" 
+        },
+      });
+  } catch (err) {
+    console.warn("Activity preview log notice:", err);
+  }
 
-  // Get signed URL with 10-minute validity for reading in modal
+  if (!storageRef || storageRef === "#") {
+    return { previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" };
+  }
+
   const { data, error } = await supabase.storage
     .from("materials")
-    .createSignedUrl(storageRef, 600);
+    .createSignedUrl(storageRef, 60);
 
   if (error || !data) {
     return { error: error?.message || "Failed to generate preview URL." };

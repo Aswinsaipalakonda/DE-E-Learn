@@ -32,13 +32,12 @@ export default function FileList({ materialId, files }: FileListProps) {
   const handleDownload = async (fileId: string, storageRef: string, fileName: string) => {
     setDownloadingId(fileId);
     try {
-      const result = await trackDownloadAndGetUrl(fileId, materialId, storageRef);
+      const result = await trackDownloadAndGetUrl(fileId, materialId, storageRef, fileName);
       if (result.error) {
         alert(result.error);
         return;
       }
       if (result.downloadUrl) {
-        // Open/download in browser
         const link = document.createElement("a");
         link.href = result.downloadUrl;
         link.download = fileName;
@@ -65,7 +64,7 @@ export default function FileList({ materialId, files }: FileListProps) {
     setIsPreviewModalOpen(true);
 
     try {
-      const res = await trackPreviewAndGetUrl(file.id, materialId, file.storage_ref);
+      const res = await trackPreviewAndGetUrl(file.id, materialId, file.storage_ref, file.file_name);
       if (res.error) {
         alert(res.error);
         setIsPreviewModalOpen(false);
@@ -81,7 +80,7 @@ export default function FileList({ materialId, files }: FileListProps) {
   };
 
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
+    if (!bytes || bytes === 0) return "0 Bytes";
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -90,51 +89,51 @@ export default function FileList({ materialId, files }: FileListProps) {
 
   return (
     <>
-      <div className="bg-surface rounded-2xl border border-border overflow-hidden">
-        <div className="divide-y divide-border">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
+        <div className="divide-y divide-slate-100">
           {files.map((file) => {
             const isDownloading = downloadingId === file.id;
             return (
               <div 
                 key={file.id} 
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 gap-3 hover:bg-bg/40 transition-all"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 gap-3 hover:bg-slate-50/70 transition-all"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2.5 rounded-xl bg-primary/5 text-primary shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200 shadow-2xs">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="font-bold text-primary text-sm sm:text-base block truncate leading-tight">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                       {file.file_name}
-                    </span>
-                    <span className="text-xs text-primary/40 mt-1 block">
-                      {formatSize(file.size)}
-                    </span>
+                    </h3>
+                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 font-normal">
+                      <span>{formatSize(file.size)}</span>
+                      <span>•</span>
+                      <span className="uppercase">{file.file_name.split(".").pop() || "PDF"} Document</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                   <button
                     onClick={() => handlePreview(file)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-secondary/10 text-secondary hover:bg-secondary/20 font-semibold text-xs transition-all cursor-pointer"
-                    aria-label={`Preview ${file.file_name}`}
+                    className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-full border border-slate-200 flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
                   >
-                    <Eye className="h-4 w-4" />
-                    Preview
+                    <Eye className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Preview</span>
                   </button>
 
                   <button
                     onClick={() => handleDownload(file.id, file.storage_ref, file.file_name)}
                     disabled={isDownloading}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary disabled:opacity-50 rounded-xl font-semibold text-xs transition-all cursor-pointer"
-                    aria-label={`Download ${file.file_name}`}
+                    className="px-4 py-2 bg-primary hover:bg-primary/95 text-white text-xs font-semibold rounded-full flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs disabled:opacity-50"
                   >
                     {isDownloading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
-                      <Download className="h-4 w-4" />
+                      <Download className="h-3.5 w-3.5" />
                     )}
-                    Download
+                    <span>{isDownloading ? "Preparing..." : "Download"}</span>
                   </button>
                 </div>
               </div>
@@ -150,17 +149,10 @@ export default function FileList({ materialId, files }: FileListProps) {
           fileName={previewingFile.fileName}
           fileUrl={previewingFile.fileUrl}
           mimeType={previewingFile.mimeType}
-          onDownload={() =>
-            handleDownload(
-              previewingFile.id,
-              previewingFile.storageRef,
-              previewingFile.fileName
-            )
-          }
+          onDownload={() => handleDownload(previewingFile.id, previewingFile.storageRef, previewingFile.fileName)}
           isDownloading={downloadingId === previewingFile.id}
         />
       )}
     </>
   );
 }
-

@@ -105,77 +105,104 @@ export default function AnalyticsClient({
     return emails.size;
   }, [materials]);
 
-  // Filtered materials
-  const filtered = useMemo(() => {
-    return materials.filter((m) => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
-        m.title.toLowerCase().includes(q) ||
-        (m.users?.name || "").toLowerCase().includes(q) ||
-        (m.users?.email || "").toLowerCase().includes(q) ||
-        m.type.toLowerCase().includes(q);
-
-      const matchesBranch = selectedBranch === "ALL" || m.branch === selectedBranch;
-      const matchesSemester = selectedSemester === "ALL" || m.semester.toString() === selectedSemester;
-      const matchesType = selectedType === "ALL" || m.type === selectedType;
-
-      return matchesSearch && matchesBranch && matchesSemester && matchesType;
-    });
-  }, [materials, searchQuery, selectedBranch, selectedSemester, selectedType]);
-
-  // Paginated records
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginatedMaterials = useMemo(() => {
-    const startIdx = (currentPage - 1) * pageSize;
-    return filtered.slice(startIdx, startIdx + pageSize);
-  }, [filtered, currentPage, pageSize]);
-
-  // Drawer Handlers
-  const openInspectDrawer = (m: MaterialWithMetrics, initialTab: "all" | "view" | "download" = "all") => {
-    setInspectingMaterial(m);
-    setDrawerActiveTab(initialTab);
+  // Open Drawer Function
+  const openInspectDrawer = (material: MaterialWithMetrics, defaultTab: "all" | "view" | "download" = "all") => {
+    setInspectingMaterial(material);
+    setDrawerActiveTab(defaultTab);
     setDrawerStudentSearch("");
     setIsDrawerMounted(true);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setIsDrawerVisible(true);
-      });
-    });
+    setTimeout(() => setIsDrawerVisible(true), 10);
   };
 
+  // Close Drawer Function
   const closeInspectDrawer = () => {
     setIsDrawerVisible(false);
     setTimeout(() => {
       setIsDrawerMounted(false);
       setInspectingMaterial(null);
-    }, 450);
+    }, 300);
   };
 
-  // Filtered student engagement logs inside the drawer
-  const filteredStudentLogs = useMemo(() => {
-    if (!inspectingMaterial || !inspectingMaterial.engagementLogs) return [];
-    const logs = inspectingMaterial.engagementLogs;
-    const q = drawerStudentSearch.toLowerCase().trim();
+  // Filtered Materials list
+  const filtered = useMemo(() => {
+    return materials.filter((m) => {
+      // 1. Search Query Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const titleMatch = m.title.toLowerCase().includes(q);
+        const facultyMatch = (m.users?.name || "").toLowerCase().includes(q);
+        const typeMatch = m.type.toLowerCase().includes(q);
+        const branchMatch = m.branch.toLowerCase().includes(q);
+        if (!titleMatch && !facultyMatch && !typeMatch && !branchMatch) {
+          return false;
+        }
+      }
 
-    return logs.filter((log) => {
-      const matchesTab = drawerActiveTab === "all" ? true : log.action === drawerActiveTab;
-      const matchesQuery =
-        !q ||
-        log.studentName.toLowerCase().includes(q) ||
-        log.rollNumber.toLowerCase().includes(q) ||
-        log.email.toLowerCase().includes(q) ||
-        log.section.toLowerCase().includes(q) ||
-        log.branch.toLowerCase().includes(q);
+      // 2. Branch Filter
+      if (selectedBranch !== "ALL" && m.branch !== selectedBranch) {
+        return false;
+      }
 
-      return matchesTab && matchesQuery;
+      // 3. Semester Filter
+      if (selectedSemester !== "ALL" && m.semester !== parseInt(selectedSemester, 10)) {
+        return false;
+      }
+
+      // 4. Type Filter
+      if (selectedType !== "ALL" && m.type !== selectedType) {
+        return false;
+      }
+
+      return true;
     });
+  }, [materials, searchQuery, selectedBranch, selectedSemester, selectedType]);
+
+  // Paginated Materials
+  const paginatedMaterials = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+
+  // Filtered Student Engagement Logs for Drawer
+  const filteredStudentLogs = useMemo(() => {
+    if (!inspectingMaterial?.engagementLogs) return [];
+    
+    let logs = inspectingMaterial.engagementLogs;
+
+    // Filter by Tab
+    if (drawerActiveTab === "view") {
+      logs = logs.filter((l) => l.action === "view");
+    } else if (drawerActiveTab === "download") {
+      logs = logs.filter((l) => l.action === "download");
+    }
+
+    // Filter by Student Search
+    if (drawerStudentSearch.trim()) {
+      const q = drawerStudentSearch.toLowerCase();
+      logs = logs.filter(
+        (l) =>
+          l.studentName.toLowerCase().includes(q) ||
+          l.rollNumber.toLowerCase().includes(q) ||
+          l.email.toLowerCase().includes(q) ||
+          (l.fileName && l.fileName.toLowerCase().includes(q))
+      );
+    }
+
+    return logs;
   }, [inspectingMaterial, drawerActiveTab, drawerStudentSearch]);
 
-  // CSV Export Handler for all materials
-  const handleExportCSV = async () => {
+  // Global CSV Export Handler
+  const handleExportAllCSV = async () => {
+    if (filtered.length === 0) {
+      addToast("info", "Nothing to Export", "No materials match your current filters.");
+      return;
+    }
+
     setIsExporting(true);
     try {
-      const headers = ["Title", "Material Type", "Branch", "Semester", "Faculty Name", "Faculty Email", "Views", "Downloads", "Uploaded Date"];
+      const headers = ["Title", "Category", "Branch", "Semester", "Faculty Contributor", "Faculty Email", "Total Views", "Total Downloads", "Uploaded Date"];
       const rows = filtered.map((m) => [
         `"${(m.title || "").replace(/"/g, '""')}"`,
         `"${m.type || ""}"`,
@@ -212,7 +239,7 @@ export default function AnalyticsClient({
   const handleExportStudentLogsCSV = () => {
     if (!inspectingMaterial || filteredStudentLogs.length === 0) return;
 
-    const headers = ["Student Name", "Roll Number", "Official Email", "Branch", "Semester", "Section", "Action", "Timestamp"];
+    const headers = ["Student Name", "Roll Number", "Official Email", "Branch", "Semester", "Section", "Action", "Accessed File", "Timestamp"];
     const rows = filteredStudentLogs.map((log) => [
       `"${log.studentName.replace(/"/g, '""')}"`,
       `"${log.rollNumber}"`,
@@ -221,6 +248,7 @@ export default function AnalyticsClient({
       log.semester,
       `"${log.section}"`,
       log.action.toUpperCase(),
+      `"${(log.fileName || "Material Workspace").replace(/"/g, '""')}"`,
       `"${new Date(log.timestamp).toLocaleString()}"`,
     ]);
 
@@ -235,136 +263,86 @@ export default function AnalyticsClient({
     link.click();
     document.body.removeChild(link);
 
-    addToast("success", "Student List Exported", `Downloaded access records for ${filteredStudentLogs.length} students.`);
+    addToast("success", "Student List Exported", `Downloaded access records for ${filteredStudentLogs.length} interactions.`);
   };
 
   return (
-    <div className="space-y-6 relative pb-10 w-full">
-      {/* Toast Notifications */}
+    <div className="space-y-6 sm:space-y-7 w-full max-w-7xl pb-10">
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
-      {/* ========================================================================= */}
-      {/* EXECUTIVE HEADER */}
-      {/* ========================================================================= */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-slate-900 text-white shadow-xs">
-              <BarChart3 className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                Repository Usage & Metrics
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed mt-0.5">
-                Analyze student curriculum engagement, document views, and file download logs.
-              </p>
+      {/* Header Banner */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            Curriculum Analytics & Student Engagement
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-normal">
+            Analyze real-time student engagement, document view audits, and verified file downloads.
+          </p>
+        </div>
+
+        <button
+          onClick={handleExportAllCSV}
+          disabled={isExporting}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer disabled:opacity-50 self-start md:self-auto"
+        >
+          {isExporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <FileSpreadsheet className="h-4 w-4" />
+          )}
+          <span>Export Analytics CSV</span>
+        </button>
+      </div>
+
+      {/* Overview Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+        <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Document Views</span>
+            <div className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
+              <Eye className="h-4 w-4" />
             </div>
           </div>
-
-          {/* Stat Pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-1.5">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
-              Resources: <span className="font-semibold">{materials.length}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-              Total Views: <span className="font-semibold">{totalViews}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-              Total Downloads: <span className="font-semibold">{totalDownloads}</span>
-            </span>
+          <div className="space-y-0.5">
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900">{totalViews}</span>
+            <span className="text-xs text-slate-400 block font-normal">Audited student views</span>
           </div>
         </div>
 
-        {/* Header Action */}
-        <div className="self-start lg:self-center shrink-0">
-          <button
-            onClick={handleExportCSV}
-            disabled={isExporting || filtered.length === 0}
-            className="inline-flex items-center gap-2 px-5.5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm transition-all shadow-xs hover:shadow-md cursor-pointer disabled:opacity-50"
-          >
-            {isExporting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileSpreadsheet className="h-4 w-4" />
-            )}
-            <span>Export CSV Report</span>
-          </button>
+        <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total File Downloads</span>
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <Download className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900">{totalDownloads}</span>
+            <span className="text-xs text-slate-400 block font-normal">Verified file downloads</span>
+          </div>
+        </div>
+
+        <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Published Materials</span>
+            <div className="p-2 rounded-xl bg-purple-50 text-purple-700 border border-purple-200">
+              <BookOpen className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900">{materials.length}</span>
+            <span className="text-xs text-slate-400 block font-normal">Active syllabus documents</span>
+          </div>
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* METRIC TILES: 2-COLUMNS ON MOBILE / 4-COLUMNS ON DESKTOP */}
-      {/* ========================================================================= */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
-        {/* Card 1: Total Views */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Views</span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
-              <Eye className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-            </div>
-          </div>
-          <div>
-            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{totalViews}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Document Previews</span>
-          </div>
-        </div>
-
-        {/* Card 2: Total Downloads */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Downloads</span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <Download className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-            </div>
-          </div>
-          <div>
-            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{totalDownloads}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">File Downloads</span>
-          </div>
-        </div>
-
-        {/* Card 3: Uploaded Materials */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Materials</span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center">
-              <BookOpen className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-            </div>
-          </div>
-          <div>
-            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{materials.length}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Learning Units</span>
-          </div>
-        </div>
-
-        {/* Card 4: Faculty Contributors */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Faculty</span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center">
-              <Users className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-            </div>
-          </div>
-          <div>
-            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{facultyContributorsCount}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Active Uploaders</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* FILTER & SEARCH TOOLBAR */}
-      {/* ========================================================================= */}
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          {/* Search Box */}
-          <div className="sm:col-span-5 relative">
-            <Search className="absolute left-4 top-3 h-4 w-4 text-slate-400" />
+      {/* Main Table Container */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden space-y-4">
+        {/* Filters Bar */}
+        <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
             <input
               placeholder="Search by title, faculty, or material type..."
               value={searchQuery}
@@ -372,70 +350,55 @@ export default function AnalyticsClient({
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-11 pr-10 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
+              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-slate-900 placeholder:text-slate-400 font-normal transition-all"
             />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setCurrentPage(1);
-                }}
-                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-700 p-0.5 rounded-full hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
           </div>
 
-          {/* Branch Filter */}
-          <div className="sm:col-span-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Branch Filter */}
             <select
               value={selectedBranch}
               onChange={(e) => {
                 setSelectedBranch(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+              className="px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-primary cursor-pointer"
             >
               <option value="ALL">All Branches</option>
               {branches.map((b) => (
                 <option key={b.code} value={b.code}>
-                  {b.code} ({b.name})
+                  {b.code}
                 </option>
               ))}
             </select>
-          </div>
 
-          {/* Semester Filter */}
-          <div className="sm:col-span-2">
+            {/* Semester Filter */}
             <select
               value={selectedSemester}
               onChange={(e) => {
                 setSelectedSemester(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+              className="px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-primary cursor-pointer"
             >
               <option value="ALL">All Semesters</option>
               {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                <option key={s} value={s.toString()}>
+                <option key={s} value={s}>
                   Sem {s}
                 </option>
               ))}
             </select>
-          </div>
 
-          {/* Material Type Filter */}
-          <div className="sm:col-span-2">
+            {/* Category Filter */}
             <select
               value={selectedType}
               onChange={(e) => {
                 setSelectedType(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+              className="px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-primary cursor-pointer"
             >
-              <option value="ALL">All Types</option>
+              <option value="ALL">All Categories</option>
               {materialTypes.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -444,17 +407,13 @@ export default function AnalyticsClient({
             </select>
           </div>
         </div>
-      </div>
 
-      {/* ========================================================================= */}
-      {/* DETAILED MATERIAL ENGAGEMENT DIRECTORY TABLE */}
-      {/* ========================================================================= */}
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs w-full">
+        {/* Table View */}
         {paginatedMaterials.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-xs border-b border-slate-200">
+                <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 pl-6 pr-4">Material Info</th>
                   <th className="py-3.5 px-4">Faculty Uploader</th>
                   <th className="py-3.5 px-4">Academic Scope</th>
@@ -463,50 +422,48 @@ export default function AnalyticsClient({
                   <th className="py-3.5 pl-4 pr-6 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 text-xs font-normal text-slate-700">
                 {paginatedMaterials.map((m) => (
                   <tr key={m.id} className="hover:bg-slate-50/70 transition-colors group">
-                    {/* Material Title & Type */}
-                    <td className="py-3.5 pl-6 pr-4">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-slate-900 text-sm leading-snug group-hover:text-blue-600 transition-colors">
+                    <td className="py-3.5 pl-6 pr-4 max-w-xs sm:max-w-sm">
+                      <div className="space-y-1">
+                        <span className="font-bold text-slate-900 block leading-snug truncate group-hover:text-primary transition-colors">
                           {m.title}
-                        </h3>
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-semibold text-slate-600 inline-block mt-1">
-                          {m.type}
                         </span>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
+                            {m.type}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        </div>
                       </div>
                     </td>
 
-                    {/* Faculty Uploader */}
                     <td className="py-3.5 px-4">
-                      <div className="min-w-0">
-                        <span className="font-semibold text-slate-900 text-xs block">
-                          {m.users?.name || "System Repository"}
-                        </span>
-                        <span className="text-[11px] text-slate-400 font-normal block truncate max-w-[180px]">
-                          {m.users?.email || "-"}
-                        </span>
+                      <div className="space-y-0.5">
+                        <span className="font-semibold text-slate-800 block">{m.users?.name || "Faculty Member"}</span>
+                        <span className="text-[11px] text-slate-400 block truncate max-w-[150px]">{m.users?.email}</span>
                       </div>
                     </td>
 
-                    {/* Scope (Branch & Sem) */}
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-800">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
                           {m.branch}
                         </span>
-                        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
                           Sem {m.semester}
                         </span>
                       </div>
                     </td>
 
-                    {/* Interactive Views Pill (Click to open Drawer in Views mode) */}
+                    {/* Interactive Views Pill */}
                     <td className="py-3.5 px-4 text-center">
                       <button
                         onClick={() => openInspectDrawer(m, "view")}
-                        title="Click to see students who viewed this file"
+                        title="Click to see students who viewed this material"
                         className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all shadow-2xs cursor-pointer group/btn"
                       >
                         <Eye className="h-3.5 w-3.5 text-blue-600 group-hover/btn:scale-110 transition-transform" />
@@ -515,11 +472,11 @@ export default function AnalyticsClient({
                       </button>
                     </td>
 
-                    {/* Interactive Downloads Pill (Click to open Drawer in Downloads mode) */}
+                    {/* Interactive Downloads Pill */}
                     <td className="py-3.5 px-4 text-center">
                       <button
                         onClick={() => openInspectDrawer(m, "download")}
-                        title="Click to see students who downloaded this file"
+                        title="Click to see students who downloaded files"
                         className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all shadow-2xs cursor-pointer group/btn"
                       >
                         <Download className="h-3.5 w-3.5 text-emerald-600 group-hover/btn:scale-110 transition-transform" />
@@ -602,26 +559,9 @@ export default function AnalyticsClient({
                 <ChevronLeft className="h-4 w-4" />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                .map((p, idx, arr) => {
-                  const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
-                  return (
-                    <div key={p} className="flex items-center gap-1.5">
-                      {showEllipsis && <span className="px-1 text-xs text-slate-400 font-normal">...</span>}
-                      <button
-                        onClick={() => setCurrentPage(p)}
-                        className={`w-8 h-8 rounded-full text-xs transition-all cursor-pointer ${
-                          currentPage === p
-                            ? "bg-slate-900 text-white shadow-2xs font-semibold"
-                            : "bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-normal"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    </div>
-                  );
-                })}
+              <span className="text-xs font-semibold px-2 text-slate-700">
+                Page {currentPage} of {totalPages}
+              </span>
 
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
@@ -637,65 +577,70 @@ export default function AnalyticsClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* SLIDE-OVER RIGHT DRAWER: STUDENT ENGAGEMENT ROSTER (VIEWS & DOWNLOADS) */}
+      {/* SLIDE-OVER DRAWER: STUDENT ACCESS ROSTER */}
       {/* ========================================================================= */}
       {isDrawerMounted && inspectingMaterial && (
         <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
           <div
-            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            onClick={closeInspectDrawer}
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 ${
               isDrawerVisible ? "opacity-100" : "opacity-0"
             }`}
-            onClick={closeInspectDrawer}
           />
 
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
             <div
-              data-lenis-prevent
-              className={`w-screen max-w-lg bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
-                isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+              className={`w-screen max-w-lg bg-white border-l border-slate-200 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${
+                isDrawerVisible ? "translate-x-0" : "translate-x-full"
               }`}
             >
               {/* Drawer Header */}
-              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-slate-900 text-white shadow-xs">
-                    <Users className="h-5 w-5" />
+              <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
+                      <Users className="h-4 w-4" />
+                    </div>
+                    <h2 className="text-base font-bold text-slate-900">Student Access Roster</h2>
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 leading-tight">
-                      Student Access Roster
-                    </h3>
-                    <p className="text-xs text-slate-500 font-normal mt-0.5">
-                      Audited student views & download history
-                    </p>
-                  </div>
+                  <p className="text-xs text-slate-500 font-normal">
+                    Audited student views, document previews, and download records.
+                  </p>
                 </div>
 
                 <button
+                  type="button"
                   onClick={closeInspectDrawer}
-                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                  title="Close Roster"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
               {/* Drawer Content */}
-              <div data-lenis-prevent className="px-6 py-5 space-y-4 flex-1 overflow-y-auto overscroll-contain">
-                {/* Material Summary Card */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-                  <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-semibold text-blue-700 inline-block">
-                    {inspectingMaterial.type} • {inspectingMaterial.branch} Sem {inspectingMaterial.semester}
-                  </span>
-                  <h4 className="text-sm font-bold text-slate-900 leading-snug">
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                {/* Material Target Info Summary */}
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                      {inspectingMaterial.type}
+                    </span>
+                    <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                      {inspectingMaterial.branch} • Sem {inspectingMaterial.semester}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug">
                     {inspectingMaterial.title}
-                  </h4>
-                  <p className="text-xs text-slate-500 font-normal">
-                    Uploaded by: <span className="font-semibold text-slate-700">{inspectingMaterial.users?.name || "System"}</span>
-                  </p>
+                  </h3>
+                  <span className="text-[11px] text-slate-400 block font-normal">
+                    Uploaded by: <strong>{inspectingMaterial.users?.name || "Faculty"}</strong>
+                  </span>
                 </div>
 
-                {/* View / Download Filter Tabs */}
-                <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl">
+                {/* Filter Tabs */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
                   <button
                     type="button"
                     onClick={() => setDrawerActiveTab("all")}
@@ -755,7 +700,7 @@ export default function AnalyticsClient({
                 {/* Student Records List */}
                 <div className="space-y-2.5 pt-1">
                   <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-                    <span>Identified Students ({filteredStudentLogs.length})</span>
+                    <span>Identified Interactions ({filteredStudentLogs.length})</span>
                     <button
                       type="button"
                       onClick={handleExportStudentLogsCSV}
@@ -768,16 +713,16 @@ export default function AnalyticsClient({
                   </div>
 
                   {filteredStudentLogs.length > 0 ? (
-                    <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                    <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-1">
                       {filteredStudentLogs.map((log) => {
                         const isDownload = log.action === "download";
 
                         return (
                           <div
                             key={log.id}
-                            className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50/70 transition-all flex items-start justify-between gap-3 group"
+                            className="p-3.5 rounded-2xl border border-slate-200/90 bg-white hover:bg-slate-50/70 transition-all flex items-start justify-between gap-3 group shadow-2xs"
                           >
-                            <div className="space-y-1 min-w-0">
+                            <div className="space-y-1.5 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-bold text-slate-900 text-xs">
                                   {log.studentName}
@@ -791,25 +736,33 @@ export default function AnalyticsClient({
                                 <span className="truncate max-w-[160px]">{log.email}</span>
                                 <span>•</span>
                                 <span className="font-medium text-slate-700">
-                                  {log.branch} Sem {log.semester} Sec {log.section}
+                                  {log.branch} Sem {log.semester}
                                 </span>
                               </div>
+
+                              {/* Exact Action and File Details */}
+                              {log.fileName && (
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200/90 text-[11px] font-medium text-slate-700 max-w-full">
+                                  <FileText className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                  <span className="truncate max-w-[220px]">{log.fileName}</span>
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex flex-col items-end gap-1 shrink-0">
                               {isDownload ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
                                   <Download className="h-3 w-3" />
                                   <span>Downloaded</span>
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
                                   <Eye className="h-3 w-3" />
                                   <span>Viewed</span>
                                 </span>
                               )}
                               <span className="text-[10px] text-slate-400 font-normal">
-                                {new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                {new Date(log.timestamp).toLocaleDateString([], { month: "short", day: "numeric" })} • {new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </span>
                             </div>
                           </div>
@@ -822,7 +775,7 @@ export default function AnalyticsClient({
                         <Users className="h-4 w-4" />
                       </div>
                       <p className="text-xs text-slate-500 font-normal">
-                        No student access records match your filter criteria.
+                        No student access records recorded yet for this material.
                       </p>
                     </div>
                   )}
