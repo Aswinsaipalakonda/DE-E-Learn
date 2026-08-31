@@ -24,6 +24,7 @@ export default function BookmarkButton({ materialId, initialBookmarked }: Bookma
       const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
       stored[materialId] = nextState;
       localStorage.setItem("de_user_bookmarks", JSON.stringify(stored));
+      window.dispatchEvent(new Event("de_bookmark_updated"));
     } catch {}
 
     startTransition(async () => {

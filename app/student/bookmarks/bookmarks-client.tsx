@@ -50,6 +50,7 @@ export default function BookmarksClient({ initialBookmarks }: BookmarksClientPro
       const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
       stored[materialId] = false;
       localStorage.setItem("de_user_bookmarks", JSON.stringify(stored));
+      window.dispatchEvent(new Event("de_bookmark_updated"));
     } catch {}
 
     startTransition(async () => {

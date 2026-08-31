@@ -158,6 +158,12 @@ export default async function MaterialDetailsPage(props: PageProps) {
   }
 
   // Check if bookmarked
+  const cookieVal = cookieStore.get("de_saved_bookmarks")?.value;
+  let savedBookmarkIds: string[] | null = null;
+  if (cookieVal) {
+    try { savedBookmarkIds = JSON.parse(cookieVal); } catch {}
+  }
+
   const { data: bookmark } = await supabase
     .from("bookmarks")
     .select("id")
@@ -165,7 +171,9 @@ export default async function MaterialDetailsPage(props: PageProps) {
     .eq("material_id", id)
     .maybeSingle();
 
-  const isBookmarked = !!bookmark || id === "mock-mat-1" || id === "mock-mat-2";
+  const isBookmarked = savedBookmarkIds !== null
+    ? savedBookmarkIds.includes(id)
+    : !!bookmark;
   const facultyName = material.users?.name || material.facultyName || "Faculty Member";
   const files: MaterialFileItem[] = material.material_files || [];
 

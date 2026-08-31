@@ -206,14 +206,19 @@ export default async function StudentDashboard({
     try { savedBookmarkIds = JSON.parse(cookieVal); } catch {}
   }
 
-  const { count: dbBookmarksCount } = await supabase
+  const { data: dbBookmarks, count: dbBookmarksCount } = await supabase
     .from("bookmarks")
-    .select("*", { count: "exact", head: true })
+    .select("material_id", { count: "exact" })
     .eq("user_id", user.id);
 
-  const displayBookmarksCount = savedBookmarkIds !== null 
-    ? savedBookmarkIds.length 
-    : ((dbBookmarksCount && dbBookmarksCount > 0) ? dbBookmarksCount : 3);
+  let displayBookmarksCount = 0;
+  if (savedBookmarkIds !== null) {
+    displayBookmarksCount = savedBookmarkIds.length;
+  } else if (typeof dbBookmarksCount === "number") {
+    displayBookmarksCount = dbBookmarksCount;
+  } else if (dbBookmarks && Array.isArray(dbBookmarks)) {
+    displayBookmarksCount = dbBookmarks.length;
+  }
 
   // Generate semester tab numbers constrained up to the student's current semester
   const semNumbers = Array.from({ length: maxAllowedSemester }, (_, i) => i + 1);

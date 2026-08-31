@@ -12,22 +12,25 @@ export function StudentBookmarkHeroPill({ initialCount }: StudentBookmarkPillPro
   const [count, setCount] = useState(initialCount);
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
-      const defaultMockIds = ["mock-mat-1", "mock-mat-2", "mock-mat-5"];
-      const activeIds = defaultMockIds.filter((id) => stored[id] !== false);
-      
-      Object.keys(stored).forEach((id) => {
-        if (stored[id] === true && !activeIds.includes(id)) {
-          activeIds.push(id);
-        }
-      });
+    setCount(initialCount);
 
-      if (Object.keys(stored).length > 0) {
-        setCount(activeIds.length);
-      }
-    } catch {}
-  }, []);
+    const handleSync = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
+        const activeCount = Object.values(stored).filter((v) => v === true).length;
+        if (Object.keys(stored).length > 0) {
+          setCount(activeCount);
+        }
+      } catch {}
+    };
+
+    window.addEventListener("de_bookmark_updated", handleSync);
+    window.addEventListener("storage", handleSync);
+    return () => {
+      window.removeEventListener("de_bookmark_updated", handleSync);
+      window.removeEventListener("storage", handleSync);
+    };
+  }, [initialCount]);
 
   return (
     <Link
@@ -44,22 +47,25 @@ export function StudentBookmarkShortcutCard({ initialCount }: StudentBookmarkPil
   const [count, setCount] = useState(initialCount);
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
-      const defaultMockIds = ["mock-mat-1", "mock-mat-2", "mock-mat-5"];
-      const activeIds = defaultMockIds.filter((id) => stored[id] !== false);
-      
-      Object.keys(stored).forEach((id) => {
-        if (stored[id] === true && !activeIds.includes(id)) {
-          activeIds.push(id);
-        }
-      });
+    setCount(initialCount);
 
-      if (Object.keys(stored).length > 0) {
-        setCount(activeIds.length);
-      }
-    } catch {}
-  }, []);
+    const handleSync = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
+        const activeCount = Object.values(stored).filter((v) => v === true).length;
+        if (Object.keys(stored).length > 0) {
+          setCount(activeCount);
+        }
+      } catch {}
+    };
+
+    window.addEventListener("de_bookmark_updated", handleSync);
+    window.addEventListener("storage", handleSync);
+    return () => {
+      window.removeEventListener("de_bookmark_updated", handleSync);
+      window.removeEventListener("storage", handleSync);
+    };
+  }, [initialCount]);
 
   return (
     <Link

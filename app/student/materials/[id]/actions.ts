@@ -31,7 +31,14 @@ export async function toggleBookmark(materialId: string, currentStatus: boolean)
   if (cookieVal) {
     try { savedList = JSON.parse(cookieVal); } catch {}
   } else {
-    savedList = ["mock-mat-1", "mock-mat-2", "mock-mat-5"];
+    // Read from DB
+    const { data: dbBm } = await supabase
+      .from("bookmarks")
+      .select("material_id")
+      .eq("user_id", user.id);
+    if (dbBm && Array.isArray(dbBm)) {
+      savedList = dbBm.map((b) => b.material_id);
+    }
   }
 
   if (currentStatus) {
@@ -47,10 +54,10 @@ export async function toggleBookmark(materialId: string, currentStatus: boolean)
     }
     await supabase
       .from("bookmarks")
-      .insert({
+      .upsert({
         user_id: user.id,
         material_id: materialId,
-      });
+      }, { onConflict: "user_id,material_id" });
   }
 
   cookieStore.set("de_saved_bookmarks", JSON.stringify(savedList), { path: "/", maxAge: 60 * 60 * 24 * 365 });

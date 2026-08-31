@@ -2,8 +2,8 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import BookmarksClient, { BookmarkMaterialItem } from "./bookmarks-client";
 
-const FALLBACK_BOOKMARKS: BookmarkMaterialItem[] = [
-  {
+const SAMPLE_MATERIALS_MAP: Record<string, BookmarkMaterialItem> = {
+  "mock-mat-1": {
     id: "mock-mat-1",
     title: "Database Management Systems (DBMS) - Unit 1 Relational Models",
     type: "Lecture Notes",
@@ -11,7 +11,7 @@ const FALLBACK_BOOKMARKS: BookmarkMaterialItem[] = [
     subjectCode: "23CIC301",
     facultyName: "Dr. P. Satyanarayana",
   },
-  {
+  "mock-mat-2": {
     id: "mock-mat-2",
     title: "Cloud Infrastructure & Distributed Computing - Lab Manual",
     type: "Lab Manual",
@@ -19,7 +19,7 @@ const FALLBACK_BOOKMARKS: BookmarkMaterialItem[] = [
     subjectCode: "23CIC302",
     facultyName: "Dr. K. Srinivas Rao",
   },
-  {
+  "mock-mat-5": {
     id: "mock-mat-5",
     title: "Big Data Processing with Apache Spark - Mid-Term Question Bank",
     type: "Question Bank",
@@ -27,7 +27,7 @@ const FALLBACK_BOOKMARKS: BookmarkMaterialItem[] = [
     subjectCode: "23CIC303",
     facultyName: "Prof. M. V. Ramana",
   },
-];
+};
 
 export default async function BookmarksPage() {
   const cookieStore = await cookies();
@@ -37,7 +37,7 @@ export default async function BookmarksPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Read cookie override if user removed items
+  // Read cookie override if user modified bookmarks
   const cookieVal = cookieStore.get("de_saved_bookmarks")?.value;
   let savedBookmarkIds: string[] | null = null;
   if (cookieVal) {
@@ -50,6 +50,7 @@ export default async function BookmarksPage() {
     .select(`
       id,
       created_at,
+      material_id,
       materials (
         id,
         title,
@@ -60,21 +61,36 @@ export default async function BookmarksPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  const rawBookmarks: BookmarkMaterialItem[] = (dbData || [])
-    .filter((b: any) => b.materials)
-    .map((b: any) => ({
-      id: b.materials.id,
-      title: b.materials.title,
-      type: b.materials.type,
-      subjectTitle: b.materials.subjects?.title || "Department Subject",
-      subjectCode: b.materials.subjects?.code || "",
-      facultyName: "Faculty Member",
-    }));
+  const rawBookmarks: BookmarkMaterialItem[] = [];
+  (dbData || []).forEach((b: any) => {
+    if (b.materials) {
+      rawBookmarks.push({
+        id: b.materials.id,
+        title: b.materials.title,
+        type: b.materials.type,
+        subjectTitle: b.materials.subjects?.title || "Department Subject",
+        subjectCode: b.materials.subjects?.code || "",
+        facultyName: "Faculty Member",
+      });
+    } else if (b.material_id && SAMPLE_MATERIALS_MAP[b.material_id]) {
+      rawBookmarks.push(SAMPLE_MATERIALS_MAP[b.material_id]);
+    }
+  });
 
-  let bookmarks: BookmarkMaterialItem[] = rawBookmarks.length > 0 ? rawBookmarks : FALLBACK_BOOKMARKS;
+  let bookmarks: BookmarkMaterialItem[] = [];
 
   if (savedBookmarkIds !== null) {
-    bookmarks = bookmarks.filter((b) => savedBookmarkIds.includes(b.id));
+    // If cookie is active, resolve items from database or sample map
+    savedBookmarkIds.forEach((id) => {
+      const existing = rawBookmarks.find((b) => b.id === id);
+      if (existing) {
+        bookmarks.push(existing);
+      } else if (SAMPLE_MATERIALS_MAP[id]) {
+        bookmarks.push(SAMPLE_MATERIALS_MAP[id]);
+      }
+    });
+  } else {
+    bookmarks = rawBookmarks;
   }
 
   return <BookmarksClient initialBookmarks={bookmarks} />;
