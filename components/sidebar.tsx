@@ -52,7 +52,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
     ],
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-      { name: "Student Roster", href: "/admin/users", icon: Users },
+      { name: "User Management", href: "/admin/users", icon: Users },
       { name: "Courses & Branches", href: "/admin/taxonomy", icon: Settings },
       { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
       { name: "Usage Metrics", href: "/admin/analytics", icon: BarChart },

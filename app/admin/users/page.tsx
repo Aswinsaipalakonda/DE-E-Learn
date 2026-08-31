@@ -21,6 +21,7 @@ interface UserItem {
   status: "active" | "deactivated";
   branch: string | null;
   current_semester: number | null;
+  section: string | null;
   created_at: string;
 }
 
@@ -36,11 +37,12 @@ export default async function AdminUsersPage() {
   const [usersRes, branchesRes, semestersRes] = await Promise.all([
     supabase
       .from("users")
-      .select("id, email, name, role, status, branch, current_semester, created_at")
+      .select("id, email, name, role, status, branch, current_semester, section, created_at")
       .order("created_at", { ascending: false }),
     supabase.from("branches").select("code, name").eq("active", true),
     supabase.from("semesters").select("number, name").eq("active", true),
   ]);
+
 
   if (usersRes.error) {
     return (

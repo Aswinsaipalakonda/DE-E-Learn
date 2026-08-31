@@ -19,9 +19,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Mail,
-  Filter,
-  CheckCircle2,
-  AlertCircle
+  Plus
 } from "lucide-react";
 
 interface BranchOption {
@@ -42,6 +40,7 @@ interface UserItem {
   status: "active" | "deactivated";
   branch: string | null;
   current_semester: number | null;
+  section: string | null;
   created_at: string;
 }
 
@@ -56,6 +55,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Pagination State
@@ -76,6 +76,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [role, setRole] = useState<"student" | "faculty" | "admin">("student");
   const [branch, setBranch] = useState(branches[0]?.code || "CIC");
   const [semester, setSemester] = useState("1");
+  const [section, setSection] = useState("A"); // Default section "A"
+  const [availableSections, setAvailableSections] = useState<string[]>(["A", "B"]);
+  const [customSectionInput, setCustomSectionInput] = useState("");
+  const [isAddingNewSection, setIsAddingNewSection] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -139,6 +144,15 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     return { total, students, faculty, admins };
   }, [users]);
 
+  // Dynamic unique sections list from users
+  const allKnownSections = useMemo(() => {
+    const secSet = new Set<string>(availableSections);
+    users.forEach((u) => {
+      if (u.section) secSet.add(u.section);
+    });
+    return Array.from(secSet).sort();
+  }, [availableSections, users]);
+
   // Filtered dataset
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -147,11 +161,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         u.email.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRole = roleFilter === "all" ? true : u.role === roleFilter;
       const matchesBranch = branchFilter === "all" ? true : u.branch === branchFilter;
+      const matchesSection = sectionFilter === "all" ? true : u.section === sectionFilter;
       const matchesStatus = statusFilter === "all" ? true : u.status === statusFilter;
 
-      return matchesSearch && matchesRole && matchesBranch && matchesStatus;
+      return matchesSearch && matchesRole && matchesBranch && matchesSection && matchesStatus;
     });
-  }, [users, searchQuery, roleFilter, branchFilter, statusFilter]);
+  }, [users, searchQuery, roleFilter, branchFilter, sectionFilter, statusFilter]);
 
   // Paginated dataset
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
@@ -169,6 +184,21 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     setCurrentPage(1);
+  };
+
+  // Section Add Handler
+  const handleAddCustomSection = () => {
+    const trimmed = customSectionInput.trim().toUpperCase();
+    if (trimmed && !availableSections.includes(trimmed)) {
+      setAvailableSections((prev) => [...prev, trimmed]);
+      setSection(trimmed);
+      setCustomSectionInput("");
+      setIsAddingNewSection(false);
+    } else if (trimmed) {
+      setSection(trimmed);
+      setCustomSectionInput("");
+      setIsAddingNewSection(false);
+    }
   };
 
   // CSV Parser
@@ -213,9 +243,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
     const semNum = role === "student" && semester ? parseInt(semester, 10) : null;
     const branchVal = role === "student" ? branch : null;
+    const sectionVal = role === "student" ? section : null;
 
     try {
-      const result = await createUserAction(email, name, role, branchVal, semNum);
+      const result = await createUserAction(email, name, role, branchVal, semNum, sectionVal);
 
       if (result.error) {
         addToast("error", "Failed to create user", result.error);
@@ -252,6 +283,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         role: (item.role || "student") as "student" | "faculty" | "admin",
         branch: item.branch || null,
         semester: item.semester ? parseInt(item.semester, 10) : null,
+        section: item.section ? item.section.toUpperCase().trim() : "A",
       }))
       .filter((u) => u.email && u.name);
 
@@ -311,7 +343,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     return userName.slice(0, 2).toUpperCase();
   };
 
-  // Avatar & Role Styling Helpers (Clean, distinctive, no weird gradients)
+  // Avatar & Role Styling Helpers
   const getRoleStyle = (userRole: string) => {
     switch (userRole.toLowerCase()) {
       case "student":
@@ -347,7 +379,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       {/* ========================================================================= */}
-      {/* UNIFIED PREMIUM PAGE HEADER */}
+      {/* UNIFIED EXECUTIVE PAGE HEADER */}
       {/* ========================================================================= */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-surface p-6 sm:p-7 rounded-3xl border border-border shadow-xs">
         <div className="space-y-2">
@@ -360,7 +392,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 User Management & Roster
               </h1>
               <p className="text-sm text-primary/60 mt-0.5 font-medium">
-                Provision students, faculty members, and administrators across department specializations.
+                Provision students, faculty members, and administrators with branch, semester, and section cohorts.
               </p>
             </div>
           </div>
@@ -442,10 +474,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           })}
         </div>
 
-        {/* Search, Branch & Status Filters */}
+        {/* Search, Branch, Section & Status Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           {/* Search Box */}
-          <div className="sm:col-span-6 relative">
+          <div className="sm:col-span-5 relative">
             <Search className="absolute left-4 top-3.5 h-4.5 w-4.5 text-primary/40" />
             <input
               placeholder="Search by user name or official email..."
@@ -463,7 +495,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             )}
           </div>
 
-          {/* Branch Specialization Selector */}
+          {/* Branch Filter */}
           <div className="sm:col-span-3">
             <select
               value={branchFilter}
@@ -482,8 +514,27 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             </select>
           </div>
 
+          {/* Section Filter */}
+          <div className="sm:col-span-2">
+            <select
+              value={sectionFilter}
+              onChange={(e) => {
+                setSectionFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-3 text-sm font-semibold bg-bg border border-border rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+            >
+              <option value="all">All Sections</option>
+              {allKnownSections.map((sec) => (
+                <option key={sec} value={sec}>
+                  Section {sec}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Status Selector */}
-          <div className="sm:col-span-3">
+          <div className="sm:col-span-2">
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -493,8 +544,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               className="w-full px-4 py-3 text-sm font-semibold bg-bg border border-border rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
             >
               <option value="all">All Statuses</option>
-              <option value="active">Active Accounts</option>
-              <option value="deactivated">Deactivated Accounts</option>
+              <option value="active">Active</option>
+              <option value="deactivated">Deactivated</option>
             </select>
           </div>
         </div>
@@ -512,7 +563,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   <th className="py-4.5 pl-6 pr-4">User</th>
                   <th className="py-4.5 px-4">Official Email</th>
                   <th className="py-4.5 px-4">Role</th>
-                  <th className="py-4.5 px-4">Scope & Academic Term</th>
+                  <th className="py-4.5 px-4">Scope, Term & Section</th>
                   <th className="py-4.5 px-4">Status</th>
                   <th className="py-4.5 pl-4 pr-6 text-right">Actions</th>
                 </tr>
@@ -559,7 +610,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         </span>
                       </td>
 
-                      {/* Scope & Academic Term */}
+                      {/* Scope, Term & Section */}
                       <td className="py-4 px-4">
                         {u.branch ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -571,6 +622,15 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                                 Sem {u.current_semester}
                               </span>
                             ) : null}
+                            {u.section ? (
+                              <span className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-[11px] font-bold text-primary">
+                                Sec {u.section}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10 text-[11px] font-bold text-primary/70">
+                                Sec A
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-primary/30 font-semibold text-xs">— Department Wide</span>
@@ -629,12 +689,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 No registered accounts match your current filter or search criteria.
               </p>
             </div>
-            {(searchQuery || roleFilter !== "all" || branchFilter !== "all" || statusFilter !== "all") && (
+            {(searchQuery || roleFilter !== "all" || branchFilter !== "all" || sectionFilter !== "all" || statusFilter !== "all") && (
               <button
                 onClick={() => {
                   setSearchQuery("");
                   setRoleFilter("all");
                   setBranchFilter("all");
+                  setSectionFilter("all");
                   setStatusFilter("all");
                   setCurrentPage(1);
                 }}
@@ -651,7 +712,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         {/* ========================================================================= */}
         {filteredUsers.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-border bg-bg/30">
-            {/* Info and Page Size Selector */}
             <div className="flex items-center gap-4 text-xs font-semibold text-primary/60">
               <span>
                 Showing{" "}
@@ -683,7 +743,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </div>
             </div>
 
-            {/* Numeric Page Navigator */}
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -729,7 +788,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE USER) - SMOOTH PREMIUM TRANSITION */}
+      {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE USER) */}
       {/* ========================================================================= */}
       {isDrawerMounted && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -741,7 +800,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             onClick={() => !loading && closeDrawer()}
           />
 
-          {/* Slide Drawer Panel (Slides Right-to-Left on open, Left-to-Right on close) */}
+          {/* Slide Drawer Panel */}
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
             <div
               data-lenis-prevent
@@ -772,7 +831,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 </button>
               </div>
 
-              {/* Drawer Form Body - fully scrollable with mouse wheel, touch & trackpad */}
+              {/* Drawer Form Body */}
               <form 
                 id="create-user-form" 
                 data-lenis-prevent
@@ -850,6 +909,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 {/* Conditional Fields for Students */}
                 {role === "student" && (
                   <div className="space-y-4 pt-1">
+                    {/* Branch */}
                     <div>
                       <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
                         Branch Specialization *
@@ -867,6 +927,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       </select>
                     </div>
 
+                    {/* Semester */}
                     <div>
                       <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-1.5">
                         Current Semester *
@@ -882,6 +943,75 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    {/* Section Selector (Default "A", with "B" and custom addition) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60">
+                          Section Cohort *
+                        </label>
+                        {!isAddingNewSection && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewSection(true)}
+                            className="text-xs font-bold text-secondary hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>Add Section</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Section Pills */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {availableSections.map((sec) => {
+                          const isSecSelected = section === sec;
+                          return (
+                            <button
+                              key={sec}
+                              type="button"
+                              onClick={() => setSection(sec)}
+                              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer ${
+                                isSecSelected
+                                  ? "bg-primary text-white border-primary shadow-2xs"
+                                  : "bg-bg text-primary/70 border-border hover:border-primary/40"
+                              }`}
+                            >
+                              Section {sec}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Inline Input for New Section */}
+                      {isAddingNewSection && (
+                        <div className="flex items-center gap-2 mt-2.5 p-2 bg-bg border border-border rounded-xl animate-in fade-in">
+                          <input
+                            type="text"
+                            maxLength={3}
+                            placeholder="e.g. C"
+                            value={customSectionInput}
+                            onChange={(e) => setCustomSectionInput(e.target.value.toUpperCase())}
+                            className="px-3 py-1.5 text-xs sm:text-sm bg-surface border border-border rounded-lg uppercase font-bold text-primary w-24 focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddCustomSection}
+                            disabled={!customSectionInput.trim()}
+                            className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg cursor-pointer disabled:opacity-40"
+                          >
+                            Add & Select
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewSection(false)}
+                            className="p-1 text-primary/40 hover:text-primary cursor-pointer"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -935,7 +1065,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       )}
 
       {/* ========================================================================= */}
-      {/* BATCH IMPORT CSV MODAL - SMOOTH TRANSITION */}
+      {/* BATCH IMPORT CSV MODAL */}
       {/* ========================================================================= */}
       {isCsvMounted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -984,7 +1114,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   />
                 </label>
                 <span className="text-xs text-primary/50 mt-1 block font-medium">
-                  Required columns: <code>email, name, role, branch, semester</code>
+                  Required columns: <code>email, name, role, branch, semester, section</code>
                 </span>
               </div>
 
@@ -1001,6 +1131,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           <th className="p-3">Name</th>
                           <th className="p-3">Role</th>
                           <th className="p-3">Branch</th>
+                          <th className="p-3">Section</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -1010,6 +1141,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                             <td className="p-3 text-primary/80">{row.name}</td>
                             <td className="p-3 font-bold uppercase">{row.role || "student"}</td>
                             <td className="p-3">{row.branch || "-"}</td>
+                            <td className="p-3">{row.section || "A"}</td>
                           </tr>
                         ))}
                       </tbody>

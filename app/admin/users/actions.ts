@@ -15,7 +15,8 @@ export async function createUserAction(
   name: string,
   role: "student" | "faculty" | "admin",
   branch: string | null,
-  semester: number | null
+  semester: number | null,
+  section?: string | null
 ) {
   const cookieStore = await cookies();
   const adminClient = createServerClient(cookieStore);
@@ -67,6 +68,7 @@ export async function createUserAction(
       status: "active",
       branch: branch || null,
       current_semester: semester || null,
+      section: section ? section.toUpperCase().trim() : null,
       first_login_pending: true,
     })
     .select()
@@ -76,7 +78,7 @@ export async function createUserAction(
     return { error: `Profile creation failed: ${profileError.message}` };
   }
 
-  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester });
+  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester, section });
 
   revalidatePath("/admin/users");
   return { success: true, user: profileData };
@@ -91,6 +93,7 @@ export async function batchCreateUsersAction(
     role: "student" | "faculty" | "admin";
     branch: string | null;
     semester: number | null;
+    section?: string | null;
   }[]
 ) {
   const cookieStore = await cookies();
@@ -147,7 +150,8 @@ export async function batchCreateUsersAction(
           role: item.role,
           status: "active",
           branch: item.branch || null,
-          current_semester: null,
+          current_semester: item.semester || null,
+          section: item.section ? item.section.toUpperCase().trim() : null,
           first_login_pending: true,
         });
 
@@ -168,6 +172,7 @@ export async function batchCreateUsersAction(
   revalidatePath("/admin/users");
   return { successCount, failCount, errors };
 }
+
 
 // Reset User Status / Lock account
 export async function toggleUserStatus(userId: string, currentStatus: string) {
