@@ -61,7 +61,7 @@ export default async function StudentLayout({
   }
 
   const userRole = profile?.role || user.user_metadata?.role || "student";
-  if (userRole !== "student" && userRole !== "admin") {
+  if (userRole !== "student" && userRole !== "admin" && userRole !== "faculty") {
     redirect("/login");
   }
 

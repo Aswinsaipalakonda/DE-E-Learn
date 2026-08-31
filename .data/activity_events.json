@@ -1,5 +1,18 @@
 [
   {
+    "id": "ev-prev-1788190828124-tfup9",
+    "type": "view",
+    "actor_id": "a32adb86-2729-45e3-969c-0787bd9110ae",
+    "target_id": "ed60ad07-aa43-42ad-a673-dbd9b9c3f019",
+    "actor_roll": "23331A4701",
+    "actor_name": "Rahul Varma Datla",
+    "actor_email": "23331a4701@mvgrce.edu.in",
+    "file_id": "db8dd09e-1d96-406c-9769-befa03329bde",
+    "file_name": "Candela_Resume.pdf",
+    "action_detail": "Previewed: Candela_Resume.pdf",
+    "created_at": "2026-08-31T15:40:28.124Z"
+  },
+  {
     "id": "ev-dl-1788189210199-u088l",
     "type": "download",
     "actor_id": "a32adb86-2729-45e3-969c-0787bd9110ae",

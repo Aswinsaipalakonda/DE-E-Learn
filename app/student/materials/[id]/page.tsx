@@ -87,6 +87,19 @@ export default async function MaterialDetailsPage(props: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // Resolve user role
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .or(`id.eq.${user.id},email.eq.${user.email}`)
+    .maybeSingle();
+
+  const userRole = profile?.role || user.user_metadata?.role || "student";
+  const isFaculty = userRole === "faculty";
+  const isAdmin = userRole === "admin";
+  const returnUrl = isFaculty ? "/faculty" : isAdmin ? "/admin/analytics" : "/student";
+  const returnLabel = isFaculty ? "Return to Faculty Dashboard" : isAdmin ? "Return to Analytics" : "Return to Dashboard";
+
   // Query database for material details
   const { data: dbMaterial } = await supabase
     .from("materials")
@@ -107,8 +120,8 @@ export default async function MaterialDetailsPage(props: PageProps) {
     .eq("id", id)
     .maybeSingle();
 
-  // If real material found in database, track view event for the student
-  if (user && dbMaterial) {
+  // If real material found in database, track view event only for students
+  if (user && dbMaterial && userRole === "student") {
     try {
       await supabase.from("activity_events").insert({
         type: "view",
@@ -130,11 +143,11 @@ export default async function MaterialDetailsPage(props: PageProps) {
     return (
       <div className="p-8 max-w-xl mx-auto space-y-4">
         <Link 
-          href="/student" 
+          href={returnUrl} 
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs transition-all shadow-sm"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Return to Dashboard</span>
+          <span>{returnLabel}</span>
         </Link>
         <div role="alert" className="p-6 bg-white border border-slate-200 rounded-3xl shadow-xs text-center space-y-2">
           <p className="text-sm font-bold text-slate-900">Material Document Not Found</p>
@@ -161,11 +174,11 @@ export default async function MaterialDetailsPage(props: PageProps) {
       {/* Navigation Breadcrumb */}
       <div>
         <Link 
-          href="/student" 
+          href={returnUrl} 
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Return to Dashboard</span>
+          <span>{returnLabel}</span>
         </Link>
       </div>
 
