@@ -12,13 +12,17 @@ import {
   Sparkles, 
   ShieldCheck, 
   GraduationCap, 
-  Users, 
-  Database,
-  Bookmark,
-  TrendingUp,
   ChevronRight
 } from "lucide-react";
 import { LandingHeader, LandingHero } from "@/components/landing-hero";
+import { 
+  TechStackMarquee, 
+  BentoGridSection, 
+  HowItWorksSection, 
+  TestimonialsSection, 
+  FAQSection, 
+  PreFooterCTABanner 
+} from "@/components/landing-sections";
 
 export const metadata = {
   title: "Data Engineering Portal | MVGR College of Engineering",
@@ -59,20 +63,25 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-900 selection:bg-slate-900 selection:text-white font-sans antialiased overflow-x-hidden">
       
       {/* ========================================================================= */}
-      {/* HERO-01 INSPIRED FLOATING PILL NAVBAR */}
+      {/* 1. HERO-01 INSPIRED FLOATING PILL NAVBAR */}
       {/* ========================================================================= */}
       <LandingHeader />
 
       {/* ========================================================================= */}
-      {/* HERO-01 ACCENT HERO SECTION */}
+      {/* 2. HERO-01 ACCENT HERO SECTION WITH CRYSTAL WAVE BACKGROUND */}
       {/* ========================================================================= */}
       <main className="flex-1">
         <LandingHero />
 
         {/* ========================================================================= */}
-        {/* KPI METRICS RIBBON */}
+        {/* 3. TECH STACK MARQUEE CLOUD */}
         {/* ========================================================================= */}
-        <section className="py-10 bg-white border-y border-slate-200/80">
+        <TechStackMarquee />
+
+        {/* ========================================================================= */}
+        {/* 4. KPI METRICS RIBBON */}
+        {/* ========================================================================= */}
+        <section className="py-10 bg-white border-b border-slate-200/80">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-100">
               
@@ -101,14 +110,19 @@ export default async function LandingPage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* SPECIALIZATIONS GRID */}
+        {/* 5. BENTO GRID FEATURES SHOWCASE */}
+        {/* ========================================================================= */}
+        <BentoGridSection />
+
+        {/* ========================================================================= */}
+        {/* 6. SPECIALIZATIONS GRID */}
         {/* ========================================================================= */}
         <section id="specializations" className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
             <span className="text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
               Academic Tracks
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
               Data Engineering Specializations
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 font-normal">
@@ -173,65 +187,12 @@ export default async function LandingPage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* STUDY VAULT SHOWCASE SECTION */}
+        {/* 7. HOW IT WORKS 3-STEP PIPELINE */}
         {/* ========================================================================= */}
-        <section id="vault" className="py-16 sm:py-24 bg-white border-t border-slate-200/80">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 sm:space-y-16">
-            
-            <div className="text-center max-w-2xl mx-auto space-y-3">
-              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
-                Purpose-Built Experience
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                Designed for Students & Faculty
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 font-normal">
-                Engineered from the ground up for minimal friction, fast document retrieval, and transparent cohort analytics.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-              
-              {/* Feature 1 */}
-              <div className="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/80 space-y-4 hover:bg-slate-50 transition-all">
-                <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center shadow-xs">
-                  <Layers className="h-5 w-5" />
-                </div>
-                <h3 className="font-bold text-base text-slate-900">Enrolled Semester Filtering</h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                  Students seamlessly toggle between current and completed semesters up to their enrolled term to view verified study resources.
-                </p>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/80 space-y-4 hover:bg-slate-50 transition-all">
-                <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shadow-xs">
-                  <Bookmark className="h-5 w-5 fill-amber-500 text-amber-700" />
-                </div>
-                <h3 className="font-bold text-base text-slate-900">Personal Study Vault</h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                  Save essential lecture units and lab experiments into a dedicated study vault for rapid access during mid-terms and semester exams.
-                </p>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/80 space-y-4 hover:bg-slate-50 transition-all">
-                <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <h3 className="font-bold text-base text-slate-900">Faculty Cohort Matrices</h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                  Teaching faculty manage versioned course material releases and monitor cohort engagement metrics across student roll lists.
-                </p>
-              </div>
-
-            </div>
-
-          </div>
-        </section>
+        <HowItWorksSection />
 
         {/* ========================================================================= */}
-        {/* ROLE PORTAL PATHWAYS */}
+        {/* 8. ROLE PORTAL PATHWAYS */}
         {/* ========================================================================= */}
         <section id="roles" className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="p-8 sm:p-12 rounded-[32px] bg-[#0F172A] text-white border border-slate-800 shadow-xl space-y-8">
@@ -312,31 +273,58 @@ export default async function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* ========================================================================= */}
+        {/* 9. TESTIMONIALS & COHORT ENDORSEMENTS */}
+        {/* ========================================================================= */}
+        <TestimonialsSection />
+
+        {/* ========================================================================= */}
+        {/* 10. INTERACTIVE FAQ ACCORDION */}
+        {/* ========================================================================= */}
+        <FAQSection />
+
+        {/* ========================================================================= */}
+        {/* 11. PRE-FOOTER CTA CONVERSION BANNER */}
+        {/* ========================================================================= */}
+        <PreFooterCTABanner />
       </main>
 
       {/* ========================================================================= */}
-      {/* FOOTER */}
+      {/* 12. INSTITUTIONAL FOOTER */}
       {/* ========================================================================= */}
-      <footer className="bg-white border-t border-slate-200/90 py-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white p-1 border border-slate-200 shrink-0">
-              <Image 
-                src="/De_logo.jpg" 
-                alt="Logo" 
-                width={36} 
-                height={36} 
-                className="object-contain w-full h-full rounded-lg"
-              />
+      <footer className="bg-white border-t border-slate-200/90 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-100 text-center sm:text-left">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-white p-1 border border-slate-200 shadow-2xs shrink-0">
+                <Image 
+                  src="/De_logo.jpg" 
+                  alt="Logo" 
+                  width={40} 
+                  height={40} 
+                  className="object-contain w-full h-full rounded-xl"
+                />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-slate-900 block">Department of Data Engineering</span>
+                <span className="text-xs text-slate-500 block font-medium">Maharaj Vijayaram Gajapathi Raj College of Engineering (Autonomous)</span>
+              </div>
             </div>
-            <div>
-              <span className="text-xs font-bold text-slate-900 block">Department of Data Engineering</span>
-              <span className="text-[11px] text-slate-500 block font-medium">MVGR College of Engineering (Autonomous)</span>
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/login"
+                className="px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all"
+              >
+                Sign In to Portal
+              </Link>
             </div>
           </div>
 
-          <div className="text-xs text-slate-500 font-normal">
-            © {new Date().getFullYear()} MVGR DE E-Learn Portal. All rights reserved.
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
+            <span>UGC Autonomous • NAAC &apos;A&apos; Grade • NBA Accredited</span>
+            <span>© {new Date().getFullYear()} MVGR DE E-Learn Portal. All rights reserved.</span>
           </div>
         </div>
       </footer>
