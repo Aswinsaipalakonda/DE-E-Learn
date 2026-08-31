@@ -15,7 +15,8 @@ import {
   BarChart, 
   History, 
   User, 
-  Megaphone 
+  Megaphone,
+  Sparkles
 } from "lucide-react";
 
 interface SidebarProps {
@@ -58,39 +59,43 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
 
   return (
     <aside
-      className="hidden lg:flex fixed top-0 bottom-0 left-0 z-45 w-64 bg-[#111827] border-r border-[#1f2937] flex-col"
+      className="hidden lg:flex fixed top-0 bottom-0 left-0 z-45 w-64 bg-[#0F172A] border-r border-slate-800 flex-col"
     >
       {/* Brand Header */}
-      <div className="p-6 border-b border-[#1f2937]">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl overflow-hidden border border-[#374151] bg-white p-0.5 shrink-0">
+      <div className="p-5 border-b border-slate-800/80 bg-slate-900/40">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-11 h-11 rounded-2xl bg-white p-1.5 shadow-md shadow-black/30 border border-slate-700/60 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
             <Image
               src="/De_logo.jpg"
-              alt="Logo"
-              width={40}
-              height={40}
-              className="object-contain"
+              alt="Department of Data Engineering Logo"
+              width={44}
+              height={44}
+              priority
+              className="w-full h-full object-contain rounded-xl"
             />
           </div>
-          <div>
-            <span className="font-extrabold text-white text-base tracking-tight block">
+          <div className="min-w-0">
+            <span className="font-bold text-white text-sm tracking-tight block leading-snug truncate group-hover:text-blue-300 transition-colors">
               Data Engineering
             </span>
-            <span className="text-[10px] text-gray-500 font-bold block uppercase tracking-widest">
-              MVGR COLLEGE
-            </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+              <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase block truncate">
+                MVGR College (A)
+              </span>
+            </div>
           </div>
         </Link>
       </div>
 
       {/* User Scope Badge Panel */}
       {userScope && (userScope.branch || userScope.semester) && (
-        <div className="px-6 py-4 border-b border-[#1f2937] bg-[#1f2937]/30">
+        <div className="px-5 py-3.5 border-b border-slate-800/80 bg-slate-900/20">
           <div className="flex flex-col gap-1">
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block">Current Scope</span>
-            <div className="flex flex-wrap gap-1.5 mt-1">
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block">Current Scope</span>
+            <div className="flex flex-wrap gap-1.5 mt-0.5">
               {userScope.branch && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#1f2937] text-gray-300 border border-[#374151]">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
                   {userScope.branch}
                 </span>
               )}
@@ -105,7 +110,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
       )}
 
       {/* Main Navigation Links */}
-      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 px-3.5 py-5 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = item.href === `/${userRole}`
             ? pathname === item.href
@@ -116,13 +121,13 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3.5 px-5 py-3 rounded-full text-sm transition-all duration-200 group ${
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs sm:text-sm transition-all duration-200 group ${
                 isActive 
-                  ? "bg-[#f3f4f6] text-[#111827] shadow-sm font-semibold" 
-                  : "text-gray-400 hover:bg-white/5 hover:text-white font-medium"
+                  ? "bg-white text-slate-900 shadow-sm font-bold" 
+                  : "text-slate-400 hover:bg-white/5 hover:text-white font-medium"
               }`}
             >
-              <Icon className={`h-4.5 w-4.5 transition-colors duration-200 ${isActive ? "text-[#111827]" : "text-gray-400 group-hover:text-white"}`} />
+              <Icon className={`h-4 w-4 transition-colors duration-200 ${isActive ? "text-slate-900" : "text-slate-400 group-hover:text-white"}`} />
               <span>{item.name}</span>
             </Link>
           );
@@ -130,12 +135,12 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
       </nav>
 
       {/* User Signout Footer */}
-      <div className="p-4 border-t border-[#1f2937]">
+      <div className="p-3.5 border-t border-slate-800/80 bg-slate-900/30">
         <button
           onClick={() => signOutAction()}
-          className="w-full flex items-center gap-3 px-5 py-3 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full transition-all duration-200 cursor-pointer"
+          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-2xl transition-all duration-200 cursor-pointer"
         >
-          <LogOut className="h-4.5 w-4.5" />
+          <LogOut className="h-4 w-4" />
           <span>Sign Out</span>
         </button>
       </div>
