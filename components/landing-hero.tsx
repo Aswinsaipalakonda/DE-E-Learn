@@ -24,8 +24,8 @@ export function LandingHeader() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="relative z-40 px-4 sm:px-6 lg:px-8 pt-4 pb-2">
-      <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-2.5 rounded-full bg-white/85 backdrop-blur-md border border-slate-200/80 shadow-xs">
+    <header className="sticky top-0 z-50 px-4 sm:px-6 lg:px-8 pt-3 pb-2 transition-all duration-300">
+      <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-2.5 rounded-full bg-white/90 backdrop-blur-xl border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow">
         
         {/* Brand Identity */}
         <Link href="/" className="flex items-center gap-3 group shrink-0">
