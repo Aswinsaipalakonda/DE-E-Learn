@@ -14,6 +14,7 @@ export interface BranchTrackItem {
   badgeBg: string;
   icon: React.ComponentType<{ className?: string }>;
   highlights: string[];
+  image: string;
 }
 
 export const departmentBranches: BranchTrackItem[] = [
@@ -26,6 +27,7 @@ export const departmentBranches: BranchTrackItem[] = [
     badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
     icon: Shield,
     highlights: ["Network Cryptography", "IoT Embedded Systems", "Ethical Hacking & Defense", "Autonomous Syllabi Sem 1-8"],
+    image: "/cic-track.webp",
   },
   {
     code: "CSD",
@@ -36,6 +38,7 @@ export const departmentBranches: BranchTrackItem[] = [
     badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
     icon: Database,
     highlights: ["Data Warehousing & Mining", "Big Data Analytics", "Statistical Modeling", "Autonomous Syllabi Sem 1-8"],
+    image: "/csd-track.webp",
   },
   {
     code: "CSM",
@@ -46,6 +49,7 @@ export const departmentBranches: BranchTrackItem[] = [
     badgeBg: "bg-indigo-50 text-indigo-700 border-indigo-200",
     icon: Brain,
     highlights: ["Deep Neural Networks", "Computer Vision & NLP", "Reinforcement Learning", "Autonomous Syllabi Sem 1-8"],
+    image: "/csm-track.webp",
   },
 ];
 
@@ -89,41 +93,54 @@ export function Services02Section() {
             
             {/* Left Dynamic Visual Preview Card (5-cols) */}
             <div className="w-full col-span-12 lg:col-span-5">
-              <div className="p-8 rounded-3xl bg-white border border-slate-200/90 shadow-md space-y-6 transition-all duration-300">
+              <div className="rounded-3xl bg-white border border-slate-200/90 shadow-md overflow-hidden flex flex-col justify-between min-h-[380px] transition-all duration-300">
                 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border font-extrabold text-sm", activeBranch.badgeBg)}>
+                {/* Image Container with Smooth Transition */}
+                <div className="relative w-full h-52 bg-slate-100 flex items-center justify-center overflow-hidden border-b border-slate-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={activeBranch.image}
+                    src={activeBranch.image}
+                    alt={`${activeBranch.heading} Preview`}
+                    className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300"
+                    onError={(e) => {
+                      // Fallback visual illustration if file not yet uploaded
+                      const target = e.target as HTMLElement;
+                      target.style.display = "none";
+                      const fallback = target.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = "flex";
+                    }}
+                  />
+                  <div
+                    style={{ display: "none" }}
+                    className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center bg-slate-50"
+                  >
+                    <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border font-extrabold text-lg", activeBranch.badgeBg)}>
                       {activeBranch.code}
                     </div>
-                    <div>
-                      <h4 className="text-base font-bold text-slate-900">{activeBranch.code} Track</h4>
-                      <p className="text-xs text-slate-500 font-medium">{activeBranch.subheading}</p>
-                    </div>
+                    <span className="text-xs font-bold text-slate-700">{activeBranch.heading}</span>
+                    <span className="text-[10px] text-slate-400">Add {activeBranch.image} to public folder</span>
                   </div>
 
-                  <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-700">
-                    <ActiveIcon className="h-5 w-5" />
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Curriculum Pillars
-                  </span>
-                  <div className="grid grid-cols-1 gap-2">
-                    {activeBranch.highlights.map((highlight, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span>{highlight}</span>
-                      </div>
-                    ))}
+                  {/* Top Badge Overlay */}
+                  <div className="absolute top-4 left-4">
+                    <span className={cn("px-3 py-1 rounded-full text-xs font-bold shadow-xs border", activeBranch.badgeBg)}>
+                      {activeBranch.code} Track
+                    </span>
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center justify-between text-xs font-bold text-slate-900 border-t border-slate-100">
-                  <span className="text-slate-500">Autonomous R20/R23</span>
-                  <span className="text-blue-600">8 Semesters Verified</span>
+                {/* Card Information */}
+                <div className="p-6 space-y-4">
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900">{activeBranch.heading}</h4>
+                    <p className="text-xs text-slate-500 font-medium">{activeBranch.subheading}</p>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between text-xs font-bold text-slate-900 border-t border-slate-100">
+                    <span className="text-slate-500">Autonomous R20/R23</span>
+                    <span className="text-blue-600">8 Semesters Verified</span>
+                  </div>
                 </div>
 
               </div>

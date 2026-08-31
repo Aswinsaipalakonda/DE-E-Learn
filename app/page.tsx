@@ -3,17 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { 
-  BookOpen, 
-  ArrowRight, 
-  Layers, 
-  FileText, 
-  CheckCircle2, 
-  Sparkles, 
-  ShieldCheck, 
-  GraduationCap, 
-  ChevronRight
-} from "lucide-react";
+
 import { LandingHeader, LandingHero } from "@/components/landing-hero";
 import { AboutUsSection01 } from "@/components/about-us-section";
 import { BentoGrid01Section } from "@/components/bento-grid-section";
