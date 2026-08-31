@@ -121,7 +121,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs sm:text-sm transition-all duration-200 group ${
+              className={`flex items-center gap-3.5 px-5 py-3 rounded-full text-sm transition-all duration-200 group ${
                 isActive 
                   ? "bg-white text-slate-900 shadow-sm font-bold" 
                   : "text-slate-400 hover:bg-white/5 hover:text-white font-medium"

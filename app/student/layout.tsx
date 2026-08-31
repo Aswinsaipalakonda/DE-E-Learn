@@ -122,9 +122,6 @@ export default async function StudentLayout({
               <span>• Sem {profile?.current_semester || 3}</span>
             </div>
 
-            {/* Notification Bell */}
-            <NotificationBell />
-
             {/* Student Roll Number Badge (Using Primary Theme) */}
             <Link
               href="/student/profile"

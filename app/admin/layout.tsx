@@ -103,13 +103,10 @@ export default async function AdminLayout({
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Notification Bell */}
-            <NotificationBell />
-
             {/* Clean Admin Role Badge */}
             <Link
               href="/admin/profile"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white shadow-2xs hover:bg-slate-800 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-slate-900 text-white shadow-2xs hover:bg-slate-800 transition-all cursor-pointer"
               title="Admin Profile"
             >
               <ShieldCheck className="h-3.5 w-3.5 text-blue-400 shrink-0" />

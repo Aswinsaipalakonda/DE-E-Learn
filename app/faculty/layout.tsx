@@ -122,9 +122,6 @@ export default async function FacultyLayout({
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Notification Bell */}
-            <NotificationBell />
-
             {/* Clean Faculty Role Badge with Real Faculty Name */}
             <Link
               href="/faculty/profile"
