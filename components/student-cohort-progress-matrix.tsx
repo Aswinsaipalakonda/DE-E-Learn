@@ -16,7 +16,10 @@ import {
   Sparkles,
   Users,
   Layers,
-  GraduationCap
+  GraduationCap,
+  LayoutGrid,
+  ListFilter,
+  Check
 } from "lucide-react";
 
 export interface FileInfo {
@@ -75,12 +78,11 @@ interface StudentProgressRecord {
   lastActivityAt?: string;
 }
 
-// Generate complete cohort of roll numbers
+// Generate complete cohort of 71 roll numbers for CIC Semester 3
 function generateCohortRolls(branch: string, semester: number): { roll: string; name: string; section: string }[] {
   const cohort: { roll: string; name: string; section: string }[] = [];
   const b = (branch || "CIC").toUpperCase();
 
-  // Known named students
   const knownStudents: Record<string, string> = {
     "23331A4701": "Rahul Varma Datla",
     "23331A4745": "Aswin Sai Palakonda",
@@ -103,7 +105,6 @@ function generateCohortRolls(branch: string, semester: number): { roll: string; 
       cohort.push({ roll: rollNum, name, section });
     }
   } else if (b === "CSD") {
-    // 68 Students
     for (let i = 1; i <= 68; i++) {
       const rollNum = `23331A05${i < 10 ? "0" + i : i}`;
       const name = knownStudents[rollNum] || `Student ${rollNum.slice(-4)}`;
@@ -111,7 +112,6 @@ function generateCohortRolls(branch: string, semester: number): { roll: string; 
       cohort.push({ roll: rollNum, name, section });
     }
   } else if (b === "CSM") {
-    // 65 Students
     for (let i = 1; i <= 65; i++) {
       const rollNum = `23331A42${i < 10 ? "0" + i : i}`;
       const name = knownStudents[rollNum] || `Student ${rollNum.slice(-4)}`;
@@ -119,7 +119,6 @@ function generateCohortRolls(branch: string, semester: number): { roll: string; 
       cohort.push({ roll: rollNum, name, section });
     }
   } else {
-    // Default 60 Students
     for (let i = 1; i <= 60; i++) {
       const rollNum = `23331A00${i < 10 ? "0" + i : i}`;
       cohort.push({ roll: rollNum, name: `Student ${rollNum.slice(-4)}`, section: "A" });
@@ -138,12 +137,12 @@ export default function StudentCohortProgressMatrix({
   activityLogs,
   uploaderName,
 }: StudentCohortProgressMatrixProps) {
-  const [selectedFileFilter, setSelectedFileFilter] = useState<string>("ALL"); // "ALL" or file_name
+  const [selectedFileFilter, setSelectedFileFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "downloaded" | "viewed" | "not_opened">("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [inspectingStudent, setInspectingStudent] = useState<StudentProgressRecord | null>(null);
 
-  // Material Files normalization
   const normalizedFiles = useMemo(() => {
     if (files && files.length > 0) return files;
     return [
@@ -160,7 +159,8 @@ export default function StudentCohortProgressMatrix({
       const studentEvents = activityLogs.filter(
         (log) =>
           log.rollNumber?.toUpperCase() === c.roll.toUpperCase() ||
-          log.email?.toLowerCase().includes(c.roll.toLowerCase())
+          log.email?.toLowerCase().includes(c.roll.toLowerCase()) ||
+          log.studentName?.toLowerCase().includes(c.roll.toLowerCase())
       );
 
       // Compute status for each file
@@ -199,7 +199,6 @@ export default function StudentCohortProgressMatrix({
         overallStatus = "viewed";
       }
 
-      // Status specifically for currently selected file
       let selectedFileStatus: "downloaded" | "viewed" | "not_opened" = overallStatus;
       if (selectedFileFilter !== "ALL") {
         const targetFs = fileStatuses.find((fs) => fs.fileName === selectedFileFilter);
@@ -231,7 +230,6 @@ export default function StudentCohortProgressMatrix({
     });
   }, [branch, semester, activityLogs, normalizedFiles, selectedFileFilter]);
 
-  // Aggregate Metrics
   const totalCount = cohortRecords.length;
   const downloadedCount = cohortRecords.filter((r) => r.selectedFileStatus === "downloaded").length;
   const viewedCount = cohortRecords.filter((r) => r.selectedFileStatus === "viewed").length;
@@ -241,22 +239,17 @@ export default function StudentCohortProgressMatrix({
   const viewPct = Math.round((viewedCount / totalCount) * 100) || 0;
   const notOpenedPct = 100 - downloadPct - viewPct;
 
-  // Filtered Roster for Grid Display
   const filteredCohort = useMemo(() => {
     return cohortRecords.filter((r) => {
-      // Status filter
       if (statusFilter !== "ALL" && r.selectedFileStatus !== statusFilter) {
         return false;
       }
-
-      // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const rollMatch = r.rollNumber.toLowerCase().includes(q);
         const nameMatch = r.studentName.toLowerCase().includes(q);
         return rollMatch || nameMatch;
       }
-
       return true;
     });
   }, [cohortRecords, statusFilter, searchQuery]);
@@ -270,7 +263,7 @@ export default function StudentCohortProgressMatrix({
       "Branch",
       "Semester",
       "Section",
-      "Overall Status",
+      "Current Status",
       ...normalizedFiles.flatMap((f) => [`${f.file_name} (Viewed)`, `${f.file_name} (Downloaded)`]),
       "Total Views",
       "Total Downloads",
@@ -284,7 +277,7 @@ export default function StudentCohortProgressMatrix({
       `"${r.branch}"`,
       r.semester,
       `"${r.section}"`,
-      r.overallStatus.toUpperCase(),
+      r.selectedFileStatus.toUpperCase(),
       ...r.files.flatMap((f) => [
         f.viewed ? `YES (${f.viewCount})` : "NO",
         f.downloaded ? `YES (${f.downloadCount})` : "NO",
@@ -310,135 +303,153 @@ export default function StudentCohortProgressMatrix({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* ========================================================================= */}
-      {/* 1. MATERIAL & COHORT PROGRESS HEADER */}
+      {/* 1. HERO COHORT ANALYTICS CARD */}
       {/* ========================================================================= */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 bg-white border border-slate-200 px-2.5 py-0.5 rounded-full shadow-2xs">
-                {branch} • Semester {semester} Cohort ({totalCount} Enrolled)
+      <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-xl space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-white border border-white/20">
+                {branch} • Semester {semester}
+              </span>
+              <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-semibold">
+                {totalCount} Enrolled Students
               </span>
               {uploaderName && (
-                <span className="text-xs text-slate-500 font-normal">
-                  Faculty: <strong className="text-slate-800 font-semibold">{uploaderName}</strong>
+                <span className="text-xs text-slate-300 font-normal">
+                  Faculty: <strong className="text-white font-semibold">{uploaderName}</strong>
                 </span>
               )}
             </div>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
+            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               {materialTitle}
-            </h3>
+            </h2>
           </div>
 
           <button
             onClick={handleExportMatrixCSV}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-full shadow-2xs cursor-pointer transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold rounded-full backdrop-blur-md shadow-sm cursor-pointer transition-all self-start sm:self-auto"
           >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
             <span>Export Roster CSV</span>
           </button>
         </div>
 
-        {/* Multi-Segment Cohort Progress Bar */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-slate-600">Cohort Completion Progress</span>
-            <span className="font-bold text-slate-900">{downloadPct}% Downloaded</span>
+        {/* 3 Metric Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {/* Downloaded */}
+          <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 backdrop-blur-md space-y-1">
+            <div className="flex items-center justify-between text-emerald-300 text-xs font-semibold">
+              <span>Downloaded & Completed</span>
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-bold text-white">{downloadedCount}</span>
+              <span className="text-xs text-emerald-300 font-medium">({downloadPct}% of class)</span>
+            </div>
           </div>
 
-          <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden flex shadow-inner">
+          {/* Viewed Only */}
+          <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 backdrop-blur-md space-y-1">
+            <div className="flex items-center justify-between text-amber-300 text-xs font-semibold">
+              <span>Viewed / In Progress</span>
+              <Eye className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-bold text-white">{viewedCount}</span>
+              <span className="text-xs text-amber-300 font-medium">({viewPct}% of class)</span>
+            </div>
+          </div>
+
+          {/* Not Opened */}
+          <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 backdrop-blur-md space-y-1">
+            <div className="flex items-center justify-between text-rose-300 text-xs font-semibold">
+              <span>Pending / Not Opened</span>
+              <MinusCircle className="h-4 w-4 text-rose-400" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-bold text-white">{notOpenedCount}</span>
+              <span className="text-xs text-rose-300 font-medium">({notOpenedPct}% of class)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="space-y-2">
+          <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden flex shadow-inner">
             {downloadPct > 0 && (
               <div 
                 style={{ width: `${downloadPct}%` }} 
-                className="bg-emerald-500 h-full transition-all duration-500" 
-                title={`Downloaded: ${downloadedCount} students (${downloadPct}%)`}
+                className="bg-emerald-400 h-full transition-all duration-500" 
+                title={`Downloaded: ${downloadedCount}`}
               />
             )}
             {viewPct > 0 && (
               <div 
                 style={{ width: `${viewPct}%` }} 
-                className="bg-amber-500 h-full transition-all duration-500" 
-                title={`Viewed Only: ${viewedCount} students (${viewPct}%)`}
+                className="bg-amber-400 h-full transition-all duration-500" 
+                title={`Viewed: ${viewedCount}`}
               />
             )}
             {notOpenedPct > 0 && (
               <div 
                 style={{ width: `${notOpenedPct}%` }} 
-                className="bg-rose-400 h-full transition-all duration-500 opacity-80" 
-                title={`Not Opened: ${notOpenedCount} students (${notOpenedPct}%)`}
+                className="bg-rose-400/80 h-full transition-all duration-500" 
+                title={`Not Opened: ${notOpenedCount}`}
               />
             )}
-          </div>
-
-          {/* Legend / Counters */}
-          <div className="flex items-center gap-4 flex-wrap text-xs pt-1">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-              <span className="font-semibold text-emerald-800">Downloaded ({downloadedCount})</span>
-              <span className="text-slate-400 font-normal">({downloadPct}%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-              <span className="font-semibold text-amber-800">Viewed Only ({viewedCount})</span>
-              <span className="text-slate-400 font-normal">({viewPct}%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0" />
-              <span className="font-semibold text-rose-800">Not Opened ({notOpenedCount})</span>
-              <span className="text-slate-400 font-normal">({notOpenedPct}%)</span>
-            </div>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. FILE SELECTOR TABS */}
+      {/* 2. TARGET DOCUMENT SELECTOR */}
       {/* ========================================================================= */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-          Select Target Document to Audit:
+      <div className="space-y-2">
+        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+          Filter Progress by Specific Document:
         </label>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           <button
             onClick={() => setSelectedFileFilter("ALL")}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-2 ${
               selectedFileFilter === "ALL"
-                ? "bg-slate-900 text-white shadow-xs"
-                : "bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-normal"
+                ? "bg-primary text-white shadow-md"
+                : "bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium shadow-2xs"
             }`}
           >
-            <Layers className="h-3.5 w-3.5" />
-            <span>All Files Combined ({normalizedFiles.length})</span>
+            <Layers className="h-4 w-4" />
+            <span>All Study Files Combined ({normalizedFiles.length})</span>
           </button>
 
           {normalizedFiles.map((f) => (
             <button
               key={f.id}
               onClick={() => setSelectedFileFilter(f.file_name)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-2 ${
                 selectedFileFilter === f.file_name
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-normal"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium shadow-2xs"
               }`}
             >
-              <FileText className="h-3.5 w-3.5" />
-              <span className="truncate max-w-[200px]">{f.file_name}</span>
+              <FileText className="h-4 w-4 text-blue-500" />
+              <span className="truncate max-w-[220px]">{f.file_name}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. STATUS FILTER PILLS & SEARCH BAR */}
+      {/* 3. CONTROLS BAR: STATUS TABS, SEARCH, VIEW MODE */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        {/* Status Filters */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+      <div className="p-4 bg-white rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Status Pills */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 overflow-x-auto">
           <button
             onClick={() => setStatusFilter("ALL")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               statusFilter === "ALL"
                 ? "bg-white text-slate-900 shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
@@ -448,137 +459,245 @@ export default function StudentCohortProgressMatrix({
           </button>
           <button
             onClick={() => setStatusFilter("downloaded")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === "downloaded"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
             <span>Downloaded ({downloadedCount})</span>
           </button>
           <button
             onClick={() => setStatusFilter("viewed")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === "viewed"
                 ? "bg-amber-600 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
             <span>Viewed ({viewedCount})</span>
           </button>
           <button
             onClick={() => setStatusFilter("not_opened")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === "not_opened"
                 ? "bg-rose-600 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
-            <span>Not Opened ({notOpenedCount})</span>
+            <span>Pending ({notOpenedCount})</span>
           </button>
         </div>
 
-        {/* Search Input */}
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            placeholder="Search roll (e.g. 4701, 4745) or name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
-          />
-          {searchQuery && (
+        {/* Search & View Switcher */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              placeholder="Search roll (4701) or name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:border-primary text-slate-900 placeholder:text-slate-400 font-normal transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 p-0.5 rounded-full cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200">
             <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 p-0.5 rounded-full cursor-pointer"
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-xl cursor-pointer transition-all ${
+                viewMode === "grid" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+              }`}
+              title="Grid View"
             >
-              <X className="h-3.5 w-3.5" />
+              <LayoutGrid className="h-4 w-4" />
             </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 rounded-xl cursor-pointer transition-all ${
+                viewMode === "table" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+              }`}
+              title="Table View"
+            >
+              <ListFilter className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4. STUDENT ROLL CARDS MATRIX (GRID VIEW) */}
+      {/* ========================================================================= */}
+      {viewMode === "grid" ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+            <span>Showing {filteredCohort.length} of {totalCount} Students</span>
+            <span className="text-[11px] text-slate-400">Click any card to inspect file breakdown</span>
+          </div>
+
+          {filteredCohort.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[500px] overflow-y-auto p-2 border border-slate-200/80 rounded-3xl bg-slate-50/50 shadow-inner">
+              {filteredCohort.map((student) => {
+                const isDownloaded = student.selectedFileStatus === "downloaded";
+                const isViewed = student.selectedFileStatus === "viewed";
+
+                let borderClasses = "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80 text-slate-700";
+                let badgeClasses = "bg-slate-100 text-slate-600";
+                let statusLabel = "Pending";
+                let StatusIcon = MinusCircle;
+
+                if (isDownloaded) {
+                  borderClasses = "border-emerald-300 bg-emerald-50/80 hover:border-emerald-400 hover:bg-emerald-100/80 text-emerald-950 shadow-xs";
+                  badgeClasses = "bg-emerald-600 text-white font-bold";
+                  statusLabel = "Downloaded";
+                  StatusIcon = CheckCircle2;
+                } else if (isViewed) {
+                  borderClasses = "border-amber-300 bg-amber-50/80 hover:border-amber-400 hover:bg-amber-100/80 text-amber-950 shadow-xs";
+                  badgeClasses = "bg-amber-500 text-white font-bold";
+                  statusLabel = "Viewed";
+                  StatusIcon = Eye;
+                }
+
+                return (
+                  <button
+                    key={student.rollNumber}
+                    onClick={() => setInspectingStudent(student)}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 group relative shadow-2xs hover:scale-[1.02] ${borderClasses}`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-extrabold tracking-tight">
+                        {student.rollNumber}
+                      </span>
+                      <StatusIcon className="h-4 w-4 shrink-0" />
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-semibold truncate block w-full">
+                        {student.studentName}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block">
+                        Sec {student.section}
+                      </span>
+                    </div>
+
+                    <div className="pt-1 flex items-center justify-between border-t border-slate-200/50">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${badgeClasses}`}>
+                        {statusLabel}
+                      </span>
+                      <ChevronRight className="h-3 w-3 text-slate-400 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-16 text-center bg-white border border-slate-200 rounded-3xl p-8 space-y-2">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                <Users className="h-5 w-5" />
+              </div>
+              <p className="text-xs text-slate-500 font-normal">
+                No students match &quot;{statusFilter}&quot; in the cohort.
+              </p>
+            </div>
           )}
         </div>
-      </div>
+      ) : (
+        /* ========================================================================= */
+        /* 5. TABLE VIEW */
+        /* ========================================================================= */
+        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto max-h-[500px]">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider z-10">
+                <tr>
+                  <th className="py-3 pl-6 pr-4">Roll Number</th>
+                  <th className="py-3 px-4">Student Name</th>
+                  <th className="py-3 px-4">Class Section</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-center">Views</th>
+                  <th className="py-3 px-4 text-center">Downloads</th>
+                  <th className="py-3 pl-4 pr-6 text-right">Audit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                {filteredCohort.map((student) => {
+                  const isDownloaded = student.selectedFileStatus === "downloaded";
+                  const isViewed = student.selectedFileStatus === "viewed";
 
-      {/* ========================================================================= */}
-      {/* 4. STUDENT ROLL NUMBER CARDS MATRIX (RED / ORANGE / GREEN) */}
-      {/* ========================================================================= */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-          <span>Showing {filteredCohort.length} of {totalCount} Students in Cohort</span>
-          <span className="text-[11px] text-slate-400">Click any roll card to inspect per-file logs</span>
+                  return (
+                    <tr key={student.rollNumber} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 pl-6 pr-4 font-bold text-slate-900">
+                        {student.rollNumber}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">
+                        {student.studentName}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-medium">
+                          {student.branch} Sem {student.semester} - Sec {student.section}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {isDownloaded ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Downloaded</span>
+                          </span>
+                        ) : isViewed ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-bold">
+                            <Eye className="h-3 w-3" />
+                            <span>Viewed</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-normal">
+                            <MinusCircle className="h-3 w-3" />
+                            <span>Pending</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold text-blue-700">
+                        {student.totalViews}
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold text-emerald-700">
+                        {student.totalDownloads}
+                      </td>
+                      <td className="py-3 pl-4 pr-6 text-right">
+                        <button
+                          onClick={() => setInspectingStudent(student)}
+                          className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-full text-xs cursor-pointer transition-all"
+                        >
+                          Details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        {filteredCohort.length > 0 ? (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[420px] overflow-y-auto p-1.5 border border-slate-100 rounded-2xl bg-slate-50/50">
-            {filteredCohort.map((student) => {
-              const isDownloaded = student.selectedFileStatus === "downloaded";
-              const isViewed = student.selectedFileStatus === "viewed";
-              const isNotOpened = student.selectedFileStatus === "not_opened";
-
-              let colorClasses = "bg-rose-50/80 border-rose-200 text-rose-800 hover:bg-rose-100 hover:border-rose-300";
-              let statusDot = "bg-rose-500";
-              let statusLabel = "Not Opened";
-
-              if (isDownloaded) {
-                colorClasses = "bg-emerald-50/90 border-emerald-300 text-emerald-900 hover:bg-emerald-100 hover:border-emerald-400 shadow-2xs";
-                statusDot = "bg-emerald-600";
-                statusLabel = "Downloaded";
-              } else if (isViewed) {
-                colorClasses = "bg-amber-50/90 border-amber-300 text-amber-900 hover:bg-amber-100 hover:border-amber-400 shadow-2xs";
-                statusDot = "bg-amber-500";
-                statusLabel = "Viewed Only";
-              }
-
-              return (
-                <button
-                  key={student.rollNumber}
-                  onClick={() => setInspectingStudent(student)}
-                  title={`${student.rollNumber} - ${student.studentName} (${statusLabel})`}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 group relative ${colorClasses}`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-[10px] font-bold uppercase tracking-tight">
-                      {student.rollNumber.slice(-4)}
-                    </span>
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot}`} />
-                  </div>
-
-                  <span className="text-[11px] font-semibold truncate block w-full leading-none">
-                    {student.rollNumber}
-                  </span>
-
-                  <span className="text-[9px] truncate opacity-75 block w-full">
-                    {student.studentName.split(" ")[0]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="py-12 text-center bg-white border border-slate-200 rounded-2xl p-6 space-y-2">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
-              <Users className="h-4 w-4" />
-            </div>
-            <p className="text-xs text-slate-500 font-normal">
-              No students match the current filter selection &quot;{statusFilter}&quot;.
-            </p>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* ========================================================================= */}
-      {/* 5. STUDENT DETAILED POPUP / MODAL INSPECTOR */}
+      {/* 6. STUDENT DETAILED PER-FILE AUDIT MODAL */}
       {/* ========================================================================= */}
       {inspectingStudent && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden space-y-5 p-6 animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden space-y-5 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800">
+                  <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold">
                     {inspectingStudent.rollNumber}
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
@@ -586,78 +705,76 @@ export default function StudentCohortProgressMatrix({
                       ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                       : inspectingStudent.overallStatus === "viewed"
                       ? "bg-amber-50 text-amber-800 border-amber-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200"
+                      : "bg-slate-100 text-slate-600 border-slate-200"
                   }`}>
                     {inspectingStudent.overallStatus === "downloaded"
-                      ? "Downloaded"
+                      ? "Downloaded Files"
                       : inspectingStudent.overallStatus === "viewed"
-                      ? "Viewed Only"
-                      : "Not Opened"}
+                      ? "Viewed Material"
+                      : "Pending"}
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">
                   {inspectingStudent.studentName}
                 </h3>
                 <p className="text-xs text-slate-500 font-normal">
-                  {inspectingStudent.email} • {inspectingStudent.branch} Semester {inspectingStudent.semester} (Sec {inspectingStudent.section})
+                  {inspectingStudent.email} • {inspectingStudent.branch} Sem {inspectingStudent.semester} (Sec {inspectingStudent.section})
                 </p>
               </div>
 
               <button
                 onClick={() => setInspectingStudent(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Per-File Access Audit Table */}
+            {/* Per-File Access Audit */}
             <div className="space-y-3">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Per-File Progress & Activity Audit:
+                Per-File Access & Download Breakdown:
               </span>
 
               <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
                 {inspectingStudent.files.map((file) => (
                   <div
                     key={file.fileId}
-                    className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2"
+                    className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/70 space-y-2.5"
                   >
-                    <div className="flex items-center gap-2 justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="h-4 w-4 text-blue-600 shrink-0" />
-                        <span className="text-xs font-bold text-slate-900 truncate">
-                          {file.fileName}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-blue-600 shrink-0" />
+                      <span className="text-xs font-bold text-slate-900 truncate">
+                        {file.fileName}
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 text-xs">
                       {/* View Status */}
-                      <div className="flex items-center gap-1.5">
+                      <div>
                         {file.viewed ? (
-                          <div className="flex items-center gap-1 text-blue-700 font-medium">
-                            <Eye className="h-3.5 w-3.5 text-blue-600" />
+                          <div className="flex items-center gap-1.5 text-blue-700 font-bold">
+                            <Eye className="h-4 w-4 text-blue-600" />
                             <span>Viewed ({file.viewCount}x)</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 text-slate-400 font-normal">
-                            <MinusCircle className="h-3.5 w-3.5" />
+                          <div className="flex items-center gap-1.5 text-slate-400 font-normal">
+                            <MinusCircle className="h-4 w-4" />
                             <span>Not Viewed</span>
                           </div>
                         )}
                       </div>
 
                       {/* Download Status */}
-                      <div className="flex items-center gap-1.5">
+                      <div>
                         {file.downloaded ? (
-                          <div className="flex items-center gap-1 text-emerald-700 font-bold">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                             <span>Downloaded ({file.downloadCount}x)</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 text-slate-400 font-normal">
-                            <MinusCircle className="h-3.5 w-3.5" />
+                          <div className="flex items-center gap-1.5 text-slate-400 font-normal">
+                            <MinusCircle className="h-4 w-4" />
                             <span>Not Downloaded</span>
                           </div>
                         )}
@@ -665,7 +782,7 @@ export default function StudentCohortProgressMatrix({
                     </div>
 
                     {(file.lastViewedAt || file.lastDownloadedAt) && (
-                      <div className="text-[10px] text-slate-400 pt-0.5 flex items-center gap-2">
+                      <div className="text-[10px] text-slate-400 pt-0.5 flex items-center gap-1.5">
                         <Clock className="h-3 w-3" />
                         <span>
                           Last active: {new Date(file.lastDownloadedAt || file.lastViewedAt || "").toLocaleString()}
@@ -677,12 +794,11 @@ export default function StudentCohortProgressMatrix({
               </div>
             </div>
 
-            {/* Modal Footer */}
             <div className="pt-2 flex justify-end">
               <button
                 type="button"
                 onClick={() => setInspectingStudent(null)}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-full cursor-pointer shadow-xs"
+                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-full cursor-pointer shadow-xs"
               >
                 Close Audit
               </button>

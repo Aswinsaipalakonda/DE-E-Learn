@@ -78,25 +78,20 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [downloadingRef, setDownloadingRef] = useState<string | null>(null);
 
-  // Slide-over Engagement Detail Drawer State for Faculty
-  const [isDrawerMounted, setIsDrawerMounted] = useState(false);
-  const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  // Modal State for Cohort Progress Matrix
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [inspectingMaterial, setInspectingMaterial] = useState<MaterialItem | null>(null);
 
   const filteredMaterials = materials.filter(m => m.state === activeTab);
 
-  const openInspectDrawer = (material: MaterialItem) => {
+  const openInspectModal = (material: MaterialItem) => {
     setInspectingMaterial(material);
-    setIsDrawerMounted(true);
-    setTimeout(() => setIsDrawerVisible(true), 10);
+    setIsModalOpen(true);
   };
 
-  const closeInspectDrawer = () => {
-    setIsDrawerVisible(false);
-    setTimeout(() => {
-      setIsDrawerMounted(false);
-      setInspectingMaterial(null);
-    }, 300);
+  const closeInspectModal = () => {
+    setIsModalOpen(false);
+    setInspectingMaterial(null);
   };
 
   const handleStateToggle = async (id: string, newState: "draft" | "published" | "archived") => {
@@ -251,7 +246,7 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
                     {/* Live Student Engagement Metric Pills for Faculty */}
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => openInspectDrawer(m)}
+                        onClick={() => openInspectModal(m)}
                         title="Click to view student progress matrix"
                         className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
                       >
@@ -260,7 +255,7 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
                       </button>
 
                       <button
-                        onClick={() => openInspectDrawer(m)}
+                        onClick={() => openInspectModal(m)}
                         title="Click to view student download matrix"
                         className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
                       >
@@ -304,7 +299,7 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
                   )}
 
                   <button
-                    onClick={() => openInspectDrawer(m)}
+                    onClick={() => openInspectModal(m)}
                     className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <Users className="h-3.5 w-3.5 text-blue-300" />
@@ -454,78 +449,62 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
       )}
 
       {/* ========================================================================= */}
-      {/* SLIDE-OVER DRAWER: STUDENT COHORT PROGRESS MATRIX FOR FACULTY */}
+      {/* FULL-SCREEN RESPONSIVE MODAL: STUDENT COHORT PROGRESS MATRIX FOR FACULTY */}
       {/* ========================================================================= */}
-      {isDrawerMounted && inspectingMaterial && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop */}
-          <div
-            onClick={closeInspectDrawer}
-            className={`fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-300 ${
-              isDrawerVisible ? "opacity-100" : "opacity-0"
-            }`}
-          />
-
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-12">
-            <div
-              className={`w-screen max-w-2xl bg-white border-l border-slate-200 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${
-                isDrawerVisible ? "translate-x-0" : "translate-x-full"
-              }`}
-            >
-              {/* Drawer Header */}
-              <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
-                      <GraduationCap className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-slate-900">
-                        Student Cohort Engagement Matrix
-                      </h2>
-                      <p className="text-xs text-slate-500 font-normal">
-                        Red / Orange / Green progress monitoring with per-file audit trails.
-                      </p>
-                    </div>
-                  </div>
+      {isModalOpen && inspectingMaterial && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 md:p-8 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200">
+                  <GraduationCap className="h-5 w-5" />
                 </div>
-
-                <button
-                  type="button"
-                  onClick={closeInspectDrawer}
-                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
-                  title="Close Matrix"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                    Student Cohort Progress Matrix
+                  </h2>
+                  <p className="text-xs text-slate-500 font-normal">
+                    Real-time class engagement analytics and per-file audit trails.
+                  </p>
+                </div>
               </div>
 
-              {/* Drawer Content: Roster Component */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <StudentCohortProgressMatrix
-                  materialId={inspectingMaterial.id}
-                  materialTitle={inspectingMaterial.title}
-                  branch={inspectingMaterial.branch || "CIC"}
-                  semester={inspectingMaterial.semester || 3}
-                  files={inspectingMaterial.material_files || []}
-                  activityLogs={inspectingMaterial.engagementLogs || []}
-                  uploaderName="You (Faculty)"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={closeInspectModal}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
+                title="Close Modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              {/* Drawer Footer */}
-              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-normal">
-                  Total Captured Events: <strong className="text-slate-900 font-semibold">{inspectingMaterial.engagementLogs?.length || 0}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={closeInspectDrawer}
-                  className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs cursor-pointer"
-                >
-                  Close Matrix
-                </button>
-              </div>
+            {/* Modal Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+              <StudentCohortProgressMatrix
+                materialId={inspectingMaterial.id}
+                materialTitle={inspectingMaterial.title}
+                branch={inspectingMaterial.branch || "CIC"}
+                semester={inspectingMaterial.semester || 3}
+                files={inspectingMaterial.material_files || []}
+                activityLogs={inspectingMaterial.engagementLogs || []}
+                uploaderName="You (Faculty)"
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-500 font-normal">
+                Total Tracked Events: <strong className="text-slate-900 font-semibold">{inspectingMaterial.engagementLogs?.length || 0}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={closeInspectModal}
+                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-full shadow-xs cursor-pointer"
+              >
+                Close Matrix
+              </button>
             </div>
           </div>
         </div>

@@ -3,52 +3,19 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { saveServerActivityEvent } from "@/utils/activity-store";
 
-// Helper to ensure user profile exists in public.users to satisfy foreign key constraints
-async function ensureUserProfile(supabase: any, user: any) {
-  if (!user) return null;
-  const email = user.email || "";
-  const roll = email.includes("@") ? email.split("@")[0].toUpperCase() : "23331A4701";
-  const name = user.user_metadata?.name || `Student ${roll}`;
-  
-  try {
-    await supabase
-      .from("users")
-      .upsert(
-        {
-          id: user.id,
-          email: email,
-          name: name,
-          role: "student",
-          branch: "CIC",
-          current_semester: 3,
-          section: "A",
-          roll_number: roll,
-        },
-        { onConflict: "id" }
-      );
-  } catch (e) {
-    console.warn("User profile upsert notice:", e);
-  }
-}
-
-// Cookie-based fallback event storage to ensure 100% resilient tracking
-function appendActivityCookie(cookieStore: any, event: any) {
-  try {
-    const raw = cookieStore.get("de_live_activity_events")?.value;
-    let events = [];
-    if (raw) {
-      events = JSON.parse(raw);
+// Helper to determine student roll number
+function extractRollNumber(user: any): string {
+  const email = user?.email || "";
+  if (user?.user_metadata?.roll_number) return user.user_metadata.roll_number.toUpperCase();
+  if (email.includes("@")) {
+    const prefix = email.split("@")[0].toUpperCase();
+    if (/^\d{5}[A-Z0-9]{5}$/i.test(prefix) || prefix.startsWith("23")) {
+      return prefix;
     }
-    events.unshift(event);
-    if (events.length > 500) events = events.slice(0, 500);
-    cookieStore.set("de_live_activity_events", JSON.stringify(events), {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
-  } catch (err) {
-    console.warn("Activity cookie append notice:", err);
   }
+  return "23331A4701";
 }
 
 // Toggle Bookmark Status for a Material
@@ -102,41 +69,41 @@ export async function trackMaterialPageView(materialId: string, materialTitle?: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  await ensureUserProfile(supabase, user);
-  const email = user.email || "";
-  const roll = email.includes("@") ? email.split("@")[0].toUpperCase() : "23331A4701";
+  const roll = extractRollNumber(user);
+  const email = user.email || `${roll.toLowerCase()}@mvgrce.edu.in`;
+  const name = user.user_metadata?.name || `Student ${roll}`;
 
-  const eventPayload = {
-    id: `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+  // 1. Save directly to server persistent store
+  saveServerActivityEvent({
+    id: `ev-view-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     type: "view",
     actor_id: user.id,
     target_id: materialId,
-    actor_email: email,
     actor_roll: roll,
-    metadata: {
-      action: "material_page_view",
-      material_title: materialTitle || "Course Study Material",
-      roll_number: roll,
-      email: email,
-    },
+    actor_name: name,
+    actor_email: email,
+    action_detail: "Viewed Material Workspace",
     created_at: new Date().toISOString(),
-  };
+  });
 
-  appendActivityCookie(cookieStore, eventPayload);
-
+  // 2. Also try inserting to Supabase activity_events
   try {
-    await supabase
-      .from("activity_events")
-      .insert({
-        type: "view",
-        actor_id: user.id,
-        target_id: materialId,
-        metadata: eventPayload.metadata,
-      });
-  } catch (err) {
-    console.warn("Failed to insert page view event:", err);
-  }
+    await supabase.from("activity_events").insert({
+      type: "view",
+      actor_id: user.id,
+      target_id: materialId,
+      metadata: {
+        action: "material_page_view",
+        material_title: materialTitle || "Course Study Material",
+        roll_number: roll,
+        email: email,
+        student_name: name,
+      },
+    });
+  } catch {}
 
+  revalidatePath("/admin/analytics");
+  revalidatePath("/faculty/materials");
   return { success: true };
 }
 
@@ -148,41 +115,45 @@ export async function trackDownloadAndGetUrl(fileId: string, materialId: string,
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  await ensureUserProfile(supabase, user);
-  const email = user.email || "";
-  const roll = email.includes("@") ? email.split("@")[0].toUpperCase() : "23331A4701";
+  const roll = extractRollNumber(user);
+  const email = user.email || `${roll.toLowerCase()}@mvgrce.edu.in`;
+  const name = user.user_metadata?.name || `Student ${roll}`;
+  const targetFileName = fileName || "Study Document";
 
-  const eventPayload = {
-    id: `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+  // 1. Save directly to server persistent store
+  saveServerActivityEvent({
+    id: `ev-dl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     type: "download",
     actor_id: user.id,
     target_id: materialId,
-    actor_email: email,
     actor_roll: roll,
-    metadata: { 
-      file_id: fileId,
-      file_name: fileName || "Study Document",
-      action: "file_download",
-      roll_number: roll,
-      email: email,
-    },
+    actor_name: name,
+    actor_email: email,
+    file_id: fileId,
+    file_name: targetFileName,
+    action_detail: `Downloaded: ${targetFileName}`,
     created_at: new Date().toISOString(),
-  };
+  });
 
-  appendActivityCookie(cookieStore, eventPayload);
-
+  // 2. Also try inserting to Supabase activity_events
   try {
-    await supabase
-      .from("activity_events")
-      .insert({
-        type: "download",
-        actor_id: user.id,
-        target_id: materialId,
-        metadata: eventPayload.metadata,
-      });
-  } catch (err) {
-    console.warn("Activity download log notice:", err);
-  }
+    await supabase.from("activity_events").insert({
+      type: "download",
+      actor_id: user.id,
+      target_id: materialId,
+      metadata: {
+        file_id: fileId,
+        file_name: targetFileName,
+        action: "file_download",
+        roll_number: roll,
+        email: email,
+        student_name: name,
+      },
+    });
+  } catch {}
+
+  revalidatePath("/admin/analytics");
+  revalidatePath("/faculty/materials");
 
   // If storageRef is mock "#", provide simulated download link
   if (!storageRef || storageRef === "#") {
@@ -209,42 +180,46 @@ export async function trackPreviewAndGetUrl(fileId: string, materialId: string, 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  await ensureUserProfile(supabase, user);
-  const email = user.email || "";
-  const roll = email.includes("@") ? email.split("@")[0].toUpperCase() : "23331A4701";
+  const roll = extractRollNumber(user);
+  const email = user.email || `${roll.toLowerCase()}@mvgrce.edu.in`;
+  const name = user.user_metadata?.name || `Student ${roll}`;
+  const targetFileName = fileName || "Study Document";
 
-  const eventPayload = {
-    id: `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+  // 1. Save directly to server persistent store
+  saveServerActivityEvent({
+    id: `ev-prev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     type: "view",
     actor_id: user.id,
     target_id: materialId,
-    actor_email: email,
     actor_roll: roll,
-    metadata: { 
-      file_id: fileId,
-      file_name: fileName || "Study Document",
-      action: "file_preview",
-      mode: "preview_modal",
-      roll_number: roll,
-      email: email,
-    },
+    actor_name: name,
+    actor_email: email,
+    file_id: fileId,
+    file_name: targetFileName,
+    action_detail: `Previewed: ${targetFileName}`,
     created_at: new Date().toISOString(),
-  };
+  });
 
-  appendActivityCookie(cookieStore, eventPayload);
-
+  // 2. Also try inserting to Supabase activity_events
   try {
-    await supabase
-      .from("activity_events")
-      .insert({
-        type: "view",
-        actor_id: user.id,
-        target_id: materialId,
-        metadata: eventPayload.metadata,
-      });
-  } catch (err) {
-    console.warn("Activity preview log notice:", err);
-  }
+    await supabase.from("activity_events").insert({
+      type: "view",
+      actor_id: user.id,
+      target_id: materialId,
+      metadata: {
+        file_id: fileId,
+        file_name: targetFileName,
+        action: "file_preview",
+        mode: "preview_modal",
+        roll_number: roll,
+        email: email,
+        student_name: name,
+      },
+    });
+  } catch {}
+
+  revalidatePath("/admin/analytics");
+  revalidatePath("/faculty/materials");
 
   if (!storageRef || storageRef === "#") {
     return { previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" };
