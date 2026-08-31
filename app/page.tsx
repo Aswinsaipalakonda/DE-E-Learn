@@ -8,12 +8,23 @@ import {
   ArrowRight, 
   Layers, 
   FileText, 
-  CheckCircle, 
+  CheckCircle2, 
+  Sparkles, 
+  ShieldCheck, 
+  GraduationCap, 
+  Users, 
   Database,
-  GraduationCap,
-  Users,
-  Compass
+  Bookmark,
+  TrendingUp,
+  DownloadCloud,
+  ChevronRight,
+  ExternalLink
 } from "lucide-react";
+
+export const metadata = {
+  title: "Data Engineering Portal | MVGR College of Engineering",
+  description: "Official E-Learning and Academic Materials Portal for the Department of Data Engineering, MVGR College of Engineering (Autonomous).",
+};
 
 export default async function LandingPage() {
   const cookieStore = await cookies();
@@ -46,253 +57,498 @@ export default async function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg flex flex-col text-primary selection:bg-secondary/20 font-sans">
-      {/* Header */}
-      <header className="sticky top-0 z-40 w-full bg-surface/80 backdrop-blur-md border-b border-border transition-all">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-white border border-border p-0.5 shadow-xs overflow-hidden shrink-0">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-900 selection:bg-slate-900 selection:text-white font-sans antialiased overflow-x-hidden">
+      
+      {/* ========================================================================= */}
+      {/* TOP INSTITUTIONAL NAVIGATION BAR */}
+      {/* ========================================================================= */}
+      <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+          
+          {/* Logo & Department Identity */}
+          <Link href="/" className="flex items-center gap-3.5 group">
+            <div className="w-11 h-11 rounded-2xl bg-white p-1.5 shadow-sm border border-slate-200/90 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
               <Image 
-                src="/icon.jpg" 
-                alt="MVGR Logo" 
-                width={36} 
-                height={36} 
-                className="object-contain w-full h-full rounded-lg"
+                src="/De_logo.jpg" 
+                alt="Department of Data Engineering Logo" 
+                width={44} 
+                height={44} 
+                priority
+                className="object-contain w-full h-full rounded-xl"
               />
             </div>
             <div>
-              <span className="font-extrabold text-sm block tracking-tight text-primary leading-tight group-hover:text-secondary transition-colors">
+              <span className="font-bold text-sm sm:text-base block tracking-tight text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
                 Data Engineering
               </span>
-              <span className="text-[10px] text-primary/50 block font-bold tracking-widest uppercase leading-none mt-0.5">
-                MVGR College
-              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <span className="text-[10px] sm:text-[11px] text-slate-500 font-semibold tracking-wider uppercase block">
+                  MVGR College (Autonomous)
+                </span>
+              </div>
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-xs font-bold text-primary/70">
-            <a href="#about" className="hover:text-primary transition-colors">About Department</a>
-            <a href="#insights" className="hover:text-primary transition-colors">Insights</a>
-            <a href="#features" className="hover:text-primary transition-colors">Features</a>
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-600">
+            <a href="#specializations" className="hover:text-slate-900 transition-colors">Specializations</a>
+            <a href="#features" className="hover:text-slate-900 transition-colors">Portal Features</a>
+            <a href="#curriculum" className="hover:text-slate-900 transition-colors">Curriculum</a>
+            <a href="#roles" className="hover:text-slate-900 transition-colors">Role Portals</a>
           </nav>
 
-          <div>
+          {/* Action Sign In Button */}
+          <div className="flex items-center gap-3">
             <Link 
               href="/login" 
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#111827] hover:bg-black text-white text-xs font-bold shadow-sm transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0F172A] hover:bg-[#1E293B] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-slate-900/10 transition-all cursor-pointer"
             >
-              <span>Sign In Portal</span>
+              <span>Sign In to Portal</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* ========================================================================= */}
+      {/* MAIN HERO SECTION */}
+      {/* ========================================================================= */}
       <main className="flex-1">
-        <section className="relative overflow-hidden pt-20 pb-16 lg:pt-28 lg:pb-24">
-          {/* Decorative Background Blob */}
-          <div className="absolute top-0 right-0 -z-10 w-96 h-96 bg-gradient-to-br from-secondary/10 to-accent/5 rounded-full blur-3xl opacity-70 pointer-events-none" />
-          <div className="absolute -bottom-10 left-10 -z-10 w-80 h-80 bg-gradient-to-tr from-primary/5 to-secondary/5 rounded-full blur-3xl opacity-50 pointer-events-none" />
+        <section className="relative pt-12 pb-16 sm:pt-16 sm:pb-24 lg:pt-24 lg:pb-32 overflow-hidden">
+          
+          {/* Subtle Ambient Depth (Clean Slate & Light Blue Only) */}
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 -z-10 w-[750px] h-[350px] bg-blue-50/70 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Content */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-black uppercase tracking-wider">
-                <Database className="h-3 w-3" /> MVGR DE E-Learn Repository
-              </span>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-primary">
-                The Next Generation of <br />
-                <span className="bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
-                  Data Engineering
-                </span> E-Learning
-              </h1>
-              <p className="text-sm md:text-base text-primary/60 max-w-xl mx-auto lg:mx-0 font-medium leading-relaxed">
-                Unlock exclusive lecture notes, lab manuals, syllabus components, and reference guides designed specifically for the Data Engineering department at MVGR College of Engineering.
-              </p>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+              
+              {/* Left Column: Hero Copy & Actions */}
+              <div className="lg:col-span-7 space-y-6 sm:space-y-7 text-center lg:text-left">
+                
+                {/* Accreditation Pill */}
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/80 border border-blue-200/80 text-blue-800 text-xs font-semibold shadow-2xs">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Department of Data Engineering • Academic Learning Cloud</span>
+                </div>
 
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
-                <Link 
-                  href="/login"
-                  className="px-6 py-3 rounded-full bg-[#111827] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 group cursor-pointer"
-                >
-                  Access Study Portal
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <a 
-                  href="#about"
-                  className="px-6 py-3 rounded-full bg-surface border border-border text-primary/80 hover:text-primary hover:border-secondary text-xs font-bold transition-all"
-                >
-                  Learn More
-                </a>
+                {/* Main Headline */}
+                <h1 className="text-3xl sm:text-5xl lg:text-[3.4rem] font-extrabold text-slate-900 tracking-tight leading-[1.15]">
+                  Curated Course Notes, Lab Manuals & Question Banks.
+                </h1>
+
+                {/* Subtitle */}
+                <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
+                  The centralized academic intelligence repository for MVGR Data Engineering. Students access verified semester syllabus materials, offline study vaults, and interactive cohort trackers.
+                </p>
+
+                {/* Call-to-Action Group */}
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 pt-2">
+                  <Link 
+                    href="/login"
+                    className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-[#0F172A] hover:bg-[#1E293B] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-lg shadow-slate-900/15 transition-all cursor-pointer group"
+                  >
+                    <span>Access Student Portal</span>
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+
+                  <a 
+                    href="#features"
+                    className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs sm:text-sm font-semibold transition-all shadow-xs"
+                  >
+                    <span>Explore Features</span>
+                  </a>
+                </div>
+
+                {/* Institutional Highlights Checklist */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-200/70 max-w-xl mx-auto lg:mx-0 text-left">
+                  <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span>UGC Autonomous</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                    <span>NAAC &apos;A&apos; Accredited</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600 shrink-0" />
+                    <span>NBA Compliant</span>
+                  </div>
+                </div>
+
               </div>
-            </div>
 
-            {/* Right Card / Visual Section */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="relative w-full max-w-sm bg-surface p-8 rounded-3xl border border-border shadow-md space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-border">
-                  <span className="text-xs font-black text-primary/45 uppercase tracking-wider">Course Catalogue</span>
-                  <span className="px-2 py-0.5 rounded-md bg-success/15 text-success text-[10px] font-bold">Live Portal</span>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3.5 p-3 rounded-xl bg-bg/50 border border-border/60">
-                    <div className="w-8 h-8 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center font-bold">
-                      CIC
+              {/* Right Column: Premium High-Definition Mockup Card Showcase */}
+              <div className="lg:col-span-5 flex justify-center">
+                <div className="w-full max-w-md bg-white rounded-3xl sm:rounded-[32px] border border-slate-200/90 shadow-[0_20px_50px_rgba(0,0,0,0.06)] p-6 sm:p-7 space-y-5 relative">
+                  
+                  {/* Card Header Badge */}
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-xs border border-blue-200">
+                        DE
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900">Academic Study Vault</h4>
+                        <p className="text-[10px] text-slate-500">Live Semester Repositories</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-primary/40 block font-bold uppercase leading-none">Branch Code</span>
-                      <span className="text-xs font-bold text-primary block mt-0.5">Cyber Security & IoT</span>
-                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Active 2026
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-3.5 p-3 rounded-xl bg-bg/50 border border-border/60">
-                    <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center font-bold">
-                      CSD
+                  {/* Mockup Subject Items */}
+                  <div className="space-y-2.5">
+                    
+                    {/* Item 1 */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 hover:bg-slate-50 transition-all flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-100/70 text-blue-800 flex items-center justify-center shrink-0">
+                          <BookOpen className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">23CIC301</span>
+                            <span className="text-[10px] font-semibold text-slate-500">Unit 1 - 5</span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-900 mt-0.5 group-hover:text-blue-700 transition-colors">
+                            Database Management Systems
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-800 transition-colors" />
                     </div>
-                    <div>
-                      <span className="text-[10px] text-primary/40 block font-bold uppercase leading-none">Branch Code</span>
-                      <span className="text-xs font-bold text-primary block mt-0.5">Data Science Spec</span>
+
+                    {/* Item 2 */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 hover:bg-slate-50 transition-all flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-100/70 text-emerald-800 flex items-center justify-center shrink-0">
+                          <Layers className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">23CIC302</span>
+                            <span className="text-[10px] font-semibold text-slate-500">Lab Manual</span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-900 mt-0.5 group-hover:text-emerald-700 transition-colors">
+                            Cloud Infrastructure & DevOps
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-800 transition-colors" />
                     </div>
+
+                    {/* Item 3 */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 hover:bg-slate-50 transition-all flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center shrink-0">
+                          <Bookmark className="h-4 w-4 fill-amber-600 text-amber-700" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">23CIC303</span>
+                            <span className="text-[10px] font-semibold text-slate-500">Question Bank</span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-900 mt-0.5 group-hover:text-amber-800 transition-colors">
+                            Big Data Processing & Spark
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-800 transition-colors" />
+                    </div>
+
                   </div>
 
-                  <div className="flex items-center gap-3.5 p-3 rounded-xl bg-bg/50 border border-border/60">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
-                      CSM
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-primary/40 block font-bold uppercase leading-none">Branch Code</span>
-                      <span className="text-xs font-bold text-primary block mt-0.5">AI & Machine Learning</span>
-                    </div>
+                  {/* Micro Footer Badge */}
+                  <div className="pt-3 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck className="h-4 w-4 text-blue-600" />
+                      Role-Verified Access
+                    </span>
+                    <span className="font-semibold text-slate-700">8 Semesters Ready</span>
                   </div>
-                </div>
 
-                <div className="pt-2 flex items-center justify-between text-[10px] font-bold text-primary/50">
-                  <span className="flex items-center gap-1"><CheckCircle className="h-3.5 w-3.5 text-success" /> Syllabus Aligned</span>
-                  <span className="flex items-center gap-1"><CheckCircle className="h-3.5 w-3.5 text-success" /> 24/7 Access</span>
                 </div>
               </div>
+
             </div>
           </div>
         </section>
 
-        {/* Insights / Stats Section */}
-        <section id="insights" className="py-12 bg-surface border-y border-border">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center divide-y sm:divide-y-0 sm:divide-x divide-border">
-              <div className="py-4">
-                <span className="text-3xl lg:text-4xl font-black text-primary block">3+</span>
-                <span className="text-[10px] font-bold text-primary/50 uppercase tracking-widest block mt-2">Data Engineering Branches</span>
+        {/* ========================================================================= */}
+        {/* KPI METRICS RIBBON */}
+        {/* ========================================================================= */}
+        <section className="py-10 bg-white border-y border-slate-200/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-100">
+              
+              <div className="pt-4 md:pt-0">
+                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 block tracking-tight">3+</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mt-1">Specialized Branches</span>
               </div>
-              <div className="py-4">
-                <span className="text-3xl lg:text-4xl font-black text-secondary block">100%</span>
-                <span className="text-[10px] font-bold text-primary/50 uppercase tracking-widest block mt-2">MVGR Syllabus Compliant</span>
+
+              <div className="pt-4 md:pt-0">
+                <span className="text-3xl sm:text-4xl font-extrabold text-blue-600 block tracking-tight">8</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mt-1">Curriculum Semesters</span>
               </div>
-              <div className="py-4">
-                <span className="text-3xl lg:text-4xl font-black text-accent block">24/7</span>
-                <span className="text-[10px] font-bold text-primary/50 uppercase tracking-widest block mt-2">Cloud Availability</span>
+
+              <div className="pt-4 md:pt-0">
+                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 block tracking-tight">100%</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mt-1">Faculty Verified Notes</span>
               </div>
+
+              <div className="pt-4 md:pt-0">
+                <span className="text-3xl sm:text-4xl font-extrabold text-emerald-600 block tracking-tight">24/7</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mt-1">Instant Cloud Downloads</span>
+              </div>
+
             </div>
           </div>
         </section>
 
-        {/* About the Department */}
-        <section id="about" className="py-16 lg:py-24">
-          <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-5 flex justify-center order-2 lg:order-1">
-              <div className="w-16 h-16 rounded-full bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
-                <GraduationCap className="h-8 w-8" />
+        {/* ========================================================================= */}
+        {/* SPECIALIZATIONS GRID */}
+        {/* ========================================================================= */}
+        <section id="specializations" className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
+            <span className="text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+              Academic Tracks
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              Data Engineering Specializations
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 font-normal">
+              Structured course material taxonomies aligned with autonomous department curricula.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+            
+            {/* Card 1: CIC */}
+            <div className="p-7 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-blue-300 transition-all space-y-5 group">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold text-sm border border-blue-200 group-hover:scale-105 transition-transform">
+                CIC
               </div>
-              <div className="ml-4 space-y-3">
-                <h3 className="text-lg font-bold text-primary">Department Vision</h3>
-                <p className="text-xs text-primary/60 leading-relaxed font-semibold">
-                  To nurture proficient engineers capable of solving complex data processing challenges and building secure, scalable engineering systems.
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-slate-900">Cyber Security & IoT</h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                  In-depth course repositories covering cryptographic protocols, threat intelligence, secure hardware interfaces, and embedded IoT architectures.
                 </p>
               </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-700">
+                <span>Semester 1 to 8 Syllabi</span>
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
 
-            <div className="lg:col-span-7 space-y-6 order-1 lg:order-2">
-              <span className="text-[10px] font-black uppercase tracking-wider bg-accent/15 text-accent px-2.5 py-0.5 rounded-full inline-block">
-                MVGR COLLEGE OF ENGINEERING
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-primary tracking-tight">
-                Empowering the Future of Computing
-              </h2>
-              <p className="text-xs sm:text-sm text-primary/65 leading-relaxed font-semibold">
-                MVGR Data Engineering delivers state-of-the-art academic instruction covering Cyber Security, IoT, Data Science, and Machine Learning. The portal acts as a central hub where professors upload validated materials, and students access resources on the fly to accelerate their learning curve.
-              </p>
+            {/* Card 2: CSD */}
+            <div className="p-7 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all space-y-5 group">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-extrabold text-sm border border-emerald-200 group-hover:scale-105 transition-transform">
+                CSD
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-slate-900">Data Science Specialization</h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                  Comprehensive notes and lab manuals on distributed computing, Apache Spark clusters, predictive statistics, and high-throughput data warehousing.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-700">
+                <span>Semester 1 to 8 Syllabi</span>
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
+
+            {/* Card 3: CSM */}
+            <div className="p-7 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all space-y-5 group">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-extrabold text-sm border border-indigo-200 group-hover:scale-105 transition-transform">
+                CSM
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-slate-900">AI & Machine Learning</h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                  Structured learning materials spanning deep neural networks, transformer architectures, reinforcement learning models, and computer vision pipelines.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-indigo-700">
+                <span>Semester 1 to 8 Syllabi</span>
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
           </div>
         </section>
 
-        {/* Key Features section */}
-        <section id="features" className="py-16 bg-bg/50 border-t border-border">
-          <div className="max-w-7xl mx-auto px-6 space-y-12">
-            <div className="text-center max-w-xl mx-auto space-y-2">
-              <h2 className="text-2xl font-black text-primary tracking-tight">Curated Portal Features</h2>
-              <p className="text-xs text-primary/50 font-semibold">Our platform is tailored to ensure quick access and minimal friction.</p>
+        {/* ========================================================================= */}
+        {/* KEY PLATFORM FEATURES */}
+        {/* ========================================================================= */}
+        <section id="features" className="py-16 sm:py-24 bg-white border-t border-slate-200/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 sm:space-y-16">
+            
+            <div className="text-center max-w-2xl mx-auto space-y-3">
+              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+                Purpose-Built Experience
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                Designed for Students & Faculty
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 font-normal">
+                Engineered from the ground up for minimal friction, fast document retrieval, and transparent cohort analytics.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="p-6 bg-surface border border-border rounded-2xl space-y-4 hover:border-secondary transition-all">
-                <div className="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+              
+              {/* Feature 1 */}
+              <div className="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/80 space-y-4 hover:bg-slate-50 transition-all">
+                <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center shadow-xs">
                   <Layers className="h-5 w-5" />
                 </div>
-                <h3 className="font-bold text-sm text-primary">Interactive Semester Filtering</h3>
-                <p className="text-xs text-primary/60 leading-relaxed font-semibold">
-                  Select your current semester (Semester 1 to 8) from the dashboard to filter study materials on the fly.
+                <h3 className="font-bold text-base text-slate-900">Enrolled Semester Filtering</h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                  Students seamlessly toggle between current and completed semesters up to their enrolled term to view verified study resources.
                 </p>
               </div>
 
-              <div className="p-6 bg-surface border border-border rounded-2xl space-y-4 hover:border-accent transition-all">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
-                  <FileText className="h-5 w-5" />
+              {/* Feature 2 */}
+              <div className="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/80 space-y-4 hover:bg-slate-50 transition-all">
+                <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shadow-xs">
+                  <Bookmark className="h-5 w-5 fill-amber-500 text-amber-700" />
                 </div>
-                <h3 className="font-bold text-sm text-primary">Diverse Resource Types</h3>
-                <p className="text-xs text-primary/60 leading-relaxed font-semibold">
-                  Access lecture slides, lab manuals, assignments, previous question papers, and references curated by faculty.
+                <h3 className="font-bold text-base text-slate-900">Personal Study Vault</h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                  Save essential lecture units and lab experiments into a dedicated study vault for rapid access during mid-terms and semester exams.
                 </p>
               </div>
 
-              <div className="p-6 bg-surface border border-border rounded-2xl space-y-4 hover:border-primary transition-all">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                  <Compass className="h-5 w-5" />
+              {/* Feature 3 */}
+              <div className="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/80 space-y-4 hover:bg-slate-50 transition-all">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
+                  <TrendingUp className="h-5 w-5" />
                 </div>
-                <h3 className="font-bold text-sm text-primary">Zero-friction Authentication</h3>
-                <p className="text-xs text-primary/60 leading-relaxed font-semibold">
-                  Instantly authenticate using college email and roll numbers as case-insensitive default passwords.
+                <h3 className="font-bold text-base text-slate-900">Faculty Cohort Matrices</h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                  Teaching faculty manage versioned course material releases and monitor cohort engagement metrics across student roll lists.
                 </p>
               </div>
+
+            </div>
+
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* ROLE PORTAL PATHWAYS */}
+        {/* ========================================================================= */}
+        <section id="roles" className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="p-8 sm:p-12 rounded-[32px] bg-[#0F172A] text-white border border-slate-800 shadow-xl space-y-8">
+            <div className="max-w-2xl space-y-2">
+              <span className="text-xs font-bold text-blue-400 uppercase tracking-widest block">
+                Single Sign-On Architecture
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+                Role-Based Academic Governance
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 font-normal leading-relaxed">
+                Direct authentication routes for enrolled students, teaching faculty mentors, and departmental administrators.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              
+              <Link
+                href="/login"
+                className="p-5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-all flex flex-col justify-between space-y-4 group cursor-pointer"
+              >
+                <div className="space-y-2">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                    <GraduationCap className="h-4.5 w-4.5" />
+                  </div>
+                  <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
+                    Student Portal
+                  </h4>
+                  <p className="text-xs text-slate-400 font-normal">
+                    Login with college email and roll number to access notes and bookmarks.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-blue-400 flex items-center gap-1">
+                  Access Portal <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </Link>
+
+              <Link
+                href="/login"
+                className="p-5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-all flex flex-col justify-between space-y-4 group cursor-pointer"
+              >
+                <div className="space-y-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                    <BookOpen className="h-4.5 w-4.5" />
+                  </div>
+                  <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                    Faculty Workspace
+                  </h4>
+                  <p className="text-xs text-slate-400 font-normal">
+                    Upload course notes, update version histories, and view progress logs.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                  Faculty Sign In <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </Link>
+
+              <Link
+                href="/login"
+                className="p-5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-all flex flex-col justify-between space-y-4 group cursor-pointer"
+              >
+                <div className="space-y-2">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
+                    <ShieldCheck className="h-4.5 w-4.5" />
+                  </div>
+                  <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
+                    Admin Console
+                  </h4>
+                  <p className="text-xs text-slate-400 font-normal">
+                    Manage student rosters, course taxonomy, announcements, and metrics.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-purple-400 flex items-center gap-1">
+                  Admin Sign In <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </Link>
+
             </div>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-surface border-t border-border py-12 text-xs">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+      {/* ========================================================================= */}
+      {/* FOOTER */}
+      {/* ========================================================================= */}
+      <footer className="bg-white border-t border-slate-200/90 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-white border border-border p-0.5 overflow-hidden">
+            <div className="w-9 h-9 rounded-xl bg-white p-1 border border-slate-200 shrink-0">
               <Image 
-                src="/icon.jpg" 
-                alt="MVGR Logo" 
-                width={32} 
-                height={32} 
-                className="object-contain w-full h-full rounded-md"
+                src="/De_logo.jpg" 
+                alt="Logo" 
+                width={36} 
+                height={36} 
+                className="object-contain w-full h-full rounded-lg"
               />
             </div>
             <div>
-              <span className="font-bold text-primary block leading-tight">Data Engineering</span>
-              <span className="text-[9px] text-primary/45 uppercase block tracking-wider mt-0.5">MVGR College of Engineering</span>
+              <span className="text-xs font-bold text-slate-900 block">Department of Data Engineering</span>
+              <span className="text-[11px] text-slate-500 block font-medium">MVGR College of Engineering (Autonomous)</span>
             </div>
           </div>
 
-          <p className="text-primary/40 font-bold text-center md:text-right">
-            &copy; {new Date().getFullYear()} MVGR Data Engineering. All rights reserved.
-          </p>
+          <div className="text-xs text-slate-500 font-normal">
+            © {new Date().getFullYear()} MVGR DE E-Learn Portal. All rights reserved.
+          </div>
         </div>
       </footer>
+
     </div>
   );
 }

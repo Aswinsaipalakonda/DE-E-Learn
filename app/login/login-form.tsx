@@ -76,7 +76,7 @@ export default function LoginForm() {
               id="email"
               type="email"
               required
-              placeholder="e.g. 23331a4745@mvgrce.edu.in"
+              placeholder="e.g. your-college-mail@mvgrce.edu.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-11 pr-4 py-3 rounded-full border border-slate-200 bg-slate-50/50 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-normal shadow-2xs"
