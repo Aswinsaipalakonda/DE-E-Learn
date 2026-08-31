@@ -18,9 +18,9 @@ import { LandingHeader, LandingHero } from "@/components/landing-hero";
 import { AboutUsSection01 } from "@/components/about-us-section";
 import { BentoGrid01Section } from "@/components/bento-grid-section";
 import { Services02Section } from "@/components/services-section";
+import { Testimonials01Section } from "@/components/testimonial-section";
 import { CookieConsent } from "@/components/cookie-consent";
 import { 
-  TestimonialsSection, 
   FAQSection, 
   PreFooterCTABanner 
 } from "@/components/landing-sections";
@@ -90,9 +90,9 @@ export default async function LandingPage() {
         <Services02Section />
 
         {/* ========================================================================= */}
-        {/* 6. TESTIMONIALS & COHORT ENDORSEMENTS */}
+        {/* 6. TESTIMONIALS & COHORT ENDORSEMENTS (@shadcn-space/radix/testimonial-01) */}
         {/* ========================================================================= */}
-        <TestimonialsSection />
+        <Testimonials01Section />
 
         {/* ========================================================================= */}
         {/* 9. INTERACTIVE FAQ ACCORDION */}
