@@ -93,33 +93,33 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
               />
             </div>
             <div>
-              <span className="font-extrabold text-sm text-white block tracking-tight leading-tight">
+              <span className="font-extrabold text-white text-base tracking-tight block">
                 Data Engineering
               </span>
-              <span className="text-[10px] text-gray-400 block font-bold tracking-widest uppercase">
-                MVGR College
+              <span className="text-[10px] text-gray-500 font-bold block uppercase tracking-widest">
+                MVGR COLLEGE
               </span>
             </div>
           </Link>
         </div>
 
-        {/* Scope Pill if available */}
+        {/* User Scope Badge Panel */}
         {userScope && (userScope.branch || userScope.semester) && (
-          <div className="px-6 py-3 bg-[#161f30] border-b border-[#1f2937]">
-            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold block mb-1">
-              Current Scope
-            </span>
-            <div className="flex items-center gap-2">
-              {userScope.branch && (
-                <span className="text-xs px-2.5 py-0.5 rounded-md bg-[#1e293b] text-blue-400 font-semibold border border-blue-900/50">
-                  {userScope.branch}
-                </span>
-              )}
-              {userScope.semester && (
-                <span className="text-xs px-2.5 py-0.5 rounded-md bg-[#1e293b] text-blue-400 font-semibold border border-blue-900/50">
-                  Sem {userScope.semester}
-                </span>
-              )}
+          <div className="px-6 py-4 border-b border-[#1f2937] bg-[#1f2937]/30">
+            <div className="flex flex-col gap-1">
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block">Current Scope</span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {userScope.branch && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#1f2937] text-gray-300 border border-[#374151]">
+                    {userScope.branch}
+                  </span>
+                )}
+                {userScope.semester && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    Sem {userScope.semester}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -127,7 +127,9 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
         {/* Main Navigation Links */}
         <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== `/${userRole}` && pathname.startsWith(item.href));
+            const isActive = item.href === `/${userRole}`
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
 
             return (
@@ -135,13 +137,13 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
                 key={item.name}
                 href={item.href}
                 onClick={handleLinkClick}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-full text-xs font-semibold transition-all ${
-                  isActive
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-400 hover:text-white hover:bg-[#1f2937]"
+                className={`flex items-center gap-3.5 px-5 py-3 rounded-full text-sm transition-all duration-200 group ${
+                  isActive 
+                    ? "bg-[#f3f4f6] text-[#111827] shadow-sm font-semibold" 
+                    : "text-gray-400 hover:bg-white/5 hover:text-white font-medium"
                 }`}
               >
-                <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-gray-900" : "text-gray-400"}`} />
+                <Icon className={`h-4.5 w-4.5 transition-colors duration-200 ${isActive ? "text-[#111827]" : "text-gray-400 group-hover:text-white"}`} />
                 <span>{item.name}</span>
               </Link>
             );
@@ -152,9 +154,9 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
         <div className="p-4 border-t border-[#1f2937]">
           <button
             onClick={() => signOutAction()}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-950/30 hover:text-red-300 w-full transition-all cursor-pointer"
+            className="w-full flex items-center gap-3 px-5 py-3 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full transition-all duration-200 cursor-pointer"
           >
-            <LogOut className="h-4 w-4 shrink-0" />
+            <LogOut className="h-4.5 w-4.5" />
             <span>Sign Out</span>
           </button>
         </div>

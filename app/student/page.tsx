@@ -16,6 +16,7 @@ import {
   GraduationCap,
   CheckCircle2
 } from "lucide-react";
+import { StudentBookmarkHeroPill, StudentBookmarkShortcutCard } from "@/components/student-bookmark-pill";
 
 interface SubjectInfo {
   title: string;
@@ -187,7 +188,7 @@ export default async function StudentDashboard({
     ? rawUploads 
     : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3]);
 
-  // 3. Read dynamic bookmarks from cookie/DB
+  // 3. Read dynamic bookmarks from cookie / DB
   const cookieVal = cookieStore.get("de_saved_bookmarks")?.value;
   let savedBookmarkIds: string[] | null = null;
   if (cookieVal) {
@@ -229,18 +230,12 @@ export default async function StudentDashboard({
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <Link
               href="/student/subjects"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium transition-all shadow-xs"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium transition-all shadow-xs cursor-pointer"
             >
               <BookOpen className="h-4 w-4" />
               <span>Browse Subjects</span>
             </Link>
-            <Link
-              href="/student/bookmarks"
-              className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-900 text-xs sm:text-sm font-medium transition-all"
-            >
-              <Bookmark className="h-4 w-4 text-amber-600 fill-amber-500" />
-              <span>Bookmarks ({displayBookmarksCount})</span>
-            </Link>
+            <StudentBookmarkHeroPill initialCount={displayBookmarksCount} />
           </div>
         </div>
       </div>
@@ -463,25 +458,7 @@ export default async function StudentDashboard({
             </h2>
 
             <div className="space-y-2">
-              <Link
-                href="/student/bookmarks"
-                className="p-3.5 rounded-2xl border border-slate-200 hover:border-amber-300 bg-amber-50/30 hover:bg-amber-50/70 transition-all flex items-center justify-between group cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-amber-100/70 border border-amber-200 text-amber-800">
-                    <Bookmark className="h-4 w-4 fill-amber-600 text-amber-700" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900 group-hover:text-amber-800 transition-colors">
-                      My Bookmarked Notes
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-normal">
-                      {displayBookmarksCount} saved syllabus items
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-900 transition-all" />
-              </Link>
+              <StudentBookmarkShortcutCard initialCount={displayBookmarksCount} />
 
               <Link
                 href="/student/subjects"
