@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function updatePasswordAction(password: string) {
   const cookieStore = await cookies();
@@ -28,7 +29,9 @@ export async function updatePasswordAction(password: string) {
     .update({ first_login_pending: false })
     .eq("id", user.id);
 
-  revalidatePath("/profile");
+  revalidatePath("/student/profile");
+  revalidatePath("/faculty/profile");
+  revalidatePath("/admin/profile");
   return { success: true };
 }
 
@@ -36,4 +39,5 @@ export async function signOutUserAction() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   await supabase.auth.signOut();
+  redirect("/login");
 }

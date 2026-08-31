@@ -159,16 +159,15 @@ export default function StudentProfileClient({ profile }: StudentProfileClientPr
 
           {/* Sign Out Button */}
           <div className="pt-2">
-            <button
-              onClick={async () => {
-                await signOutUserAction();
-                window.location.href = "/login";
-              }}
-              className="w-full py-3 px-4 rounded-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Sign Out Account</span>
-            </button>
+            <form action={signOutUserAction} className="w-full">
+              <button
+                type="submit"
+                className="w-full py-3 px-4 rounded-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sign Out Account</span>
+              </button>
+            </form>
           </div>
         </div>
 

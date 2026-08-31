@@ -98,16 +98,15 @@ export default function ProfileClient({ profile }: ProfileClientProps) {
         </div>
 
         <div className="pt-6 border-t border-border">
-          <button
-            onClick={async () => {
-              await signOutUserAction();
-              window.location.href = "/login";
-            }}
-            className="w-full px-4 py-2.5 bg-danger/10 hover:bg-danger text-danger hover:text-white font-bold text-xs rounded-full border border-danger/15 transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out Account
-          </button>
+          <form action={signOutUserAction} className="w-full">
+            <button
+              type="submit"
+              className="w-full px-4 py-2.5 bg-danger/10 hover:bg-danger text-danger hover:text-white font-bold text-xs rounded-full border border-danger/15 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out Account</span>
+            </button>
+          </form>
         </div>
       </div>
 
