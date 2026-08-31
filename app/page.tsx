@@ -18,8 +18,8 @@ import { LandingHeader, LandingHero } from "@/components/landing-hero";
 import { AboutUsSection01 } from "@/components/about-us-section";
 import { BentoGrid01Section } from "@/components/bento-grid-section";
 import { Services02Section } from "@/components/services-section";
+import { CookieConsent } from "@/components/cookie-consent";
 import { 
-  HowItWorksSection, 
   TestimonialsSection, 
   FAQSection, 
   PreFooterCTABanner 
@@ -143,6 +143,11 @@ export default async function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* ========================================================================= */}
+      {/* 12. COOKIE CONSENT BANNER (@shadcn-space/radix/cookie-consent-01) */}
+      {/* ========================================================================= */}
+      <CookieConsent />
 
     </div>
   );
