@@ -110,11 +110,11 @@ export default async function FacultyLayout({
             {/* Clean Faculty Role Badge */}
             <Link
               href="/faculty/profile"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-700 text-white shadow-2xs hover:bg-emerald-800 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-2xs hover:bg-primary/95 transition-all cursor-pointer"
               title="Faculty Profile"
             >
-              <BookOpen className="h-3.5 w-3.5 text-emerald-200 shrink-0" />
-              <span>Faculty Member</span>
+              <BookOpen className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span>{profile?.name || "Faculty Member"}</span>
             </Link>
           </div>
         </header>
