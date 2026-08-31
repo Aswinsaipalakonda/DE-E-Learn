@@ -461,13 +461,18 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
       )}
 
       {/* ========================================================================= */}
-      {/* FIXED VIEWPORT MODAL: STUDENT COHORT PROGRESS MATRIX FOR FACULTY */}
+      {/* NATURAL PAGE-FLOW MODAL FOR FACULTY: SCROLLS LIKE A NORMAL WEBPAGE */}
       {/* ========================================================================= */}
       {isModalOpen && inspectingMaterial && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 md:p-8 bg-slate-900/70 backdrop-blur-md">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full h-[90vh] max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeInspectModal();
+          }}
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-md p-3 sm:p-6 md:p-8"
+        >
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full mx-auto my-4 sm:my-8 overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/90 shrink-0">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50 sticky top-0 z-20">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200">
                   <GraduationCap className="h-5 w-5" />
@@ -492,8 +497,8 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
               </button>
             </div>
 
-            {/* Dedicated Scrollable Viewport with min-h-0 */}
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 sm:p-8 space-y-6">
+            {/* Modal Content - Natural Height, Scrolls Effortlessly */}
+            <div className="p-6 sm:p-8 space-y-6">
               <StudentCohortProgressMatrix
                 materialId={inspectingMaterial.id}
                 materialTitle={inspectingMaterial.title}
@@ -506,7 +511,7 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between sticky bottom-0 z-20">
               <span className="text-xs text-slate-500 font-normal">
                 Total Tracked Events: <strong className="text-slate-900 font-semibold">{inspectingMaterial.engagementLogs?.length || 0}</strong>
               </span>
