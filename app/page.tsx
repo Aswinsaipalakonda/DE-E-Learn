@@ -19,9 +19,9 @@ import { AboutUsSection01 } from "@/components/about-us-section";
 import { BentoGrid01Section } from "@/components/bento-grid-section";
 import { Services02Section } from "@/components/services-section";
 import { Testimonials01Section } from "@/components/testimonial-section";
+import { Faq01Section } from "@/components/faq-section";
 import { CookieConsent } from "@/components/cookie-consent";
 import { 
-  FAQSection, 
   PreFooterCTABanner 
 } from "@/components/landing-sections";
 
@@ -95,9 +95,9 @@ export default async function LandingPage() {
         <Testimonials01Section />
 
         {/* ========================================================================= */}
-        {/* 9. INTERACTIVE FAQ ACCORDION */}
+        {/* 7. INTERACTIVE FAQ ACCORDION (@shadcn-space/radix/faq-01) */}
         {/* ========================================================================= */}
-        <FAQSection />
+        <Faq01Section />
 
         {/* ========================================================================= */}
         {/* 10. PRE-FOOTER CTA CONVERSION BANNER */}
