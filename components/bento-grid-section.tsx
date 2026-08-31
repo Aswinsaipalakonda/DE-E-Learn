@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { 
   BookOpen, 
@@ -213,12 +213,37 @@ function AnimatedUiBlock() {
 // 3. COMPLETE BENTO GRID COMPONENT
 // =========================================================================
 export function BentoGrid01Section() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section id="features" className="py-16 sm:py-24 bg-white border-t border-slate-200/80">
+    <section ref={sectionRef} id="features" className="py-16 sm:py-24 bg-white border-t border-slate-200/80 scroll-mt-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 sm:space-y-16">
         
         {/* Section Title */}
-        <div className="flex flex-col gap-3 items-center justify-center max-w-3xl mx-auto text-center">
+        <div
+          className={cn(
+            "flex flex-col gap-3 items-center justify-center max-w-3xl mx-auto text-center transition-all duration-700 ease-out",
+            isInView ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6"
+          )}
+        >
           <span className="text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
             Bento Grid Modules
           </span>
@@ -234,7 +259,12 @@ export function BentoGrid01Section() {
         <div className="grid grid-cols-12 gap-6">
           
           {/* Card 1: 4 Columns with Looping Reminder Carousel */}
-          <div className="col-span-12 lg:col-span-4 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all flex flex-col justify-between group">
+          <div
+            className={cn(
+              "col-span-12 lg:col-span-4 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all duration-700 delay-100 ease-out flex flex-col justify-between group",
+              isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            )}
+          >
             <div className="p-6 bg-slate-100/70 border-b border-slate-200/80 relative">
               <ReminderCarousel />
             </div>
@@ -249,7 +279,12 @@ export function BentoGrid01Section() {
           </div>
 
           {/* Card 2: 8 Columns with Orbiting Central DE Core */}
-          <div className="col-span-12 lg:col-span-8 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all flex flex-col justify-between group">
+          <div
+            className={cn(
+              "col-span-12 lg:col-span-8 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all duration-700 delay-200 ease-out flex flex-col justify-between group",
+              isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            )}
+          >
             <div className="p-6 bg-slate-100/70 border-b border-slate-200/80 relative">
               <AnimatedUiBlock />
             </div>
@@ -264,7 +299,12 @@ export function BentoGrid01Section() {
           </div>
 
           {/* Card 3: 4 Columns - Enrolled Term Filtering */}
-          <div className="col-span-12 lg:col-span-4 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all flex flex-col justify-between group">
+          <div
+            className={cn(
+              "col-span-12 lg:col-span-4 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all duration-700 delay-300 ease-out flex flex-col justify-between group",
+              isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            )}
+          >
             <div className="p-8 bg-slate-100/70 border-b border-slate-200/80 flex items-center justify-center min-h-[170px]">
               <div className="flex flex-wrap gap-2 justify-center max-w-[240px]">
                 {["Sem 1", "Sem 2", "Sem 3", "Sem 4", "Sem 5", "Sem 6", "Sem 7", "Sem 8"].map((sem, i) => (
@@ -293,7 +333,12 @@ export function BentoGrid01Section() {
           </div>
 
           {/* Card 4: 4 Columns - Multi-Version Faculty Releases */}
-          <div className="col-span-12 lg:col-span-4 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all flex flex-col justify-between group">
+          <div
+            className={cn(
+              "col-span-12 lg:col-span-4 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all duration-700 delay-400 ease-out flex flex-col justify-between group",
+              isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            )}
+          >
             <div className="p-8 bg-slate-100/70 border-b border-slate-200/80 flex items-center justify-center min-h-[170px]">
               <div className="w-full max-w-[240px] space-y-2 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
                 <div className="flex items-center justify-between text-[11px] font-bold text-purple-700 pb-1 border-b border-slate-100">
@@ -316,7 +361,12 @@ export function BentoGrid01Section() {
           </div>
 
           {/* Card 5: 4 Columns - In-Browser PDF Previews */}
-          <div className="col-span-12 lg:col-span-4 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all flex flex-col justify-between group">
+          <div
+            className={cn(
+              "col-span-12 lg:col-span-4 overflow-hidden rounded-3xl border border-slate-200/90 bg-slate-50/70 hover:shadow-md transition-all duration-700 delay-500 ease-out flex flex-col justify-between group",
+              isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            )}
+          >
             <div className="p-8 bg-slate-100/70 border-b border-slate-200/80 flex items-center justify-center min-h-[170px]">
               <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
                 <FileText className="h-5 w-5 text-blue-600" />

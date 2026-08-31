@@ -1,12 +1,39 @@
 "use client";
 
+import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Sparkles, CheckCircle2, ShieldCheck, BookOpen, Layers } from "lucide-react";
+import { ArrowUpRight, Sparkles, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function PreFooterCTA() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+        }
+      },
+      { threshold: 0.15 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="relative rounded-[36px] bg-[#0F172A] text-white border border-slate-800 p-8 sm:p-14 lg:p-16 overflow-hidden shadow-2xl">
+    <section ref={sectionRef} className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div
+        className={cn(
+          "relative rounded-[36px] bg-[#0F172A] text-white border border-slate-800 p-8 sm:p-14 lg:p-16 overflow-hidden shadow-2xl transition-all duration-700 ease-out",
+          isInView ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-[0.98]"
+        )}
+      >
         
         {/* Ambient Glow Lights */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />

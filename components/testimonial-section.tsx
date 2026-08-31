@@ -26,7 +26,7 @@ export function Testimonials01Section() {
   }, []);
 
   return (
-    <section ref={sectionRef} id="testimonials" className="py-16 sm:py-24 bg-white border-t border-slate-200/80">
+    <section ref={sectionRef} id="testimonials" className="py-16 sm:py-24 bg-white border-t border-slate-200/80 scroll-mt-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-12">
           

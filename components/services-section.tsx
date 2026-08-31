@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Shield, Database, Brain, CheckCircle2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,13 +55,38 @@ export const departmentBranches: BranchTrackItem[] = [
 
 export function Services02Section() {
   const [activeIndex, setActiveIndex] = useState<number>(0);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+        }
+      },
+      { threshold: 0.12 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   const activeBranch = departmentBranches[activeIndex];
   const ActiveIcon = activeBranch.icon;
 
   return (
-    <section id="specializations" className="bg-[#F8FAFC] py-16 sm:py-24 border-t border-slate-200/80">
+    <section ref={sectionRef} id="specializations" className="bg-[#F8FAFC] py-16 sm:py-24 border-t border-slate-200/80 scroll-mt-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:gap-16 gap-10">
+        <div
+          className={cn(
+            "flex flex-col sm:gap-16 gap-10 transition-all duration-700 ease-out",
+            isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          )}
+        >
           
           {/* Header Row */}
           <div className="flex md:flex-row flex-col justify-between md:items-end items-start gap-6">

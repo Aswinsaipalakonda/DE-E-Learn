@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,14 +39,38 @@ const FAQ_DATA: FaqItem[] = [
 
 export function Faq01Section() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+        }
+      },
+      { threshold: 0.12 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   const toggle = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
   return (
-    <section id="faq" className="py-16 sm:py-24 bg-[#F8FAFC]">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-12 sm:gap-16">
+    <section ref={sectionRef} id="faq" className="py-16 sm:py-24 bg-[#F8FAFC] scroll-mt-20">
+      <div
+        className={cn(
+          "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-12 sm:gap-16 transition-all duration-700 ease-out",
+          isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        )}
+      >
         
         {/* Header */}
         <div className="flex flex-col gap-3 items-center text-center">

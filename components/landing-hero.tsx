@@ -23,6 +23,18 @@ const navigationData: NavigationLink[] = [
 export function LandingHeader() {
   const [isOpen, setIsOpen] = useState(false);
 
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith("#")) {
+      e.preventDefault();
+      const targetElement = document.querySelector(href);
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.history.pushState(null, "", href);
+      }
+      setIsOpen(false);
+    }
+  };
+
   return (
     <header className="fixed top-0 inset-x-0 z-50 px-4 sm:px-6 lg:px-8 pt-3.5 pb-2 pointer-events-none transition-all duration-300">
       <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-2.5 rounded-full bg-white/90 backdrop-blur-xl border border-slate-200/90 shadow-md pointer-events-auto hover:shadow-lg transition-shadow">
@@ -55,7 +67,8 @@ export function LandingHeader() {
             <a
               key={item.title}
               href={item.href}
-              className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-white rounded-full transition-all duration-200"
+              onClick={(e) => handleNavClick(e, item.href)}
+              className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-white rounded-full transition-all duration-200 cursor-pointer"
             >
               {item.title}
             </a>
@@ -96,8 +109,8 @@ export function LandingHeader() {
               <a
                 key={item.title}
                 href={item.href}
-                onClick={() => setIsOpen(false)}
-                className="px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-2xl transition-colors"
+                onClick={(e) => handleNavClick(e, item.href)}
+                className="px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-2xl transition-colors cursor-pointer"
               >
                 {item.title}
               </a>
