@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AnalyticsClient from "./analytics-client";
 
-
 interface MaterialItem {
   id: string;
   title: string;
@@ -22,6 +21,11 @@ interface ActivityEvent {
   target_id: string;
 }
 
+interface BranchItem {
+  code: string;
+  name: string;
+}
+
 export default async function AdminAnalyticsPage() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -30,39 +34,44 @@ export default async function AdminAnalyticsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch all materials with uploader profile
-  const { data: materialsData, error: mError } = await supabase
-    .from("materials")
-    .select(`
-      id,
-      title,
-      type,
-      branch,
-      semester,
-      created_at,
-      users:owner (
-        name,
-        email
-      )
-    `)
-    .neq("state", "deleted")
-    .order("created_at", { ascending: false });
+  // Fetch materials, activity events, and branches in parallel
+  const [materialsRes, eventsRes, branchesRes] = await Promise.all([
+    supabase
+      .from("materials")
+      .select(`
+        id,
+        title,
+        type,
+        branch,
+        semester,
+        created_at,
+        users:owner (
+          name,
+          email
+        )
+      `)
+      .neq("state", "deleted")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("activity_events")
+      .select("type, target_id"),
+    supabase
+      .from("branches")
+      .select("code, name")
+      .eq("active", true),
+  ]);
 
-  // Fetch all activity events
-  const { data: eventsData, error: eError } = await supabase
-    .from("activity_events")
-    .select("type, target_id");
-
-  if (mError || eError) {
+  if (materialsRes.error || eventsRes.error) {
     return (
-      <div role="alert" className="p-4 bg-danger/10 border border-danger/25 text-danger rounded-xl font-semibold">
-        Failed to fetch repository statistics.
+      <div role="alert" className="p-4 bg-danger/10 border border-danger/25 text-danger rounded-2xl font-semibold">
+        Failed to fetch repository analytics: {materialsRes.error?.message || eventsRes.error?.message}
       </div>
     );
   }
 
-  const materials = (materialsData as unknown as MaterialItem[]) || [];
-  const events = (eventsData as unknown as ActivityEvent[]) || [];
+  const materials = (materialsRes.data as unknown as MaterialItem[]) || [];
+  const events = (eventsRes.data as unknown as ActivityEvent[]) || [];
+  const branches = (branchesRes.data as unknown as BranchItem[]) || [];
 
   // Aggregations
   const totalViews = events.filter((e) => e.type === "view").length;
@@ -81,9 +90,9 @@ export default async function AdminAnalyticsPage() {
   return (
     <AnalyticsClient
       materials={materialsWithMetrics}
+      branches={branches}
       totalViews={totalViews}
       totalDownloads={totalDownloads}
     />
   );
 }
-
