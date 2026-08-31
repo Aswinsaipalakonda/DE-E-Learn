@@ -1,0 +1,214 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowUpRight, Menu, X, Sparkles, BookOpen, Layers, Bookmark, ShieldCheck, GraduationCap } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export interface NavigationLink {
+  title: string;
+  href: string;
+  isActive?: boolean;
+}
+
+const navigationData: NavigationLink[] = [
+  { title: "Specializations", href: "#specializations" },
+  { title: "Study Vault", href: "#vault" },
+  { title: "Curriculum", href: "#curriculum" },
+  { title: "Portals", href: "#roles" },
+];
+
+export function LandingHeader() {
+  const [sticky, setSticky] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    setSticky(window.scrollY >= 30);
+  }, []);
+
+  const handleResize = useCallback(() => {
+    if (window.innerWidth >= 1024) setIsOpen(false);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [handleScroll, handleResize]);
+
+  return (
+    <header className="sticky top-0 z-50 px-4 sm:px-6 lg:px-8 pt-4 transition-all duration-300">
+      <div
+        className={cn(
+          "w-full max-w-6xl mx-auto flex items-center justify-between gap-4 transition-all duration-500 px-4 py-2.5 rounded-full",
+          sticky
+            ? "bg-white/85 backdrop-blur-xl border border-slate-200/90 shadow-[0_12px_40px_rgba(0,0,0,0.06)]"
+            : "bg-white/60 backdrop-blur-md border border-slate-200/60 shadow-xs"
+        )}
+      >
+        {/* Brand Identity */}
+        <Link href="/" className="flex items-center gap-3 group shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-white p-1 shadow-xs border border-slate-200 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
+            <Image
+              src="/De_logo.jpg"
+              alt="Department of Data Engineering Logo"
+              width={38}
+              height={38}
+              priority
+              className="object-contain w-full h-full rounded-xl"
+            />
+          </div>
+          <div className="hidden sm:block">
+            <span className="font-extrabold text-sm text-slate-900 tracking-tight block leading-tight group-hover:text-blue-600 transition-colors">
+              Data Engineering
+            </span>
+            <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase block">
+              MVGR College (A)
+            </span>
+          </div>
+        </Link>
+
+        {/* Center Pill Navigation */}
+        <nav className="hidden lg:flex items-center gap-1 bg-slate-100/80 p-1 rounded-full border border-slate-200/60">
+          {navigationData.map((item) => (
+            <a
+              key={item.title}
+              href={item.href}
+              className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-white rounded-full transition-all duration-200"
+            >
+              {item.title}
+            </a>
+          ))}
+        </nav>
+
+        {/* Action Button & Mobile Toggle */}
+        <div className="flex items-center gap-2.5">
+          {/* Animated Hero-01 Style Button */}
+          <Link
+            href="/login"
+            className="relative inline-flex items-center text-xs sm:text-sm font-bold text-white bg-[#0F172A] hover:bg-[#1E293B] active:scale-[0.99] rounded-full h-10 p-1 ps-5 pe-12 group transition-all duration-500 hover:ps-12 hover:pe-5 overflow-hidden shadow-md shadow-slate-900/10 cursor-pointer shrink-0"
+          >
+            <span className="relative z-10 transition-all duration-500 whitespace-nowrap">
+              Sign In Portal
+            </span>
+            <span className="absolute right-1 w-8 h-8 bg-white text-slate-900 rounded-full flex items-center justify-center transition-all duration-500 group-hover:right-[calc(100%-36px)] group-hover:rotate-45 shadow-xs">
+              <ArrowUpRight className="h-4 w-4" />
+            </span>
+          </Link>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="lg:hidden p-2 rounded-full border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Toggle Navigation Menu"
+          >
+            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Slide-down Menu */}
+      {isOpen && (
+        <div className="lg:hidden mt-2 p-5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl shadow-xl max-w-6xl mx-auto space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-col gap-2">
+            {navigationData.map((item) => (
+              <a
+                key={item.title}
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className="px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-2xl transition-colors"
+              >
+                {item.title}
+              </a>
+            ))}
+          </div>
+          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+            <Link
+              href="/login"
+              onClick={() => setIsOpen(false)}
+              className="w-full text-center py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-sm"
+            >
+              Sign In to Your Account
+            </Link>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
+export function LandingHero() {
+  return (
+    <section className="relative pt-8 pb-16 sm:pt-14 sm:pb-24 lg:pt-16 lg:pb-28 overflow-hidden">
+      
+      {/* Hero Radial Glow */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 w-[700px] h-[350px] bg-blue-100/40 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center text-center space-y-8 max-w-4xl mx-auto">
+          
+          {/* Top Status Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-slate-200/90 text-slate-700 text-xs font-semibold shadow-xs">
+            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+            <span>Department of Data Engineering • Academic Learning Cloud</span>
+          </div>
+
+          {/* Master Headline with Italics Serif Accent */}
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.12]">
+            Architecting Data Intelligence with{" "}
+            <span className="font-serif italic font-normal text-blue-600 tracking-normal">
+              academic excellence
+            </span>
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl font-normal leading-relaxed">
+            The centralized learning and materials platform for MVGR College of Engineering. Access verified semester course notes, lab manuals, question banks, and cohort trackers.
+          </p>
+
+          {/* Interactive CTA Group with Hero-01 Sliding Button */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 pt-2">
+            
+            {/* Primary Action Button */}
+            <Link
+              href="/login"
+              className="relative inline-flex items-center text-sm font-bold text-white bg-[#0F172A] hover:bg-[#1E293B] active:scale-[0.99] rounded-full h-12 p-1 ps-6 pe-14 group transition-all duration-500 hover:ps-14 hover:pe-6 overflow-hidden shadow-lg shadow-slate-900/15 cursor-pointer shrink-0"
+            >
+              <span className="relative z-10 transition-all duration-500">
+                Access Student Portal
+              </span>
+              <span className="absolute right-1 w-10 h-10 bg-white text-slate-900 rounded-full flex items-center justify-center transition-all duration-500 group-hover:right-[calc(100%-44px)] group-hover:rotate-45 shadow-sm">
+                <ArrowUpRight className="h-4.5 w-4.5" />
+              </span>
+            </Link>
+
+            {/* Verification Trust Pill */}
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white border border-slate-200/80 shadow-xs">
+              <div className="flex items-center -space-x-2">
+                <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                  CIC
+                </div>
+                <div className="w-7 h-7 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                  CSD
+                </div>
+                <div className="w-7 h-7 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                  CSM
+                </div>
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold text-slate-900">100% Verified Notes</p>
+                <p className="text-[10px] text-slate-500">UGC Autonomous Curriculum</p>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
