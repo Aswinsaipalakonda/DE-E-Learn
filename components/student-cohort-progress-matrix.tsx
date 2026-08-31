@@ -78,6 +78,19 @@ interface StudentProgressRecord {
   lastActivityAt?: string;
 }
 
+// Resilient file name normalizer to prevent whitespace / comma mismatch
+function normalizeFileName(name?: string): string {
+  if (!name) return "";
+  try {
+    return decodeURIComponent(name)
+      .replace(/[,\s_\-.]+/g, " ")
+      .trim()
+      .toLowerCase();
+  } catch {
+    return (name || "").replace(/[,\s_\-.]+/g, " ").trim().toLowerCase();
+  }
+}
+
 // Generate complete cohort of 71 roll numbers for CIC Semester 3
 function generateCohortRolls(branch: string, semester: number): { roll: string; name: string; section: string }[] {
   const cohort: { roll: string; name: string; section: string }[] = [];
@@ -97,7 +110,6 @@ function generateCohortRolls(branch: string, semester: number): { roll: string; 
   };
 
   if (b === "CIC") {
-    // 71 Students (23331A4701 to 23331A4771)
     for (let i = 1; i <= 71; i++) {
       const rollNum = `23331A47${i < 10 ? "0" + i : i}`;
       const name = knownStudents[rollNum] || `Student ${rollNum.slice(-4)}`;
@@ -156,20 +168,23 @@ export default function StudentCohortProgressMatrix({
 
     return rawCohort.map((c) => {
       // Find all activity events matching this student
-      const studentEvents = activityLogs.filter(
-        (log) =>
-          log.rollNumber?.toUpperCase() === c.roll.toUpperCase() ||
-          log.email?.toLowerCase().includes(c.roll.toLowerCase()) ||
-          log.studentName?.toLowerCase().includes(c.roll.toLowerCase())
-      );
+      const studentEvents = activityLogs.filter((log) => {
+        const r1 = (log.rollNumber || "").toUpperCase();
+        const r2 = c.roll.toUpperCase();
+        const emailMatch = (log.email || "").toLowerCase().includes(c.roll.toLowerCase());
+        const nameMatch = (log.studentName || "").toLowerCase().includes(c.roll.toLowerCase());
+        return r1 === r2 || emailMatch || nameMatch;
+      });
 
       // Compute status for each file
       const fileStatuses: StudentFileStatus[] = normalizedFiles.map((f) => {
-        const fileEvents = studentEvents.filter(
-          (e) =>
-            (e.fileName && e.fileName.toLowerCase() === f.file_name.toLowerCase()) ||
-            (!e.fileName && e.action === "view") // Page view applies generally
-        );
+        const normTarget = normalizeFileName(f.file_name);
+
+        const fileEvents = studentEvents.filter((e) => {
+          if (!e.fileName) return e.action === "view"; // general workspace view
+          const normEv = normalizeFileName(e.fileName);
+          return normEv === normTarget || normEv.includes(normTarget) || normTarget.includes(normEv);
+        });
 
         const viewEvents = fileEvents.filter((e) => e.action === "view");
         const downloadEvents = fileEvents.filter((e) => e.action === "download");
@@ -201,7 +216,10 @@ export default function StudentCohortProgressMatrix({
 
       let selectedFileStatus: "downloaded" | "viewed" | "not_opened" = overallStatus;
       if (selectedFileFilter !== "ALL") {
-        const targetFs = fileStatuses.find((fs) => fs.fileName === selectedFileFilter);
+        const normFilter = normalizeFileName(selectedFileFilter);
+        const targetFs = fileStatuses.find(
+          (fs) => normalizeFileName(fs.fileName) === normFilter
+        );
         if (targetFs) {
           if (targetFs.downloaded) selectedFileStatus = "downloaded";
           else if (targetFs.viewed) selectedFileStatus = "viewed";
@@ -303,7 +321,7 @@ export default function StudentCohortProgressMatrix({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       {/* ========================================================================= */}
       {/* 1. HERO COHORT ANALYTICS CARD */}
       {/* ========================================================================= */}
@@ -536,7 +554,7 @@ export default function StudentCohortProgressMatrix({
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. STUDENT ROLL CARDS MATRIX (GRID VIEW) */}
+      {/* 4. STUDENT ROLL CARDS MATRIX (GRID VIEW) - Smooth natural grid */}
       {/* ========================================================================= */}
       {viewMode === "grid" ? (
         <div className="space-y-3">
@@ -546,7 +564,7 @@ export default function StudentCohortProgressMatrix({
           </div>
 
           {filteredCohort.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[500px] overflow-y-auto p-2 border border-slate-200/80 rounded-3xl bg-slate-50/50 shadow-inner">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 p-3 border border-slate-200/80 rounded-3xl bg-slate-50/50">
               {filteredCohort.map((student) => {
                 const isDownloaded = student.selectedFileStatus === "downloaded";
                 const isViewed = student.selectedFileStatus === "viewed";
@@ -616,9 +634,9 @@ export default function StudentCohortProgressMatrix({
         /* 5. TABLE VIEW */
         /* ========================================================================= */
         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto max-h-[500px]">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider z-10">
+              <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <tr>
                   <th className="py-3 pl-6 pr-4">Roll Number</th>
                   <th className="py-3 px-4">Student Name</th>
@@ -689,11 +707,11 @@ export default function StudentCohortProgressMatrix({
       )}
 
       {/* ========================================================================= */}
-      {/* 6. STUDENT DETAILED PER-FILE AUDIT MODAL */}
+      {/* 6. STUDENT DETAILED PER-FILE AUDIT MODAL (Smooth Scroll) */}
       {/* ========================================================================= */}
       {inspectingStudent && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden space-y-5 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden space-y-5 p-6 sm:p-7 my-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -736,7 +754,7 @@ export default function StudentCohortProgressMatrix({
                 Per-File Access & Download Breakdown:
               </span>
 
-              <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+              <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
                 {inspectingStudent.files.map((file) => (
                   <div
                     key={file.fileId}
