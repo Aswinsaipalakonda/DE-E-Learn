@@ -143,20 +143,20 @@ export function LandingHeader() {
 
 export function LandingHero() {
   return (
-    <section className="relative pt-8 pb-16 sm:pt-14 sm:pb-24 lg:pt-16 lg:pb-28 overflow-hidden">
+    <section className="relative pt-10 pb-20 sm:pt-16 sm:pb-28 lg:pt-20 lg:pb-36 overflow-hidden">
       
-      {/* Dynamic Generated Hero Background Image */}
+      {/* Crisp High-Definition Hero Background Image */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none select-none">
         <Image
           src="/hero-bg.webp"
           alt="Data Engineering Hero Background"
           fill
           priority
-          className="object-cover object-center opacity-75 sm:opacity-85"
+          sizes="100vw"
+          className="object-cover object-bottom sm:object-center opacity-100"
         />
-        {/* Soft gradient blends for crisp text contrast and smooth page transition */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAFC]/50 via-white/10 to-[#F8FAFC]" />
-        <div className="absolute inset-0 bg-white/15 backdrop-blur-[0.5px]" />
+        {/* Subtle fade only at the bottom border to blend seamlessly into metrics */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#F8FAFC] to-transparent" />
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
