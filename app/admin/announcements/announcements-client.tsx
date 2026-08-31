@@ -228,13 +228,14 @@ export default function AnnouncementsClient({
       {/* Create Announcement Modal */}
       {isModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/80 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/60 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => !isSubmitting && setIsModalOpen(false)}
         >
           <div 
-            className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-xl p-6 space-y-6 overflow-hidden max-h-[90vh] flex flex-col"
+            className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-xl p-6 space-y-6 overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 ease-[cubic-bezier(0.16,1,0.3,1)] duration-300"
             onClick={(e) => e.stopPropagation()}
           >
+
             <div className="flex items-center justify-between border-b border-border pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-primary/5 text-primary">

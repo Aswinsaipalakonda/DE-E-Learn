@@ -52,17 +52,18 @@ export default function FilePreviewModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-primary/80 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-primary/80 backdrop-blur-md transition-all duration-300 animate-in fade-in"
       onClick={onClose}
     >
       <div 
-        className={`bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+        className={`bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-in zoom-in-95 ${
           isFullscreen 
             ? "w-full h-full rounded-none" 
             : "w-full max-w-5xl h-[85vh] max-h-[900px]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
+
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-border bg-bg/50 shrink-0">
           <div className="flex items-center gap-3 min-w-0 pr-4">

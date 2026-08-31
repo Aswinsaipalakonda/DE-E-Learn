@@ -86,7 +86,8 @@ export default function NotificationBell() {
 
       {/* Floating Announcements Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 z-50 w-80 bg-surface rounded-2xl border border-border shadow-md p-4 space-y-4">
+        <div className="absolute right-0 mt-2 z-50 w-80 bg-surface rounded-2xl border border-border shadow-2xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-250 ease-[cubic-bezier(0.16,1,0.3,1)]">
+
           <div className="flex items-center justify-between border-b border-border pb-2">
             <span className="font-bold text-xs text-primary">Announcements ({announcements.length})</span>
             <button

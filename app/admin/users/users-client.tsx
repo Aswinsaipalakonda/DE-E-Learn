@@ -375,16 +375,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE USER) */}
       {/* ========================================================================= */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="fixed inset-0 z-50 overflow-hidden transition-all duration-300">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
             onClick={() => !loading && setIsDrawerOpen(false)}
           />
 
           {/* Slide Drawer Panel */}
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
+            <div className="w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-in slide-in-from-right">
               {/* Drawer Header */}
               <div className="p-6 border-b border-border bg-bg/40 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -410,6 +410,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
               {/* Drawer Form Body */}
               <form id="create-user-form" onSubmit={handleSingleSubmit} className="p-6 space-y-5 flex-1 overflow-y-auto">
+
                 {/* Role Selector Segmented Buttons */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-2">

@@ -117,7 +117,7 @@ export default function GlobalSearch() {
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-primary/20 backdrop-blur-xs flex items-start justify-center p-4 pt-20"
+      className="fixed inset-0 z-50 bg-primary/20 backdrop-blur-md flex items-start justify-center p-4 pt-20 animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) setIsOpen(false);
       }}
@@ -125,8 +125,9 @@ export default function GlobalSearch() {
       <div 
         ref={modalRef}
         onKeyDown={handleKeyDown}
-        className="bg-surface rounded-2xl border border-border shadow-md w-full max-w-xl overflow-hidden flex flex-col max-h-[480px]"
+        className="bg-surface rounded-2xl border border-border shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[480px] animate-in zoom-in-95 ease-[cubic-bezier(0.16,1,0.3,1)] duration-300"
       >
+
         {/* Search header input */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-surface">
           <Search className="h-5 w-5 text-primary/40 shrink-0" />

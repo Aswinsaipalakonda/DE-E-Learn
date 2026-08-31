@@ -64,8 +64,9 @@ export default function ReplaceDialog({ materialId, fileId, fileName, onClose }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-primary/20 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-surface rounded-2xl border border-border shadow-md w-full max-w-md p-6 relative">
+    <div className="fixed inset-0 z-50 bg-primary/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-surface rounded-2xl border border-border shadow-2xl w-full max-w-md p-6 relative animate-in zoom-in-95 ease-[cubic-bezier(0.16,1,0.3,1)] duration-300">
+
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1 hover:bg-bg text-primary/60 rounded-md cursor-pointer transition-colors"
