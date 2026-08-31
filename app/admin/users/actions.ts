@@ -17,7 +17,8 @@ export async function createUserAction(
   branch: string | null,
   semester: number | null,
   section?: string | null,
-  designation?: string | null
+  designation?: string | null,
+  rollNumber?: string | null
 ) {
   const cookieStore = await cookies();
   const adminClient = createServerClient(cookieStore);
@@ -41,7 +42,7 @@ export async function createUserAction(
     auth: { persistSession: false }
   });
 
-  const defaultPassword = "ChangeMe1234!";
+  const defaultPassword = role === "student" && rollNumber ? rollNumber.toUpperCase().trim() : "ChangeMe1234!";
 
   const { data: authData, error: authError } = await statelessClient.auth.signUp({
     email,
@@ -75,6 +76,9 @@ export async function createUserAction(
   if (designation) {
     profilePayload.designation = designation.trim();
   }
+  if (rollNumber) {
+    profilePayload.roll_number = rollNumber.toUpperCase().trim();
+  }
 
   let { data: profileData, error: profileError } = await adminClient
     .from("users")
@@ -82,9 +86,11 @@ export async function createUserAction(
     .select()
     .single();
 
-  if (profileError && (profileError.message?.toLowerCase().includes("section") || profileError.message?.toLowerCase().includes("designation"))) {
+  // Schema resilience retry if optional columns are absent in DB
+  if (profileError) {
     delete profilePayload.section;
     delete profilePayload.designation;
+    delete profilePayload.roll_number;
     const retry = await adminClient.from("users").upsert(profilePayload).select().single();
     profileData = retry.data;
     profileError = retry.error;
@@ -94,7 +100,7 @@ export async function createUserAction(
     return { error: `Profile creation failed: ${profileError.message}` };
   }
 
-  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester, section, designation });
+  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester, section, designation, rollNumber });
 
   revalidatePath("/admin/users");
   return { success: true, user: profileData };
@@ -110,6 +116,7 @@ export async function updateUserAction(
     semester: number | null;
     section: string | null;
     designation: string | null;
+    rollNumber?: string | null;
     status: "active" | "deactivated";
   }
 ) {
@@ -143,6 +150,9 @@ export async function updateUserAction(
   if (updates.designation) {
     updatePayload.designation = updates.designation.trim();
   }
+  if (updates.rollNumber) {
+    updatePayload.roll_number = updates.rollNumber.toUpperCase().trim();
+  }
 
   let { data: profileData, error: updateError } = await adminClient
     .from("users")
@@ -151,9 +161,10 @@ export async function updateUserAction(
     .select()
     .single();
 
-  if (updateError && (updateError.message?.toLowerCase().includes("section") || updateError.message?.toLowerCase().includes("designation"))) {
+  if (updateError) {
     delete updatePayload.section;
     delete updatePayload.designation;
+    delete updatePayload.roll_number;
     const retry = await adminClient.from("users").update(updatePayload).eq("id", userId).select().single();
     profileData = retry.data;
     updateError = retry.error;
@@ -187,7 +198,6 @@ export async function deleteUserAction(userId: string, email: string) {
     return { error: "Permission denied." };
   }
 
-  // Prevent admin from deleting themselves
   if (userId === adminUser.id) {
     return { error: "Cannot delete your own administrator account." };
   }
@@ -217,6 +227,7 @@ export async function batchCreateUsersAction(
     semester: number | null;
     section?: string | null;
     designation?: string | null;
+    rollNumber?: string | null;
   }[]
 ) {
   const cookieStore = await cookies();
@@ -245,7 +256,7 @@ export async function batchCreateUsersAction(
 
   for (const item of usersList) {
     try {
-      const defaultPassword = "ChangeMe1234!";
+      const defaultPassword = item.role === "student" && item.rollNumber ? item.rollNumber.toUpperCase().trim() : "ChangeMe1234!";
 
       const { data: authData, error: authError } = await statelessClient.auth.signUp({
         email: item.email,
@@ -277,14 +288,16 @@ export async function batchCreateUsersAction(
 
       if (item.section) rowPayload.section = item.section.toUpperCase().trim();
       if (item.designation) rowPayload.designation = item.designation.trim();
+      if (item.rollNumber) rowPayload.roll_number = item.rollNumber.toUpperCase().trim();
 
       let { error: profileError } = await adminClient
         .from("users")
         .upsert(rowPayload);
 
-      if (profileError && (profileError.message?.toLowerCase().includes("section") || profileError.message?.toLowerCase().includes("designation"))) {
+      if (profileError) {
         delete rowPayload.section;
         delete rowPayload.designation;
+        delete rowPayload.roll_number;
         const retry = await adminClient.from("users").upsert(rowPayload);
         profileError = retry.error;
       }

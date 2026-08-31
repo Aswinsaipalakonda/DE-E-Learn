@@ -23,6 +23,7 @@ interface UserItem {
   current_semester: number | null;
   section: string | null;
   designation: string | null;
+  roll_number: string | null;
   created_at: string;
 }
 
@@ -40,11 +41,11 @@ export default async function AdminUsersPage() {
 
   const usersWithAllCols = await supabase
     .from("users")
-    .select("id, email, name, role, status, branch, current_semester, section, designation, created_at")
+    .select("id, email, name, role, status, branch, current_semester, section, designation, roll_number, created_at")
     .order("created_at", { ascending: false });
 
   if (usersWithAllCols.error) {
-    // Fallback query if section/designation columns are not present in schema yet
+    // Fallback query if optional columns are not present in schema yet
     const fallbackUsers = await supabase
       .from("users")
       .select("id, email, name, role, status, branch, current_semester, created_at")
@@ -84,8 +85,10 @@ export default async function AdminUsersPage() {
     current_semester: typeof u.current_semester === "number" ? u.current_semester : null,
     section: (u.section as string) || null,
     designation: (u.designation as string) || null,
+    roll_number: (u.roll_number as string) || (String(u.email || "").includes("@") ? String(u.email || "").split("@")[0].toUpperCase() : null),
     created_at: String(u.created_at || ""),
   }));
+
 
 
   const branches = (branchesRes.data as unknown as BranchItem[]) || [];

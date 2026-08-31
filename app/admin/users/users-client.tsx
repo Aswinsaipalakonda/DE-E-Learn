@@ -21,7 +21,9 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Briefcase
+  Briefcase,
+  AlertCircle,
+  Hash
 } from "lucide-react";
 
 interface BranchOption {
@@ -44,6 +46,7 @@ interface UserItem {
   current_semester: number | null;
   section: string | null;
   designation: string | null;
+  roll_number: string | null;
   created_at: string;
 }
 
@@ -59,6 +62,15 @@ const DEFAULT_DESIGNATIONS = [
   "Distinguished Associate Professor",
   "Assistant Professor"
 ];
+
+// Validate 10-char roll number with college code '33' at position 3-4 (0-indexed 2-3)
+function isValidRollNumber(roll: string): boolean {
+  if (!roll || roll.length !== 10) return false;
+  const upper = roll.toUpperCase();
+  // Format: 2 digits + 33 + 6 alphanumeric characters
+  const regex = /^\d{2}33[0-9A-Z]{6}$/;
+  return regex.test(upper);
+}
 
 export default function UsersClient({ initialUsers, branches, semesters }: UsersClientProps) {
   const [users, setUsers] = useState<UserItem[]>(initialUsers);
@@ -93,7 +105,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [semester, setSemester] = useState("1");
   const [status, setStatus] = useState<"active" | "deactivated">("active");
 
-  // Student Section State
+  // Student Roll Number & Section State
+  const [rollNumber, setRollNumber] = useState("");
   const [section, setSection] = useState("A");
   const [availableSections, setAvailableSections] = useState<string[]>(["A", "B"]);
   const [customSectionInput, setCustomSectionInput] = useState("");
@@ -125,12 +138,29 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  // Roll Number change handler (auto-generates official college email)
+  const handleRollNumberChange = (val: string) => {
+    const upper = val.toUpperCase().trim();
+    setRollNumber(upper);
+    if (upper) {
+      setEmail(`${upper.toLowerCase()}@mvgrce.edu.in`);
+    }
+  };
+
+  // Roll Number validation status
+  const isRollInvalid = useMemo(() => {
+    if (role !== "student") return false;
+    if (!rollNumber) return false;
+    return !isValidRollNumber(rollNumber);
+  }, [role, rollNumber]);
+
   // Open Drawer in Create Mode
   const openCreateDrawer = () => {
     setEditingUser(null);
     setEmail("");
     setName("");
     setRole("student");
+    setRollNumber("");
     setBranch(branches[0]?.code || "CIC");
     setSemester("1");
     setSection("A");
@@ -150,6 +180,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setEmail(user.email);
     setName(user.name);
     setRole(user.role);
+    setRollNumber(user.roll_number || (user.email.includes("@") ? user.email.split("@")[0].toUpperCase() : ""));
     setBranch(user.branch || branches[0]?.code || "CIC");
     setSemester(user.current_semester ? user.current_semester.toString() : "1");
     setSection(user.section || "A");
@@ -217,10 +248,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   // Filtered dataset
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (u.designation && u.designation.toLowerCase().includes(searchQuery.toLowerCase()));
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.roll_number && u.roll_number.toLowerCase().includes(q)) ||
+        (u.designation && u.designation.toLowerCase().includes(q));
       const matchesRole = roleFilter === "all" ? true : u.role === roleFilter;
       const matchesBranch = branchFilter === "all" ? true : u.branch === branchFilter;
       const matchesSection = sectionFilter === "all" ? true : u.section === sectionFilter;
@@ -312,12 +345,20 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   // Form Submit (Create OR Edit)
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (role === "student" && rollNumber && !isValidRollNumber(rollNumber)) {
+      addToast("error", "Invalid Roll Number", "Please enter a valid 10-character college roll number in standard format (e.g. 23331A4745).");
+      return;
+    }
+
     setLoading(true);
 
     const semNum = role === "student" && semester ? parseInt(semester, 10) : null;
     const branchVal = role === "admin" ? null : branch;
     const sectionVal = role === "student" ? section : null;
     const designationVal = role === "faculty" ? designation : null;
+    const rollVal = role === "student" ? rollNumber : null;
+    const finalEmail = role === "student" && rollNumber ? `${rollNumber.toLowerCase()}@mvgrce.edu.in` : email.trim().toLowerCase();
 
     try {
       if (editingUser) {
@@ -329,6 +370,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           semester: semNum,
           section: sectionVal,
           designation: designationVal,
+          rollNumber: rollVal,
           status,
         });
 
@@ -347,6 +389,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     current_semester: semNum,
                     section: sectionVal,
                     designation: designationVal,
+                    roll_number: rollVal,
                     status,
                   }
                 : u
@@ -357,13 +400,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       } else {
         // CREATE New User
         const result = await createUserAction(
-          email,
+          finalEmail,
           name,
           role,
           branchVal,
           semNum,
           sectionVal,
-          designationVal
+          designationVal,
+          rollVal
         );
 
         if (result.error) {
@@ -381,6 +425,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
           setEmail("");
           setName("");
+          setRollNumber("");
           closeDrawer();
         }
       }
@@ -417,15 +462,20 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setCsvLoading(true);
 
     const formattedList = csvPreview
-      .map((item) => ({
-        email: item.email || "",
-        name: item.name || "",
-        role: (item.role || "student") as "student" | "faculty" | "admin",
-        branch: item.branch || null,
-        semester: item.semester ? parseInt(item.semester, 10) : null,
-        section: item.section ? item.section.toUpperCase().trim() : "A",
-        designation: item.designation ? item.designation.trim() : "Assistant Professor",
-      }))
+      .map((item) => {
+        const roll = item.roll_number || item.rollnumber || (item.email?.includes("@") ? item.email.split("@")[0].toUpperCase() : null);
+        const itemEmail = item.role === "student" && roll ? `${roll.toLowerCase()}@mvgrce.edu.in` : (item.email || "");
+        return {
+          email: itemEmail,
+          name: item.name || "",
+          role: (item.role || "student") as "student" | "faculty" | "admin",
+          branch: item.branch || null,
+          semester: item.semester ? parseInt(item.semester, 10) : null,
+          section: item.section ? item.section.toUpperCase().trim() : "A",
+          designation: item.designation ? item.designation.trim() : "Assistant Professor",
+          rollNumber: roll,
+        };
+      })
       .filter((u) => u.email && u.name);
 
     try {
@@ -531,26 +581,26 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 User Management & Roster
               </h1>
               <p className="text-xs sm:text-sm text-primary/60 font-normal leading-relaxed mt-0.5">
-                Provision and manage students, faculty designations, and administrators across department cohorts.
+                Provision students with verified roll numbers, faculty ranks, and department cohorts.
               </p>
             </div>
           </div>
 
           {/* Stat Counter Badges */}
           <div className="flex flex-wrap items-center gap-2 pt-1.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-bg border border-border text-xs font-medium text-primary">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-bg border border-border text-xs font-medium text-primary">
               <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
               Total: <span className="font-semibold">{counts.total}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-medium text-blue-700">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-medium text-blue-700">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
               Students: <span className="font-semibold">{counts.students}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-medium text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-medium text-emerald-700">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
               Faculty: <span className="font-semibold">{counts.faculty}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-xs font-medium text-slate-800">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-slate-100 border border-slate-300 text-xs font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-700" />
               Admins: <span className="font-semibold">{counts.admins}</span>
             </span>
@@ -619,7 +669,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           <div className="sm:col-span-5 relative">
             <Search className="absolute left-4 top-3 h-4 w-4 text-primary/40" />
             <input
-              placeholder="Search by name, email, or designation..."
+              placeholder="Search by name, roll number, email, or designation..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-11 pr-10 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 font-normal text-primary placeholder:text-primary/40 transition-all"
@@ -691,7 +741,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* IMMERSIVE ROSTER DIRECTORY TABLE WITH FULL CRUD ACTIONS */}
+      {/* IMMERSIVE ROSTER DIRECTORY TABLE WITH ROLL NUMBERS & FULL CRUD */}
       {/* ========================================================================= */}
       <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
         {paginatedUsers.length > 0 ? (
@@ -712,10 +762,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   const isToggling = togglingId === u.id;
                   const roleStyle = getRoleStyle(u.role);
                   const initials = getInitials(u.name);
+                  const displayRoll = u.roll_number || (u.role === "student" && u.email.includes("@") ? u.email.split("@")[0].toUpperCase() : null);
 
                   return (
                     <tr key={u.id} className="hover:bg-bg/30 transition-colors group">
-                      {/* Name & Initials Avatar */}
+                      {/* Name & Initials Avatar + Roll Number */}
                       <td className="py-3.5 pl-6 pr-4">
                         <div className="flex items-center gap-3">
                           <div
@@ -724,9 +775,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                             {initials}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-primary text-sm leading-snug group-hover:text-secondary transition-colors">
-                              {u.name}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-primary text-sm leading-snug group-hover:text-secondary transition-colors">
+                                {u.name}
+                              </h3>
+                              {displayRoll && (
+                                <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 text-[11px] font-bold text-blue-700 font-mono">
+                                  {displayRoll}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[11px] text-primary/50 font-normal block mt-0.5">
                               Registered: {new Date(u.created_at).toLocaleDateString()}
                             </span>
@@ -738,7 +796,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       <td className="py-3.5 px-4 text-primary/70 text-sm font-normal">
                         <div className="flex items-center gap-2">
                           <Mail className="h-3.5 w-3.5 text-primary/40 shrink-0" />
-                          <span className="truncate max-w-[220px]">{u.email}</span>
+                          <span className="truncate max-w-[220px] font-mono text-xs">{u.email}</span>
                         </div>
                       </td>
 
@@ -822,7 +880,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                             }`}
                           >
                             {isToggling ? (
-                              <Loader2 className="h-3 w-3 animate-spin mx-auto" />
+                              <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
                             ) : u.status === "active" ? (
                               "Deactivate"
                             ) : (
@@ -956,7 +1014,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE / EDIT USER) */}
+      {/* REDESIGNED CRISP SLIDE-OVER RIGHT DRAWER (CREATE / EDIT USER) */}
       {/* ========================================================================= */}
       {isDrawerMounted && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -1003,16 +1061,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 </button>
               </div>
 
-              {/* Drawer Form Body */}
+              {/* Drawer Form Body with Crisp Card Sections */}
               <form 
                 id="user-manage-form" 
                 data-lenis-prevent
                 onSubmit={handleFormSubmit} 
                 className="p-5 sm:p-6 space-y-4.5 flex-1 overflow-y-auto overscroll-contain"
               >
-                {/* Role Selector Segmented Buttons */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-2">
+                {/* 1. Account Role Segmented Buttons */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
                     Account Role *
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -1044,9 +1102,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 </div>
 
-                {/* Name Input */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                {/* 2. Full Name */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
                     Full Name *
                   </label>
                   <input
@@ -1059,44 +1117,91 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   />
                 </div>
 
-                {/* Email Address Input */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
-                    Official College Email *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    disabled={!!editingUser}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={
-                      role === "student"
-                        ? "e.g., 23331a4745@mvgrce.edu.in"
-                        : "e.g., faculty@mvgrce.edu.in"
-                    }
-                    className={`w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40 ${
-                      editingUser ? "opacity-60 cursor-not-allowed bg-border/40" : ""
-                    }`}
-                  />
-                  {editingUser && (
-                    <span className="text-[11px] text-primary/40 mt-1 block">Email address cannot be changed once provisioned.</span>
-                  )}
-                </div>
+                {/* 3. Role-Specific Identifiers: Roll Number for Students */}
+                {role === "student" && (
+                  <div className="p-4 bg-blue-50/40 border border-blue-200/70 rounded-2xl space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                          <Hash className="h-3.5 w-3.5 text-blue-600" />
+                          <span>Student Roll Number *</span>
+                        </label>
+                        <span className="text-[11px] text-blue-600/80 font-mono">10 Characters</span>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        maxLength={10}
+                        value={rollNumber}
+                        onChange={(e) => handleRollNumberChange(e.target.value)}
+                        placeholder="e.g., 23331A4745"
+                        className={`w-full px-4 py-2.5 text-sm font-mono uppercase bg-white border rounded-full focus:outline-none focus:ring-2 transition-all ${
+                          isRollInvalid
+                            ? "border-red-400 focus:ring-red-400 text-red-700"
+                            : "border-blue-200 focus:ring-blue-400 text-primary"
+                        }`}
+                      />
+                      {/* Helpful validation warning without leaking internal constraints */}
+                      {isRollInvalid && (
+                        <div className="flex items-center gap-1.5 text-xs text-red-600 pt-1 font-medium animate-in fade-in">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                          <span>Please enter a valid 10-character college roll number in standard format (e.g. 23331A4745).</span>
+                        </div>
+                      )}
+                    </div>
 
-                {/* Conditional Fields for Faculty: Designation */}
+                    {/* Auto-Generated College Email Preview */}
+                    <div className="space-y-1 pt-1">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-blue-900/80">
+                        Official College Email (Auto-Generated)
+                      </label>
+                      <div className="px-4 py-2.5 bg-white/80 border border-blue-200/60 rounded-full text-xs font-mono text-blue-800 flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                        <span className="truncate">
+                          {rollNumber ? `${rollNumber.toLowerCase()}@mvgrce.edu.in` : "rollnumber@mvgrce.edu.in"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Email Address for Faculty & Admin */}
+                {role !== "student" && (
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
+                      Official College Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      disabled={!!editingUser}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={role === "faculty" ? "e.g., faculty@mvgrce.edu.in" : "e.g., admin@mvgrce.edu.in"}
+                      className={`w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40 ${
+                        editingUser ? "opacity-60 cursor-not-allowed bg-border/40" : ""
+                      }`}
+                    />
+                    {editingUser && (
+                      <span className="text-[11px] text-primary/40 mt-1 block">Email address cannot be changed once provisioned.</span>
+                    )}
+                  </div>
+                )}
+
+                {/* 4. Faculty Designations & Department */}
                 {role === "faculty" && (
                   <div className="space-y-3.5 pt-0.5">
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                          Faculty Designation *
+                    <div className="p-4 bg-emerald-50/30 border border-emerald-200/70 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                          <Briefcase className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Faculty Designation *</span>
                         </label>
                         {!isAddingNewDesignation && (
                           <button
                             type="button"
                             onClick={() => setIsAddingNewDesignation(true)}
-                            className="text-xs font-medium text-secondary hover:underline cursor-pointer flex items-center gap-1"
+                            className="text-xs font-medium text-emerald-700 hover:underline cursor-pointer flex items-center gap-1"
                           >
                             <Plus className="h-3 w-3" />
                             <span>Add Designation</span>
@@ -1104,7 +1209,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         )}
                       </div>
 
-                      {/* Designation Pills */}
+                      {/* Designation Selection Pills */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {availableDesignations.map((desig) => {
                           const isDesigSelected = designation === desig;
@@ -1116,7 +1221,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                               className={`px-3.5 py-2 rounded-2xl text-xs text-left border transition-all cursor-pointer flex items-center justify-between ${
                                 isDesigSelected
                                   ? "bg-primary text-white border-primary shadow-2xs font-semibold"
-                                  : "bg-bg text-primary/70 border-border hover:border-primary/40 font-medium"
+                                  : "bg-white text-primary/70 border-emerald-200/60 hover:border-emerald-400 font-medium"
                               }`}
                             >
                               <span>{desig}</span>
@@ -1126,15 +1231,15 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         })}
                       </div>
 
-                      {/* Inline Input for New Designation */}
+                      {/* Inline Input for Custom Designation */}
                       {isAddingNewDesignation && (
-                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-bg border border-border rounded-full animate-in fade-in">
+                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-white border border-emerald-200 rounded-full animate-in fade-in">
                           <input
                             type="text"
                             placeholder="e.g. Dean of Academic Affairs"
                             value={customDesignationInput}
                             onChange={(e) => setCustomDesignationInput(e.target.value)}
-                            className="px-3.5 py-1 text-xs bg-surface border border-border rounded-full font-medium text-primary flex-1 focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                            className="px-3.5 py-1 text-xs bg-transparent border-none font-medium text-primary flex-1 focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1156,8 +1261,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     </div>
 
                     {/* Department Branch for Faculty */}
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
                         Department Specialization
                       </label>
                       <select
@@ -1175,48 +1280,49 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 )}
 
-                {/* Conditional Fields for Students */}
+                {/* 5. Student Branch, Semester & Section */}
                 {role === "student" && (
                   <div className="space-y-3.5 pt-0.5">
-                    {/* Branch */}
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
-                        Branch Specialization *
-                      </label>
-                      <select
-                        value={branch}
-                        onChange={(e) => setBranch(e.target.value)}
-                        className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
-                      >
-                        {branches.map((b) => (
-                          <option key={b.code} value={b.code}>
-                            {b.code} - {b.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Branch & Semester Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
+                          Branch *
+                        </label>
+                        <select
+                          value={branch}
+                          onChange={(e) => setBranch(e.target.value)}
+                          className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                        >
+                          {branches.map((b) => (
+                            <option key={b.code} value={b.code}>
+                              {b.code}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                    {/* Semester */}
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
-                        Current Semester *
-                      </label>
-                      <select
-                        value={semester}
-                        onChange={(e) => setSemester(e.target.value)}
-                        className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
-                      >
-                        {semesters.map((s) => (
-                          <option key={s.number} value={s.number.toString()}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
+                          Semester *
+                        </label>
+                        <select
+                          value={semester}
+                          onChange={(e) => setSemester(e.target.value)}
+                          className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                        >
+                          {semesters.map((s) => (
+                            <option key={s.number} value={s.number.toString()}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     {/* Section Selector */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
                         <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
                           Section Cohort *
                         </label>
@@ -1285,10 +1391,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 )}
 
-                {/* Edit Mode: Account Status Selector */}
+                {/* 6. Edit Mode: Account Status Selector */}
                 {editingUser && (
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
                       Account Status
                     </label>
                     <select
@@ -1302,11 +1408,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 )}
 
-                {/* Password Policy Info Note */}
+                {/* Security Policy Info Card */}
                 <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs">
                   <div className="flex items-center gap-1.5 font-semibold text-primary">
                     <Sparkles className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>Security Policy</span>
+                    <span>Security & Initial Credentials</span>
                   </div>
                   <p className="text-[11px] text-primary/65 leading-relaxed font-normal">
                     {editingUser
@@ -1331,7 +1437,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 <button
                   type="submit"
                   form="user-manage-form"
-                  disabled={loading}
+                  disabled={loading || (role === "student" && isRollInvalid)}
                   className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {loading ? (
@@ -1450,7 +1556,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   />
                 </label>
                 <span className="text-[11px] text-primary/50 mt-1 block font-normal">
-                  Required columns: <code>email, name, role, branch, semester, section, designation</code>
+                  Required columns: <code>email, name, role, branch, semester, section, designation, roll_number</code>
                 </span>
               </div>
 
@@ -1463,7 +1569,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     <table className="w-full text-left text-xs">
                       <thead className="bg-bg font-semibold text-primary/50 border-b border-border">
                         <tr>
-                          <th className="p-2.5">Email</th>
+                          <th className="p-2.5">Email / Roll</th>
                           <th className="p-2.5">Name</th>
                           <th className="p-2.5">Role</th>
                           <th className="p-2.5">Scope/Designation</th>
@@ -1472,7 +1578,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       <tbody className="divide-y divide-border">
                         {csvPreview.slice(0, 10).map((row, i) => (
                           <tr key={i} className="hover:bg-bg/25">
-                            <td className="p-2.5 font-normal text-primary">{row.email}</td>
+                            <td className="p-2.5 font-normal text-primary">{row.email || row.roll_number}</td>
                             <td className="p-2.5 text-primary/80 font-normal">{row.name}</td>
                             <td className="p-2.5 font-medium uppercase">{row.role || "student"}</td>
                             <td className="p-2.5 font-normal">
