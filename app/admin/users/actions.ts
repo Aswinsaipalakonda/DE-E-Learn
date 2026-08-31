@@ -16,7 +16,8 @@ export async function createUserAction(
   role: "student" | "faculty" | "admin",
   branch: string | null,
   semester: number | null,
-  section?: string | null
+  section?: string | null,
+  designation?: string | null
 ) {
   const cookieStore = await cookies();
   const adminClient = createServerClient(cookieStore);
@@ -71,6 +72,9 @@ export async function createUserAction(
   if (section) {
     profilePayload.section = section.toUpperCase().trim();
   }
+  if (designation) {
+    profilePayload.designation = designation.trim();
+  }
 
   let { data: profileData, error: profileError } = await adminClient
     .from("users")
@@ -78,8 +82,9 @@ export async function createUserAction(
     .select()
     .single();
 
-  if (profileError && profileError.message?.toLowerCase().includes("section")) {
+  if (profileError && (profileError.message?.toLowerCase().includes("section") || profileError.message?.toLowerCase().includes("designation"))) {
     delete profilePayload.section;
+    delete profilePayload.designation;
     const retry = await adminClient.from("users").upsert(profilePayload).select().single();
     profileData = retry.data;
     profileError = retry.error;
@@ -89,13 +94,118 @@ export async function createUserAction(
     return { error: `Profile creation failed: ${profileError.message}` };
   }
 
-  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester, section });
+  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester, section, designation });
 
   revalidatePath("/admin/users");
   return { success: true, user: profileData };
 }
 
+// Update an existing user
+export async function updateUserAction(
+  userId: string,
+  updates: {
+    name: string;
+    role: "student" | "faculty" | "admin";
+    branch: string | null;
+    semester: number | null;
+    section: string | null;
+    designation: string | null;
+    status: "active" | "deactivated";
+  }
+) {
+  const cookieStore = await cookies();
+  const adminClient = createServerClient(cookieStore);
 
+  const { data: { user: adminUser } } = await adminClient.auth.getUser();
+  if (!adminUser) return { error: "Unauthorized" };
+
+  const { data: adminProfile } = await adminClient
+    .from("users")
+    .select("role")
+    .eq("id", adminUser.id)
+    .single();
+
+  if (!adminProfile || adminProfile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  const updatePayload: Record<string, unknown> = {
+    name: updates.name.trim(),
+    role: updates.role,
+    status: updates.status,
+    branch: updates.branch || null,
+    current_semester: updates.semester || null,
+  };
+
+  if (updates.section) {
+    updatePayload.section = updates.section.toUpperCase().trim();
+  }
+  if (updates.designation) {
+    updatePayload.designation = updates.designation.trim();
+  }
+
+  let { data: profileData, error: updateError } = await adminClient
+    .from("users")
+    .update(updatePayload)
+    .eq("id", userId)
+    .select()
+    .single();
+
+  if (updateError && (updateError.message?.toLowerCase().includes("section") || updateError.message?.toLowerCase().includes("designation"))) {
+    delete updatePayload.section;
+    delete updatePayload.designation;
+    const retry = await adminClient.from("users").update(updatePayload).eq("id", userId).select().single();
+    profileData = retry.data;
+    updateError = retry.error;
+  }
+
+  if (updateError) {
+    return { error: `Update failed: ${updateError.message}` };
+  }
+
+  await logAuditAction("UPDATE_USER", userId, null, updates);
+
+  revalidatePath("/admin/users");
+  return { success: true, user: profileData };
+}
+
+// Delete user profile
+export async function deleteUserAction(userId: string, email: string) {
+  const cookieStore = await cookies();
+  const adminClient = createServerClient(cookieStore);
+
+  const { data: { user: adminUser } } = await adminClient.auth.getUser();
+  if (!adminUser) return { error: "Unauthorized" };
+
+  const { data: adminProfile } = await adminClient
+    .from("users")
+    .select("role")
+    .eq("id", adminUser.id)
+    .single();
+
+  if (!adminProfile || adminProfile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  // Prevent admin from deleting themselves
+  if (userId === adminUser.id) {
+    return { error: "Cannot delete your own administrator account." };
+  }
+
+  const { error: deleteError } = await adminClient
+    .from("users")
+    .delete()
+    .eq("id", userId);
+
+  if (deleteError) {
+    return { error: `Delete failed: ${deleteError.message}` };
+  }
+
+  await logAuditAction("DELETE_USER", email, { id: userId }, null);
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}
 
 // Batch Create Users (from CSV Roster)
 export async function batchCreateUsersAction(
@@ -106,6 +216,7 @@ export async function batchCreateUsersAction(
     branch: string | null;
     semester: number | null;
     section?: string | null;
+    designation?: string | null;
   }[]
 ) {
   const cookieStore = await cookies();
@@ -153,19 +264,30 @@ export async function batchCreateUsersAction(
         continue;
       }
 
-      const { error: profileError } = await adminClient
+      const rowPayload: Record<string, unknown> = {
+        id: authData.user.id,
+        email: item.email,
+        name: item.name,
+        role: item.role,
+        status: "active",
+        branch: item.branch || null,
+        current_semester: item.semester || null,
+        first_login_pending: true,
+      };
+
+      if (item.section) rowPayload.section = item.section.toUpperCase().trim();
+      if (item.designation) rowPayload.designation = item.designation.trim();
+
+      let { error: profileError } = await adminClient
         .from("users")
-        .upsert({
-          id: authData.user.id,
-          email: item.email,
-          name: item.name,
-          role: item.role,
-          status: "active",
-          branch: item.branch || null,
-          current_semester: item.semester || null,
-          section: item.section ? item.section.toUpperCase().trim() : null,
-          first_login_pending: true,
-        });
+        .upsert(rowPayload);
+
+      if (profileError && (profileError.message?.toLowerCase().includes("section") || profileError.message?.toLowerCase().includes("designation"))) {
+        delete rowPayload.section;
+        delete rowPayload.designation;
+        const retry = await adminClient.from("users").upsert(rowPayload);
+        profileError = retry.error;
+      }
 
       if (profileError) {
         failCount++;
@@ -185,22 +307,34 @@ export async function batchCreateUsersAction(
   return { successCount, failCount, errors };
 }
 
-
 // Reset User Status / Lock account
 export async function toggleUserStatus(userId: string, currentStatus: string) {
   const cookieStore = await cookies();
   const supabase = createServerClient(cookieStore);
 
-  const newStatus = currentStatus === "active" ? "deactivated" : "active";
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  const nextStatus = currentStatus === "active" ? "deactivated" : "active";
 
   const { error } = await supabase
     .from("users")
-    .update({ status: newStatus })
+    .update({ status: nextStatus })
     .eq("id", userId);
 
   if (error) return { error: error.message };
 
-  await logAuditAction("TOGGLE_USER_STATUS", userId, { status: currentStatus }, { status: newStatus });
+  await logAuditAction("TOGGLE_USER_STATUS", userId, { status: currentStatus }, { status: nextStatus });
 
   revalidatePath("/admin/users");
   return { success: true };

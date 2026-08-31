@@ -22,6 +22,7 @@ interface UserItem {
   branch: string | null;
   current_semester: number | null;
   section: string | null;
+  designation: string | null;
   created_at: string;
 }
 
@@ -37,13 +38,13 @@ export default async function AdminUsersPage() {
   let usersData: Record<string, unknown>[] | null = null;
   let fetchError: { message: string } | null = null;
 
-  const usersWithSection = await supabase
+  const usersWithAllCols = await supabase
     .from("users")
-    .select("id, email, name, role, status, branch, current_semester, section, created_at")
+    .select("id, email, name, role, status, branch, current_semester, section, designation, created_at")
     .order("created_at", { ascending: false });
 
-  if (usersWithSection.error) {
-    // Fallback query if section column is not present in schema yet
+  if (usersWithAllCols.error) {
+    // Fallback query if section/designation columns are not present in schema yet
     const fallbackUsers = await supabase
       .from("users")
       .select("id, email, name, role, status, branch, current_semester, created_at")
@@ -55,7 +56,7 @@ export default async function AdminUsersPage() {
       usersData = fallbackUsers.data as unknown as Record<string, unknown>[];
     }
   } else {
-    usersData = usersWithSection.data as unknown as Record<string, unknown>[];
+    usersData = usersWithAllCols.data as unknown as Record<string, unknown>[];
   }
 
   // Fetch branches and semesters
@@ -82,8 +83,10 @@ export default async function AdminUsersPage() {
     branch: (u.branch as string) || null,
     current_semester: typeof u.current_semester === "number" ? u.current_semester : null,
     section: (u.section as string) || null,
+    designation: (u.designation as string) || null,
     created_at: String(u.created_at || ""),
   }));
+
 
   const branches = (branchesRes.data as unknown as BranchItem[]) || [];
   const semesters = (semestersRes.data as unknown as SemesterItem[]) || [];

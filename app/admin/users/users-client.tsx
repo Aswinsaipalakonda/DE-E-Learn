@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { createUserAction, batchCreateUsersAction, toggleUserStatus } from "./actions";
+import { createUserAction, updateUserAction, deleteUserAction, batchCreateUsersAction, toggleUserStatus } from "./actions";
 import { ToastContainer, ToastMessage } from "@/components/toast";
 import { 
   Users as UsersIcon, 
@@ -18,7 +18,10 @@ import {
   ChevronRight,
   ChevronLeft,
   Mail,
-  Plus
+  Plus,
+  Pencil,
+  Trash2,
+  Briefcase
 } from "lucide-react";
 
 interface BranchOption {
@@ -40,6 +43,7 @@ interface UserItem {
   branch: string | null;
   current_semester: number | null;
   section: string | null;
+  designation: string | null;
   created_at: string;
 }
 
@@ -48,6 +52,13 @@ interface UsersClientProps {
   branches: BranchOption[];
   semesters: SemesterOption[];
 }
+
+const DEFAULT_DESIGNATIONS = [
+  "Professor",
+  "Associate Professor",
+  "Distinguished Associate Professor",
+  "Assistant Professor"
+];
 
 export default function UsersClient({ initialUsers, branches, semesters }: UsersClientProps) {
   const [users, setUsers] = useState<UserItem[]>(initialUsers);
@@ -64,21 +75,35 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   // Slide-over Right Drawer Animation State
   const [isDrawerMounted, setIsDrawerMounted] = useState(false);
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+
+  // Delete Confirmation Modal State
+  const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
 
   // CSV Modal Animation State
   const [isCsvMounted, setIsCsvMounted] = useState(false);
   const [isCsvVisible, setIsCsvVisible] = useState(false);
 
-  // Single User Form State
+  // Form State
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"student" | "faculty" | "admin">("student");
   const [branch, setBranch] = useState(branches[0]?.code || "CIC");
   const [semester, setSemester] = useState("1");
+  const [status, setStatus] = useState<"active" | "deactivated">("active");
+
+  // Student Section State
   const [section, setSection] = useState("A");
   const [availableSections, setAvailableSections] = useState<string[]>(["A", "B"]);
   const [customSectionInput, setCustomSectionInput] = useState("");
   const [isAddingNewSection, setIsAddingNewSection] = useState(false);
+
+  // Faculty Designation State
+  const [designation, setDesignation] = useState("Assistant Professor");
+  const [availableDesignations, setAvailableDesignations] = useState<string[]>(DEFAULT_DESIGNATIONS);
+  const [customDesignationInput, setCustomDesignationInput] = useState("");
+  const [isAddingNewDesignation, setIsAddingNewDesignation] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -100,8 +125,44 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Drawer Open / Close Handlers
-  const openDrawer = () => {
+  // Open Drawer in Create Mode
+  const openCreateDrawer = () => {
+    setEditingUser(null);
+    setEmail("");
+    setName("");
+    setRole("student");
+    setBranch(branches[0]?.code || "CIC");
+    setSemester("1");
+    setSection("A");
+    setDesignation("Assistant Professor");
+    setStatus("active");
+    setIsDrawerMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsDrawerVisible(true);
+      });
+    });
+  };
+
+  // Open Drawer in Edit Mode
+  const openEditDrawer = (user: UserItem) => {
+    setEditingUser(user);
+    setEmail(user.email);
+    setName(user.name);
+    setRole(user.role);
+    setBranch(user.branch || branches[0]?.code || "CIC");
+    setSemester(user.current_semester ? user.current_semester.toString() : "1");
+    setSection(user.section || "A");
+    setDesignation(user.designation || "Assistant Professor");
+    setStatus(user.status);
+
+    if (user.designation && !availableDesignations.includes(user.designation)) {
+      setAvailableDesignations((prev) => [...prev, user.designation!]);
+    }
+    if (user.section && !availableSections.includes(user.section)) {
+      setAvailableSections((prev) => [...prev, user.section!]);
+    }
+
     setIsDrawerMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -114,6 +175,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setIsDrawerVisible(false);
     setTimeout(() => {
       setIsDrawerMounted(false);
+      setEditingUser(null);
     }, 450);
   };
 
@@ -143,7 +205,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     return { total, students, faculty, admins };
   }, [users]);
 
-  // Dynamic unique sections list from users
+  // Dynamic unique sections list
   const allKnownSections = useMemo(() => {
     const secSet = new Set<string>(availableSections);
     users.forEach((u) => {
@@ -157,7 +219,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     return users.filter((u) => {
       const matchesSearch =
         u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase());
+        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (u.designation && u.designation.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesRole = roleFilter === "all" ? true : u.role === roleFilter;
       const matchesBranch = branchFilter === "all" ? true : u.branch === branchFilter;
       const matchesSection = sectionFilter === "all" ? true : u.section === sectionFilter;
@@ -184,18 +247,29 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setCurrentPage(1);
   };
 
-  // Section Add Handler
+  // Dynamic Section Add Handler
   const handleAddCustomSection = () => {
     const trimmed = customSectionInput.trim().toUpperCase();
-    if (trimmed && !availableSections.includes(trimmed)) {
-      setAvailableSections((prev) => [...prev, trimmed]);
+    if (trimmed) {
+      if (!availableSections.includes(trimmed)) {
+        setAvailableSections((prev) => [...prev, trimmed]);
+      }
       setSection(trimmed);
       setCustomSectionInput("");
       setIsAddingNewSection(false);
-    } else if (trimmed) {
-      setSection(trimmed);
-      setCustomSectionInput("");
-      setIsAddingNewSection(false);
+    }
+  };
+
+  // Dynamic Designation Add Handler
+  const handleAddCustomDesignation = () => {
+    const trimmed = customDesignationInput.trim();
+    if (trimmed) {
+      if (!availableDesignations.includes(trimmed)) {
+        setAvailableDesignations((prev) => [...prev, trimmed]);
+      }
+      setDesignation(trimmed);
+      setCustomDesignationInput("");
+      setIsAddingNewDesignation(false);
     }
   };
 
@@ -235,38 +309,106 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }
   };
 
-  const handleSingleSubmit = async (e: React.FormEvent) => {
+  // Form Submit (Create OR Edit)
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     const semNum = role === "student" && semester ? parseInt(semester, 10) : null;
-    const branchVal = role === "student" ? branch : null;
+    const branchVal = role === "admin" ? null : branch;
     const sectionVal = role === "student" ? section : null;
+    const designationVal = role === "faculty" ? designation : null;
 
     try {
-      const result = await createUserAction(email, name, role, branchVal, semNum, sectionVal);
+      if (editingUser) {
+        // UPDATE Existing User
+        const result = await updateUserAction(editingUser.id, {
+          name,
+          role,
+          branch: branchVal,
+          semester: semNum,
+          section: sectionVal,
+          designation: designationVal,
+          status,
+        });
 
-      if (result.error) {
-        addToast("error", "Failed to create user", result.error);
+        if (result.error) {
+          addToast("error", "Update Failed", result.error);
+        } else {
+          addToast("success", "Profile Updated", `${name}'s account details have been modified.`);
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === editingUser.id
+                ? {
+                    ...u,
+                    name,
+                    role,
+                    branch: branchVal,
+                    current_semester: semNum,
+                    section: sectionVal,
+                    designation: designationVal,
+                    status,
+                  }
+                : u
+            )
+          );
+          closeDrawer();
+        }
       } else {
-        addToast(
-          "success",
-          "User Created Successfully",
-          `${name} (${role.toUpperCase()}) account has been registered.`
+        // CREATE New User
+        const result = await createUserAction(
+          email,
+          name,
+          role,
+          branchVal,
+          semNum,
+          sectionVal,
+          designationVal
         );
 
-        if (result.user) {
-          setUsers((prev) => [result.user as UserItem, ...prev]);
-        }
+        if (result.error) {
+          addToast("error", "Failed to create user", result.error);
+        } else {
+          addToast(
+            "success",
+            "User Created Successfully",
+            `${name} (${role.toUpperCase()}) account has been registered.`
+          );
 
-        setEmail("");
-        setName("");
-        closeDrawer();
+          if (result.user) {
+            setUsers((prev) => [result.user as UserItem, ...prev]);
+          }
+
+          setEmail("");
+          setName("");
+          closeDrawer();
+        }
       }
     } catch {
-      addToast("error", "Error", "An unexpected error occurred while creating user.");
+      addToast("error", "Error", "An unexpected error occurred while saving user.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Delete User Handler
+  const handleDeleteConfirm = async () => {
+    if (!deletingUser) return;
+    setIsDeleteLoading(true);
+
+    try {
+      const result = await deleteUserAction(deletingUser.id, deletingUser.email);
+      if (result.error) {
+        addToast("error", "Delete Failed", result.error);
+      } else {
+        addToast("success", "User Deleted", `${deletingUser.name}'s account was removed from the roster.`);
+        setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
+        setDeletingUser(null);
+      }
+    } catch {
+      addToast("error", "Error", "Failed to delete user account.");
+    } finally {
+      setIsDeleteLoading(false);
     }
   };
 
@@ -282,6 +424,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         branch: item.branch || null,
         semester: item.semester ? parseInt(item.semester, 10) : null,
         section: item.section ? item.section.toUpperCase().trim() : "A",
+        designation: item.designation ? item.designation.trim() : "Assistant Professor",
       }))
       .filter((u) => u.email && u.name);
 
@@ -332,7 +475,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }
   };
 
-  // Avatar Initials Helper
   const getInitials = (userName: string) => {
     const parts = userName.trim().split(" ");
     if (parts.length >= 2) {
@@ -341,7 +483,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     return userName.slice(0, 2).toUpperCase();
   };
 
-  // Avatar & Role Styling Helpers
   const getRoleStyle = (userRole: string) => {
     switch (userRole.toLowerCase()) {
       case "student":
@@ -390,7 +531,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 User Management & Roster
               </h1>
               <p className="text-xs sm:text-sm text-primary/60 font-normal leading-relaxed mt-0.5">
-                Provision students, faculty members, and administrators across department specializations.
+                Provision and manage students, faculty designations, and administrators across department cohorts.
               </p>
             </div>
           </div>
@@ -416,7 +557,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           </div>
         </div>
 
-        {/* Header Action Buttons (Fully Rounded Corners) */}
+        {/* Header Action Buttons */}
         <div className="flex items-center gap-3 self-start lg:self-center shrink-0">
           <button
             onClick={openCsvModal}
@@ -427,7 +568,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           </button>
 
           <button
-            onClick={openDrawer}
+            onClick={openCreateDrawer}
             className="inline-flex items-center gap-2 px-5.5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-medium text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
@@ -440,7 +581,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {/* FILTER & SEARCH TOOLBAR */}
       {/* ========================================================================= */}
       <div className="bg-surface p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-4">
-        {/* Role Tabs (Fully Rounded Pills) */}
+        {/* Role Tabs */}
         <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3">
           {[
             { id: "all", label: "All Users", count: counts.total },
@@ -472,13 +613,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           })}
         </div>
 
-        {/* Search, Branch, Section & Status Filters (Fully Rounded Corners) */}
+        {/* Search, Branch, Section & Status Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           {/* Search Box */}
           <div className="sm:col-span-5 relative">
             <Search className="absolute left-4 top-3 h-4 w-4 text-primary/40" />
             <input
-              placeholder="Search by user name or official email..."
+              placeholder="Search by name, email, or designation..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-11 pr-10 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 font-normal text-primary placeholder:text-primary/40 transition-all"
@@ -550,7 +691,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* IMMERSIVE ROSTER DIRECTORY TABLE */}
+      {/* IMMERSIVE ROSTER DIRECTORY TABLE WITH FULL CRUD ACTIONS */}
       {/* ========================================================================= */}
       <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
         {paginatedUsers.length > 0 ? (
@@ -561,7 +702,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   <th className="py-3.5 pl-6 pr-4">User</th>
                   <th className="py-3.5 px-4">Official Email</th>
                   <th className="py-3.5 px-4">Role</th>
-                  <th className="py-3.5 px-4">Scope, Term & Section</th>
+                  <th className="py-3.5 px-4">Scope, Term / Designation</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
                 </tr>
@@ -608,30 +749,38 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         </span>
                       </td>
 
-                      {/* Scope, Term & Section */}
+                      {/* Scope, Term / Designation */}
                       <td className="py-3.5 px-4">
-                        {u.branch ? (
+                        {u.role === "student" ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="px-2.5 py-0.5 rounded-full bg-bg border border-border text-xs font-medium text-primary">
-                              {u.branch}
-                            </span>
-                            {u.current_semester ? (
+                            {u.branch && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-bg border border-border text-xs font-medium text-primary">
+                                {u.branch}
+                              </span>
+                            )}
+                            {u.current_semester && (
                               <span className="px-2.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 text-[11px] font-medium text-secondary">
                                 Sem {u.current_semester}
                               </span>
-                            ) : null}
-                            {u.section ? (
-                              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[11px] font-medium text-primary">
-                                Sec {u.section}
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-0.5 rounded-full bg-primary/5 border border-primary/10 text-[11px] font-medium text-primary/70">
-                                Sec A
+                            )}
+                            <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[11px] font-medium text-primary">
+                              Sec {u.section || "A"}
+                            </span>
+                          </div>
+                        ) : u.role === "faculty" ? (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-semibold text-emerald-800 flex items-center gap-1">
+                              <Briefcase className="h-3 w-3 text-emerald-600" />
+                              {u.designation || "Assistant Professor"}
+                            </span>
+                            {u.branch && (
+                              <span className="px-2 py-0.5 rounded-full bg-bg border border-border text-[11px] font-medium text-primary/70">
+                                {u.branch}
                               </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-primary/35 font-normal text-xs">— Department Wide</span>
+                          <span className="text-primary/40 font-normal text-xs">— System Administrator</span>
                         )}
                       </td>
 
@@ -650,25 +799,46 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         )}
                       </td>
 
-                      {/* Actions (Rounded Full Buttons) */}
+                      {/* Full CRUD Actions: Edit, Status Toggle, Delete */}
                       <td className="py-3.5 pl-4 pr-6 text-right">
-                        <button
-                          onClick={() => handleStatusToggle(u.id, u.status, u.name)}
-                          disabled={isToggling}
-                          className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
-                            u.status === "active"
-                              ? "bg-surface hover:bg-red-50 text-primary/70 hover:text-red-700 border-border hover:border-red-200/80 shadow-2xs"
-                              : "bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border-emerald-200/80 shadow-2xs"
-                          }`}
-                        >
-                          {isToggling ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
-                          ) : u.status === "active" ? (
-                            "Deactivate"
-                          ) : (
-                            "Activate"
-                          )}
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Edit Trigger */}
+                          <button
+                            onClick={() => openEditDrawer(u)}
+                            title="Edit User Profile"
+                            className="p-1.5 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg hover:border-primary/30 transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+
+                          {/* Activate / Deactivate Toggle */}
+                          <button
+                            onClick={() => handleStatusToggle(u.id, u.status, u.name)}
+                            disabled={isToggling}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
+                              u.status === "active"
+                                ? "bg-surface hover:bg-red-50 text-primary/70 hover:text-red-700 border-border hover:border-red-200/80 shadow-2xs"
+                                : "bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border-emerald-200/80 shadow-2xs"
+                            }`}
+                          >
+                            {isToggling ? (
+                              <Loader2 className="h-3 w-3 animate-spin mx-auto" />
+                            ) : u.status === "active" ? (
+                              "Deactivate"
+                            ) : (
+                              "Activate"
+                            )}
+                          </button>
+
+                          {/* Delete Trigger */}
+                          <button
+                            onClick={() => setDeletingUser(u)}
+                            title="Delete User"
+                            className="p-1.5 rounded-full border border-red-200/60 bg-red-50/50 text-red-600 hover:bg-red-100/80 hover:border-red-300 transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -706,7 +876,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         )}
 
         {/* ========================================================================= */}
-        {/* PAGINATION CONTROLS (Rounded Full) */}
+        {/* PAGINATION CONTROLS */}
         {/* ========================================================================= */}
         {filteredUsers.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-bg/20">
@@ -786,7 +956,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE USER) */}
+      {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE / EDIT USER) */}
       {/* ========================================================================= */}
       {isDrawerMounted && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -810,12 +980,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <div className="p-5 sm:p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-2xl bg-primary text-white shadow-xs">
-                    <UserPlus className="h-5 w-5" />
+                    {editingUser ? <Pencil className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-primary leading-tight">Add New User</h3>
+                    <h3 className="text-base sm:text-lg font-bold text-primary leading-tight">
+                      {editingUser ? "Edit User Profile" : "Add New User"}
+                    </h3>
                     <p className="text-xs text-primary/55 font-normal mt-0.5">
-                      Provision student, faculty, or admin account
+                      {editingUser
+                        ? `Modify account scope and role for ${editingUser.name}`
+                        : "Provision student, faculty, or admin account"}
                     </p>
                   </div>
                 </div>
@@ -831,9 +1005,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
               {/* Drawer Form Body */}
               <form 
-                id="create-user-form" 
+                id="user-manage-form" 
                 data-lenis-prevent
-                onSubmit={handleSingleSubmit} 
+                onSubmit={handleFormSubmit} 
                 className="p-5 sm:p-6 space-y-4.5 flex-1 overflow-y-auto overscroll-contain"
               >
                 {/* Role Selector Segmented Buttons */}
@@ -893,6 +1067,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   <input
                     type="email"
                     required
+                    disabled={!!editingUser}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={
@@ -900,9 +1075,105 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         ? "e.g., 23331a4745@mvgrce.edu.in"
                         : "e.g., faculty@mvgrce.edu.in"
                     }
-                    className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40"
+                    className={`w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40 ${
+                      editingUser ? "opacity-60 cursor-not-allowed bg-border/40" : ""
+                    }`}
                   />
+                  {editingUser && (
+                    <span className="text-[11px] text-primary/40 mt-1 block">Email address cannot be changed once provisioned.</span>
+                  )}
                 </div>
+
+                {/* Conditional Fields for Faculty: Designation */}
+                {role === "faculty" && (
+                  <div className="space-y-3.5 pt-0.5">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
+                          Faculty Designation *
+                        </label>
+                        {!isAddingNewDesignation && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewDesignation(true)}
+                            className="text-xs font-medium text-secondary hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <Plus className="h-3 w-3" />
+                            <span>Add Designation</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Designation Pills */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {availableDesignations.map((desig) => {
+                          const isDesigSelected = designation === desig;
+                          return (
+                            <button
+                              key={desig}
+                              type="button"
+                              onClick={() => setDesignation(desig)}
+                              className={`px-3.5 py-2 rounded-2xl text-xs text-left border transition-all cursor-pointer flex items-center justify-between ${
+                                isDesigSelected
+                                  ? "bg-primary text-white border-primary shadow-2xs font-semibold"
+                                  : "bg-bg text-primary/70 border-border hover:border-primary/40 font-medium"
+                              }`}
+                            >
+                              <span>{desig}</span>
+                              {isDesigSelected && <span className="h-1.5 w-1.5 rounded-full bg-white ml-2" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Inline Input for New Designation */}
+                      {isAddingNewDesignation && (
+                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-bg border border-border rounded-full animate-in fade-in">
+                          <input
+                            type="text"
+                            placeholder="e.g. Dean of Academic Affairs"
+                            value={customDesignationInput}
+                            onChange={(e) => setCustomDesignationInput(e.target.value)}
+                            className="px-3.5 py-1 text-xs bg-surface border border-border rounded-full font-medium text-primary flex-1 focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddCustomDesignation}
+                            disabled={!customDesignationInput.trim()}
+                            className="px-3.5 py-1 bg-primary text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
+                          >
+                            Add & Select
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewDesignation(false)}
+                            className="p-1 text-primary/40 hover:text-primary cursor-pointer"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Department Branch for Faculty */}
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                        Department Specialization
+                      </label>
+                      <select
+                        value={branch}
+                        onChange={(e) => setBranch(e.target.value)}
+                        className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                      >
+                        {branches.map((b) => (
+                          <option key={b.code} value={b.code}>
+                            {b.code} - {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 {/* Conditional Fields for Students */}
                 {role === "student" && (
@@ -1014,14 +1285,33 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 )}
 
+                {/* Edit Mode: Account Status Selector */}
+                {editingUser && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                      Account Status
+                    </label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as "active" | "deactivated")}
+                      className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                    >
+                      <option value="active">Active (Access Enabled)</option>
+                      <option value="deactivated">Deactivated (Locked Out)</option>
+                    </select>
+                  </div>
+                )}
+
                 {/* Password Policy Info Note */}
                 <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs">
                   <div className="flex items-center gap-1.5 font-semibold text-primary">
                     <Sparkles className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>Security & Initial Credentials</span>
+                    <span>Security Policy</span>
                   </div>
                   <p className="text-[11px] text-primary/65 leading-relaxed font-normal">
-                    {role === "student"
+                    {editingUser
+                      ? "Modifying profile information will immediately update access scopes and subject enrollments."
+                      : role === "student"
                       ? "Initial password will default to student's uppercase roll number. Forced password change is required upon first login."
                       : "Initial password will default to 'ChangeMe1234!'. Forced password change is enforced on first sign-in."}
                   </p>
@@ -1040,23 +1330,71 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 </button>
                 <button
                   type="submit"
-                  form="create-user-form"
+                  form="user-manage-form"
                   disabled={loading}
                   className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Creating...</span>
+                      <span>{editingUser ? "Saving..." : "Creating..."}</span>
                     </>
                   ) : (
                     <>
-                      <span>Create Account</span>
+                      <span>{editingUser ? "Save Changes" : "Create Account"}</span>
                       <ChevronRight className="h-4 w-4" />
                     </>
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DELETE CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-300"
+            onClick={() => !isDeleteLoading && setDeletingUser(null)}
+          />
+          <div className="bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-primary">Delete User Account</h3>
+            </div>
+            <p className="text-xs sm:text-sm text-primary/70 font-normal leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-primary font-semibold">{deletingUser.name}</strong> (<span className="text-primary/80 font-mono text-xs">{deletingUser.email}</span>)? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingUser(null)}
+                disabled={isDeleteLoading}
+                className="px-5 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleteLoading}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isDeleteLoading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Confirm Delete"
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -1112,7 +1450,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   />
                 </label>
                 <span className="text-[11px] text-primary/50 mt-1 block font-normal">
-                  Required columns: <code>email, name, role, branch, semester, section</code>
+                  Required columns: <code>email, name, role, branch, semester, section, designation</code>
                 </span>
               </div>
 
@@ -1128,8 +1466,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           <th className="p-2.5">Email</th>
                           <th className="p-2.5">Name</th>
                           <th className="p-2.5">Role</th>
-                          <th className="p-2.5">Branch</th>
-                          <th className="p-2.5">Section</th>
+                          <th className="p-2.5">Scope/Designation</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -1138,8 +1475,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                             <td className="p-2.5 font-normal text-primary">{row.email}</td>
                             <td className="p-2.5 text-primary/80 font-normal">{row.name}</td>
                             <td className="p-2.5 font-medium uppercase">{row.role || "student"}</td>
-                            <td className="p-2.5 font-normal">{row.branch || "-"}</td>
-                            <td className="p-2.5 font-normal">{row.section || "A"}</td>
+                            <td className="p-2.5 font-normal">
+                              {row.role === "faculty" ? (row.designation || "Assistant Professor") : `${row.branch || "-"} Sec ${row.section || "A"}`}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { createSubjectAction, toggleSubjectActiveAction, createBranchAction } from "./actions";
+import { createSubjectAction, updateSubjectAction, deleteSubjectAction, toggleSubjectActiveAction, createBranchAction, deleteBranchAction } from "./actions";
 import { ToastContainer, ToastMessage } from "@/components/toast";
 import { 
   BookOpen, 
@@ -14,7 +14,9 @@ import {
   Sparkles,
   ChevronRight,
   ChevronLeft,
-  Layers
+  Layers,
+  Pencil,
+  Trash2
 } from "lucide-react";
 
 interface Branch {
@@ -58,19 +60,29 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Slide-over Right Drawer for Subject Creation
+  // Slide-over Right Drawer for Subject Creation & Editing
   const [isSubjectDrawerMounted, setIsSubjectDrawerMounted] = useState(false);
   const [isSubjectDrawerVisible, setIsSubjectDrawerVisible] = useState(false);
+  const [editingSubject, setEditingSubject] = useState<{ originalCode: string; originalBranch: string } | null>(null);
+
+  // Delete Subject Confirmation Modal
+  const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
+  const [isDeletingSubject, setIsDeletingSubject] = useState(false);
 
   // Modal for Branch Creation
   const [isBranchModalMounted, setIsBranchModalMounted] = useState(false);
   const [isBranchModalVisible, setIsBranchModalVisible] = useState(false);
+
+  // Delete Branch Confirmation Modal
+  const [deletingBranch, setDeletingBranch] = useState<Branch | null>(null);
+  const [isDeletingBranch, setIsDeletingBranch] = useState(false);
 
   // Subject Form State
   const [subCode, setSubCode] = useState("");
   const [subTitle, setSubTitle] = useState("");
   const [subBranch, setSubBranch] = useState(initialBranches[0]?.code || "CIC");
   const [subSemester, setSubSemester] = useState("1");
+  const [subActive, setSubActive] = useState(true);
   const [subjectLoading, setSubjectLoading] = useState(false);
 
   // Branch Form State
@@ -93,8 +105,30 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Drawer Animation Handlers
+  // Open Drawer in Create Mode
   const openSubjectDrawer = () => {
+    setEditingSubject(null);
+    setSubCode("");
+    setSubTitle("");
+    setSubBranch(branches[0]?.code || "CIC");
+    setSubSemester("1");
+    setSubActive(true);
+    setIsSubjectDrawerMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsSubjectDrawerVisible(true);
+      });
+    });
+  };
+
+  // Open Drawer in Edit Mode
+  const openEditSubjectDrawer = (subject: Subject) => {
+    setEditingSubject({ originalCode: subject.code, originalBranch: subject.branch });
+    setSubCode(subject.code);
+    setSubTitle(subject.title);
+    setSubBranch(subject.branch);
+    setSubSemester(subject.semester.toString());
+    setSubActive(subject.active);
     setIsSubjectDrawerMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -107,6 +141,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
     setIsSubjectDrawerVisible(false);
     setTimeout(() => {
       setIsSubjectDrawerMounted(false);
+      setEditingSubject(null);
     }, 450);
   };
 
@@ -161,43 +196,80 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
     return filteredSubjects.slice(startIdx, startIdx + pageSize);
   }, [filteredSubjects, currentPage, pageSize]);
 
-  // Submit Handlers
+  // Submit Handler for Subject (Create OR Update)
   const handleSubjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubjectLoading(true);
 
     const semNum = parseInt(subSemester, 10);
     const formattedCode = subCode.toUpperCase().trim();
+    const formattedTitle = subTitle.trim();
 
     try {
-      const result = await createSubjectAction(
-        formattedCode,
-        subTitle.trim(),
-        subBranch,
-        semNum
-      );
-
-      if (result.error) {
-        addToast("error", "Subject Creation Failed", result.error);
-      } else {
-        addToast(
-          "success",
-          "Subject Created Successfully",
-          `${formattedCode} - ${subTitle} added to ${subBranch}.`
-        );
-        setSubjects((prev) => [
+      if (editingSubject) {
+        // UPDATE Subject
+        const result = await updateSubjectAction(
+          editingSubject.originalCode,
+          editingSubject.originalBranch,
           {
             code: formattedCode,
-            title: subTitle.trim(),
+            title: formattedTitle,
             branch: subBranch,
             semester: semNum,
-            active: true,
-          },
-          ...prev,
-        ]);
-        setSubCode("");
-        setSubTitle("");
-        closeSubjectDrawer();
+            active: subActive,
+          }
+        );
+
+        if (result.error) {
+          addToast("error", "Subject Update Failed", result.error);
+        } else {
+          addToast("success", "Subject Updated", `${formattedCode} - ${formattedTitle} details updated.`);
+          setSubjects((prev) =>
+            prev.map((s) =>
+              s.code === editingSubject.originalCode && s.branch === editingSubject.originalBranch
+                ? {
+                    code: formattedCode,
+                    title: formattedTitle,
+                    branch: subBranch,
+                    semester: semNum,
+                    active: subActive,
+                  }
+                : s
+            )
+          );
+          closeSubjectDrawer();
+        }
+      } else {
+        // CREATE Subject
+        const result = await createSubjectAction(
+          formattedCode,
+          formattedTitle,
+          subBranch,
+          semNum
+        );
+
+        if (result.error) {
+          addToast("error", "Subject Creation Failed", result.error);
+        } else {
+          addToast(
+            "success",
+            "Subject Created Successfully",
+            `${formattedCode} - ${formattedTitle} added to ${subBranch}.`
+          );
+          setSubjects((prev) => [
+            {
+              code: formattedCode,
+              title: formattedTitle,
+              branch: subBranch,
+              semester: semNum,
+              active: true,
+            },
+            ...prev,
+          ]);
+          setSubCode("");
+          setSubTitle("");
+          closeSubjectDrawer();
+        }
       }
     } catch {
       addToast("error", "Error", "An unexpected error occurred.");
@@ -206,6 +278,30 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
     }
   };
 
+  // Delete Subject Handler
+  const handleDeleteSubjectConfirm = async () => {
+    if (!deletingSubject) return;
+    setIsDeletingSubject(true);
+
+    try {
+      const result = await deleteSubjectAction(deletingSubject.code, deletingSubject.branch);
+      if (result.error) {
+        addToast("error", "Delete Failed", result.error);
+      } else {
+        addToast("success", "Subject Deleted", `${deletingSubject.code} was removed from the catalog.`);
+        setSubjects((prev) =>
+          prev.filter((s) => !(s.code === deletingSubject.code && s.branch === deletingSubject.branch))
+        );
+        setDeletingSubject(null);
+      }
+    } catch {
+      addToast("error", "Error", "Failed to delete subject.");
+    } finally {
+      setIsDeletingSubject(false);
+    }
+  };
+
+  // Create Branch Handler
   const handleBranchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBranchLoading(true);
@@ -235,6 +331,27 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
       addToast("error", "Error", "Failed to create branch.");
     } finally {
       setBranchLoading(false);
+    }
+  };
+
+  // Delete Branch Handler
+  const handleDeleteBranchConfirm = async () => {
+    if (!deletingBranch) return;
+    setIsDeletingBranch(true);
+
+    try {
+      const result = await deleteBranchAction(deletingBranch.code);
+      if (result.error) {
+        addToast("error", "Delete Failed", result.error);
+      } else {
+        addToast("success", "Branch Deleted", `${deletingBranch.code} specialization was removed.`);
+        setBranches((prev) => prev.filter((b) => b.code !== deletingBranch.code));
+        setDeletingBranch(null);
+      }
+    } catch {
+      addToast("error", "Error", "Failed to delete branch.");
+    } finally {
+      setIsDeletingBranch(false);
     }
   };
 
@@ -306,7 +423,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
           </div>
         </div>
 
-        {/* Action Buttons (Fully Rounded Corners) */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-3 self-start lg:self-center shrink-0">
           <button
             onClick={openBranchModal}
@@ -327,7 +444,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
       </div>
 
       {/* ========================================================================= */}
-      {/* NAVIGATION TABS (Fully Rounded Pills) */}
+      {/* NAVIGATION TABS */}
       {/* ========================================================================= */}
       <div className="bg-surface p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-4">
         <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3">
@@ -365,7 +482,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
           })}
         </div>
 
-        {/* Subjects Tab Toolbar Filter Controls (Fully Rounded Corners) */}
+        {/* Subjects Tab Toolbar Filter Controls */}
         {activeTab === "subjects" && (
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-0.5">
             {/* Search Box */}
@@ -451,7 +568,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
       </div>
 
       {/* ========================================================================= */}
-      {/* SUBJECTS CATALOG VIEW */}
+      {/* SUBJECTS CATALOG VIEW WITH FULL CRUD ACTIONS */}
       {/* ========================================================================= */}
       {activeTab === "subjects" && (
         <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
@@ -515,25 +632,46 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                           )}
                         </td>
 
-                        {/* Actions (Rounded Full Buttons) */}
+                        {/* Full CRUD Actions: Edit, Toggle, Delete */}
                         <td className="py-3.5 pl-4 pr-6 text-right">
-                          <button
-                            onClick={() => handleToggleSubject(sub.code, sub.branch, sub.active)}
-                            disabled={isToggling}
-                            className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
-                              sub.active
-                                ? "bg-surface hover:bg-red-50 text-primary/70 hover:text-red-700 border-border hover:border-red-200/80 shadow-2xs"
-                                : "bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border-emerald-200/80 shadow-2xs"
-                            }`}
-                          >
-                            {isToggling ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
-                            ) : sub.active ? (
-                              "Deactivate"
-                            ) : (
-                              "Activate"
-                            )}
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Edit Trigger */}
+                            <button
+                              onClick={() => openEditSubjectDrawer(sub)}
+                              title="Edit Subject"
+                              className="p-1.5 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg hover:border-primary/30 transition-all cursor-pointer shadow-2xs"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Activate / Deactivate Toggle */}
+                            <button
+                              onClick={() => handleToggleSubject(sub.code, sub.branch, sub.active)}
+                              disabled={isToggling}
+                              className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
+                                sub.active
+                                  ? "bg-surface hover:bg-red-50 text-primary/70 hover:text-red-700 border-border hover:border-red-200/80 shadow-2xs"
+                                  : "bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border-emerald-200/80 shadow-2xs"
+                              }`}
+                            >
+                              {isToggling ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
+                              ) : sub.active ? (
+                                "Deactivate"
+                              ) : (
+                                "Activate"
+                              )}
+                            </button>
+
+                            {/* Delete Trigger */}
+                            <button
+                              onClick={() => setDeletingSubject(sub)}
+                              title="Delete Subject"
+                              className="p-1.5 rounded-full border border-red-200/60 bg-red-50/50 text-red-600 hover:bg-red-100/80 hover:border-red-300 transition-all cursor-pointer shadow-2xs"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -639,7 +777,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
       )}
 
       {/* ========================================================================= */}
-      {/* BRANCHES DIRECTORY VIEW */}
+      {/* BRANCHES DIRECTORY VIEW WITH CRUD ACTIONS */}
       {/* ========================================================================= */}
       {activeTab === "branches" && (
         <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
@@ -665,7 +803,8 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                 <tr className="bg-bg/50 text-primary/50 font-semibold uppercase tracking-wider text-xs border-b border-border">
                   <th className="py-3.5 pl-6 pr-4">Branch Code</th>
                   <th className="py-3.5 px-4">Full Program Name</th>
-                  <th className="py-3.5 pl-4 pr-6 text-right">Operational Status</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -679,11 +818,20 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                     <td className="py-3.5 px-4 font-semibold text-primary text-sm">
                       {b.name}
                     </td>
-                    <td className="py-3.5 pl-4 pr-6 text-right">
+                    <td className="py-3.5 px-4">
                       <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         Active
                       </span>
+                    </td>
+                    <td className="py-3.5 pl-4 pr-6 text-right">
+                      <button
+                        onClick={() => setDeletingBranch(b)}
+                        title="Delete Branch"
+                        className="p-1.5 rounded-full border border-red-200/60 bg-red-50/50 text-red-600 hover:bg-red-100/80 hover:border-red-300 transition-all cursor-pointer shadow-2xs"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -726,7 +874,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
       )}
 
       {/* ========================================================================= */}
-      {/* SLIDE-OVER RIGHT DRAWER (ADD SUBJECT) */}
+      {/* SLIDE-OVER RIGHT DRAWER (ADD / EDIT SUBJECT) */}
       {/* ========================================================================= */}
       {isSubjectDrawerMounted && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -749,12 +897,14 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
               <div className="p-5 sm:p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-2xl bg-primary text-white shadow-xs">
-                    <BookOpen className="h-5 w-5" />
+                    {editingSubject ? <Pencil className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-primary leading-tight">Add New Subject</h3>
+                    <h3 className="text-base sm:text-lg font-bold text-primary leading-tight">
+                      {editingSubject ? "Edit Curriculum Subject" : "Add New Subject"}
+                    </h3>
                     <p className="text-xs text-primary/55 font-normal mt-0.5">
-                      Register curriculum course syllabus code
+                      {editingSubject ? `Modify course syllabus code: ${editingSubject.originalCode}` : "Register curriculum course syllabus code"}
                     </p>
                   </div>
                 </div>
@@ -770,7 +920,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
 
               {/* Form */}
               <form
-                id="create-subject-form"
+                id="subject-manage-form"
                 data-lenis-prevent
                 onSubmit={handleSubjectSubmit}
                 className="p-5 sm:p-6 space-y-4 flex-1 overflow-y-auto overscroll-contain"
@@ -839,13 +989,29 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   </div>
                 </div>
 
+                {editingSubject && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={subActive ? "active" : "inactive"}
+                      onChange={(e) => setSubActive(e.target.value === "active")}
+                      className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                    >
+                      <option value="active">Active (Visible to Students)</option>
+                      <option value="inactive">Inactive (Archived)</option>
+                    </select>
+                  </div>
+                )}
+
                 <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs">
                   <div className="flex items-center gap-1.5 font-semibold text-primary">
                     <Sparkles className="h-3.5 w-3.5 text-secondary shrink-0" />
                     <span>Curriculum Alignment</span>
                   </div>
                   <p className="text-[11px] text-primary/65 leading-relaxed font-normal">
-                    Once created, students enrolled in this branch and semester will automatically see this subject on their learning dashboard.
+                    Once saved, students enrolled in this branch and semester will see this subject syllabus updated across their learning dashboard.
                   </p>
                 </div>
               </form>
@@ -862,23 +1028,119 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                 </button>
                 <button
                   type="submit"
-                  form="create-subject-form"
+                  form="subject-manage-form"
                   disabled={subjectLoading}
                   className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {subjectLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Creating...</span>
+                      <span>Saving...</span>
                     </>
                   ) : (
                     <>
-                      <span>Create Subject</span>
+                      <span>{editingSubject ? "Save Changes" : "Create Subject"}</span>
                       <ChevronRight className="h-4 w-4" />
                     </>
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DELETE SUBJECT CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {deletingSubject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-300"
+            onClick={() => !isDeletingSubject && setDeletingSubject(null)}
+          />
+          <div className="bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-primary">Delete Subject</h3>
+            </div>
+            <p className="text-xs sm:text-sm text-primary/70 font-normal leading-relaxed">
+              Are you sure you want to permanently delete course <strong className="text-primary font-semibold">{deletingSubject.code}</strong> - <em>{deletingSubject.title}</em> from <strong className="text-primary font-semibold">{deletingSubject.branch}</strong>?
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingSubject(null)}
+                disabled={isDeletingSubject}
+                className="px-5 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSubjectConfirm}
+                disabled={isDeletingSubject}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isDeletingSubject ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Confirm Delete"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DELETE BRANCH CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {deletingBranch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-300"
+            onClick={() => !isDeletingBranch && setDeletingBranch(null)}
+          />
+          <div className="bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-primary">Delete Branch Specialization</h3>
+            </div>
+            <p className="text-xs sm:text-sm text-primary/70 font-normal leading-relaxed">
+              Are you sure you want to remove <strong className="text-primary font-semibold">{deletingBranch.code}</strong> ({deletingBranch.name}) from academic branches?
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingBranch(null)}
+                disabled={isDeletingBranch}
+                className="px-5 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteBranchConfirm}
+                disabled={isDeletingBranch}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isDeletingBranch ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Confirm Delete"
+                )}
+              </button>
             </div>
           </div>
         </div>
