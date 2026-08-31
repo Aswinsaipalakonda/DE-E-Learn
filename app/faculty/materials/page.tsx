@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import MaterialsList from "./materials-list";
+import MaterialsList, { SubjectItem } from "./materials-list";
 import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import { getServerActivityEvents } from "@/utils/activity-store";
@@ -43,6 +43,16 @@ interface RawMaterial {
   engagementLogs?: StudentEngagementLog[];
   material_files: FileItem[];
 }
+
+const DEFAULT_SUBJECTS: SubjectItem[] = [
+  { code: "23CIC301", title: "Database Management Systems", branch: "CIC", semester: 3 },
+  { code: "23CIC302", title: "Cloud Infrastructure & Distributed Systems", branch: "CIC", semester: 3 },
+  { code: "23CIC303", title: "Big Data Processing with Apache Spark", branch: "CIC", semester: 3 },
+  { code: "23CIC304", title: "Operating Systems & Linux Kernel Architecture", branch: "CIC", semester: 3 },
+  { code: "23CIC305", title: "Computer Networks & IoT Protocols", branch: "CIC", semester: 3 },
+  { code: "23CSD501", title: "Data Warehousing & Dimensional Mining", branch: "CSD", semester: 5 },
+  { code: "23CSM101", title: "Machine Learning with Python", branch: "CSM", semester: 1 },
+];
 
 const FALLBACK_FACULTY_INVENTORY: RawMaterial[] = [
   {
@@ -86,8 +96,8 @@ export default async function FacultyMaterialsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch materials, activity events, and student users in parallel
-  const [materialsRes, eventsRes, usersRes] = await Promise.all([
+  // Fetch materials, activity events, subjects, and student users in parallel
+  const [materialsRes, eventsRes, usersRes, subjectsRes] = await Promise.all([
     supabase
       .from("materials")
       .select(`
@@ -135,13 +145,19 @@ export default async function FacultyMaterialsPage() {
     supabase
       .from("users")
       .select("id, name, email, role, branch, current_semester, section, roll_number"),
+    supabase
+      .from("subjects")
+      .select("code, title, branch, semester, description")
+      .eq("active", true)
+      .order("code"),
   ]);
 
   const rawMaterials = (materialsRes.data as unknown as RawMaterial[]) || [];
-  const dbEvents = (eventsRes.data as any[]) || [];
-  const dbUsers = (usersRes.data as any[]) || [];
+  const dbEvents = (eventsRes.data as unknown as any[]) || [];
+  const dbUsers = (usersRes.data as unknown as Record<string, unknown>[]) || [];
+  const dbSubjects = (subjectsRes.data as unknown as SubjectItem[]) || [];
 
-  // 1. Read from persistent server activity store
+  // 1. Read from persistent server-side activity store
   const serverEvents = getServerActivityEvents();
 
   // 2. Read from cookie backup
@@ -233,6 +249,25 @@ export default async function FacultyMaterialsPage() {
     };
   });
 
+  // Combine DB subjects with default seed subjects & any custom subject codes in materials
+  const subjectsMap = new Map<string, SubjectItem>();
+  DEFAULT_SUBJECTS.forEach((s) => subjectsMap.set(s.code, s));
+  dbSubjects.forEach((s) => subjectsMap.set(s.code, s));
+  
+  // Ensure every material's subject code exists in subjects map
+  materials.forEach((m) => {
+    if (m.subject && !subjectsMap.has(m.subject)) {
+      subjectsMap.set(m.subject, {
+        code: m.subject,
+        title: m.subject,
+        branch: m.branch || "CIC",
+        semester: m.semester || 3,
+      });
+    }
+  });
+
+  const subjects = Array.from(subjectsMap.values());
+
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-6xl pb-10">
       {/* Top Header Actions */}
@@ -252,18 +287,18 @@ export default async function FacultyMaterialsPage() {
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-semibold text-xs sm:text-sm transition-all shadow-2xs self-start sm:self-auto cursor-pointer"
         >
           <Plus className="h-4 w-4" />
-          <span>Upload Material</span>
+          <span>Upload New Material</span>
         </Link>
       </div>
 
       <header className="space-y-1">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Your Materials Inventory</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Your Course Materials Portfolio</h1>
         <p className="text-xs sm:text-sm text-slate-500 font-normal">
-          Manage your uploaded files, monitor live student engagement, and inspect verified file downloads.
+          Select an assigned subject to inspect and manage syllabus documents, lecture notes, and student engagement.
         </p>
       </header>
 
-      <MaterialsList initialMaterials={materials} />
+      <MaterialsList initialMaterials={materials} subjects={subjects} />
     </div>
   );
 }
