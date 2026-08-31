@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { login } from "./actions";
-import { Eye, EyeOff, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, Sparkles, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { KineticTextLoader } from "@/components/ui/kinetic-text-loader";
 
@@ -53,39 +53,49 @@ export default function LoginForm() {
         {error && (
           <div 
             role="alert" 
-            className="p-3 text-xs sm:text-sm text-rose-700 bg-rose-50 border border-rose-200/80 rounded-2xl flex items-center gap-2"
+            className="p-3.5 text-xs text-rose-700 bg-rose-50/80 border border-rose-200 rounded-2xl flex items-center gap-2.5 animate-in fade-in duration-200"
           >
             <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
             <span>{error}</span>
           </div>
         )}
 
+        {/* Email Input Field */}
         <div>
           <label 
             htmlFor="email" 
-            className="block text-xs font-semibold text-slate-700 mb-1.5"
+            className="block text-xs font-semibold text-slate-700 mb-1.5 pl-1"
           >
             College Email
           </label>
-          <input
-            id="email"
-            type="email"
-            required
-            placeholder="e.g., 23331a4745@mvgrce.edu.in"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-normal"
-          />
+          <div className="relative">
+            <div className="absolute left-4 top-3.5 text-slate-400 pointer-events-none">
+              <Mail className="h-4.5 w-4.5" />
+            </div>
+            <input
+              id="email"
+              type="email"
+              required
+              placeholder="e.g. 23331a4745@mvgrce.edu.in"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 rounded-full border border-slate-200 bg-slate-50/50 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-normal shadow-2xs"
+            />
+          </div>
         </div>
 
+        {/* Password Input Field */}
         <div>
           <label 
             htmlFor="password" 
-            className="block text-xs font-semibold text-slate-700 mb-1.5"
+            className="block text-xs font-semibold text-slate-700 mb-1.5 pl-1"
           >
             Password
           </label>
           <div className="relative">
+            <div className="absolute left-4 top-3.5 text-slate-400 pointer-events-none">
+              <Lock className="h-4.5 w-4.5" />
+            </div>
             <input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -93,12 +103,12 @@ export default function LoginForm() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-4 pr-11 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-normal"
+              className="w-full pl-11 pr-12 py-3 rounded-full border border-slate-200 bg-slate-50/50 text-slate-900 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-normal shadow-2xs"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+              className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
@@ -106,15 +116,16 @@ export default function LoginForm() {
           </div>
         </div>
 
+        {/* Rounded Full Sign In Button */}
         <button
           type="submit"
           disabled={loading || isRedirecting}
-          className="w-full py-3 bg-primary hover:bg-primary/95 text-white font-semibold text-sm rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 transition-all cursor-pointer mt-1"
+          className="w-full py-3.5 bg-[#0F172A] hover:bg-[#1E293B] active:scale-[0.99] text-white font-bold text-sm rounded-full shadow-md shadow-slate-900/10 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-50 transition-all cursor-pointer mt-2"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-white" />
-              <span>Signing In...</span>
+              <span>Verifying Credentials...</span>
             </span>
           ) : (
             "Sign In"

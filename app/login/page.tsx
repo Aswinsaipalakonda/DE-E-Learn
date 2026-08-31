@@ -8,39 +8,43 @@ export const metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-md bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-[0_4px_25px_rgba(0,0,0,0.06)] space-y-6">
+    <main className="min-h-screen w-full bg-[#F8FAFC] flex items-center justify-center p-4 sm:p-6 relative selection:bg-slate-900 selection:text-white">
+      {/* Ultra-Minimalist Subtle Ambient Radial Accent (Clean Slate/Blue, No Gradients) */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-slate-200/40 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Modern Minimalist Executive Authentication Card */}
+      <div className="w-full max-w-[440px] bg-white/95 backdrop-blur-xl p-8 sm:p-10 rounded-[32px] border border-slate-200/90 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.07)] space-y-7 relative z-10">
         
-        {/* Header with High-Definition Logo */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white p-2 border border-slate-200/90 shadow-sm">
+        {/* Brand Header */}
+        <div className="text-center space-y-3.5">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white p-2 border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.04)] mx-auto">
             <Image
               src="/De_logo.jpg"
               alt="Department of Data Engineering Logo"
-              width={56}
-              height={56}
+              width={52}
+              height={52}
               priority
               className="w-full h-full object-contain rounded-xl"
             />
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               Data Engineering Portal
             </h1>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
+            <p className="text-xs text-slate-500 font-medium">
               MVGR College of Engineering (Autonomous)
             </p>
           </div>
         </div>
 
-        {/* Login Form Component */}
+        {/* Form Inputs & Actions */}
         <LoginForm />
 
-        {/* Clean Student Helper Note */}
-        <div className="pt-2 text-center border-t border-slate-100">
-          <p className="text-[11px] text-slate-400 font-normal">
+        {/* Clean Student Helper Pill */}
+        <div className="pt-1 text-center">
+          <div className="inline-block bg-slate-50 border border-slate-100 px-4 py-2 rounded-full text-[11px] text-slate-500 font-normal">
             For students: Your initial password is your registration number.
-          </p>
+          </div>
         </div>
 
       </div>
