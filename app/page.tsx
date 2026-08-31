@@ -10,10 +10,9 @@ import { BentoGrid01Section } from "@/components/bento-grid-section";
 import { Services02Section } from "@/components/services-section";
 import { Testimonials01Section } from "@/components/testimonial-section";
 import { Faq01Section } from "@/components/faq-section";
+import { PreFooterCTA } from "@/components/pre-footer-cta";
+import { LandingFooter } from "@/components/landing-footer";
 import { CookieConsent } from "@/components/cookie-consent";
-import { 
-  PreFooterCTABanner 
-} from "@/components/landing-sections";
 
 export const metadata = {
   title: "Data Engineering Portal | MVGR College of Engineering",
@@ -90,52 +89,18 @@ export default async function LandingPage() {
         <Faq01Section />
 
         {/* ========================================================================= */}
-        {/* 10. PRE-FOOTER CTA CONVERSION BANNER */}
+        {/* 8. PRE-FOOTER CTA CONVERSION BANNER */}
         {/* ========================================================================= */}
-        <PreFooterCTABanner />
+        <PreFooterCTA />
       </main>
 
       {/* ========================================================================= */}
-      {/* 11. INSTITUTIONAL FOOTER */}
+      {/* 9. INSTITUTIONAL FOOTER */}
       {/* ========================================================================= */}
-      <footer className="bg-white border-t border-slate-200/90 py-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-100 text-center sm:text-left">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-2xl bg-white p-1 border border-slate-200 shadow-2xs shrink-0">
-                <Image 
-                  src="/De_logo.jpg" 
-                  alt="Logo" 
-                  width={40} 
-                  height={40} 
-                  className="object-contain w-full h-full rounded-xl"
-                />
-              </div>
-              <div>
-                <span className="text-sm font-bold text-slate-900 block">Department of Data Engineering</span>
-                <span className="text-xs text-slate-500 block font-medium">Maharaj Vijayaram Gajapathi Raj College of Engineering (Autonomous)</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href="/login"
-                className="px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all"
-              >
-                Sign In to Portal
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
-            <span>UGC Autonomous • NAAC &apos;A&apos; Grade • NBA Accredited</span>
-            <span>© {new Date().getFullYear()} MVGR DE E-Learn Portal. All rights reserved.</span>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
 
       {/* ========================================================================= */}
-      {/* 12. COOKIE CONSENT BANNER (@shadcn-space/radix/cookie-consent-01) */}
+      {/* 10. COOKIE CONSENT BANNER (@shadcn-space/radix/cookie-consent-01) */}
       {/* ========================================================================= */}
       <CookieConsent />
 
