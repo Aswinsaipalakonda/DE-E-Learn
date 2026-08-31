@@ -187,13 +187,22 @@ export default async function StudentDashboard({
     ? rawUploads 
     : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3]);
 
-  // 3. Fetch total bookmarks count
+  // 3. Read dynamic bookmarks from cookie/DB
+  const cookieVal = cookieStore.get("de_saved_bookmarks")?.value;
+  let savedBookmarkIds: string[] | null = null;
+  if (cookieVal) {
+    try { savedBookmarkIds = JSON.parse(cookieVal); } catch {}
+  }
+
   const { count: dbBookmarksCount } = await supabase
     .from("bookmarks")
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  const displayBookmarksCount = (dbBookmarksCount && dbBookmarksCount > 0) ? dbBookmarksCount : 3;
+  const displayBookmarksCount = savedBookmarkIds !== null 
+    ? savedBookmarkIds.length 
+    : ((dbBookmarksCount && dbBookmarksCount > 0) ? dbBookmarksCount : 3);
+
   const semNumbers = [1, 2, 3, 4, 5, 6, 7, 8];
 
   return (
@@ -475,19 +484,19 @@ export default async function StudentDashboard({
               </Link>
 
               <Link
-                href="/help"
+                href="/student/subjects"
                 className="p-3.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-100 transition-all flex items-center justify-between group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 group-hover:text-slate-900">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <BookOpen className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                      Help & Support Desk
+                      Course Curriculum
                     </h3>
                     <p className="text-[11px] text-slate-500 font-normal">
-                      FAQs & portal assistance
+                      Browse all semester subjects
                     </p>
                   </div>
                 </div>

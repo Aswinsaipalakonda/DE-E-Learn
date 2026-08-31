@@ -37,6 +37,13 @@ export default async function BookmarksPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // Read cookie override if user removed items
+  const cookieVal = cookieStore.get("de_saved_bookmarks")?.value;
+  let savedBookmarkIds: string[] | null = null;
+  if (cookieVal) {
+    try { savedBookmarkIds = JSON.parse(cookieVal); } catch {}
+  }
+
   // Query bookmarks joining materials and subjects
   const { data: dbData } = await supabase
     .from("bookmarks")
@@ -64,7 +71,11 @@ export default async function BookmarksPage() {
       facultyName: "Faculty Member",
     }));
 
-  const bookmarks: BookmarkMaterialItem[] = rawBookmarks.length > 0 ? rawBookmarks : FALLBACK_BOOKMARKS;
+  let bookmarks: BookmarkMaterialItem[] = rawBookmarks.length > 0 ? rawBookmarks : FALLBACK_BOOKMARKS;
+
+  if (savedBookmarkIds !== null) {
+    bookmarks = bookmarks.filter((b) => savedBookmarkIds.includes(b.id));
+  }
 
   return <BookmarksClient initialBookmarks={bookmarks} />;
 }

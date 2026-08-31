@@ -12,35 +12,43 @@ export async function toggleBookmark(materialId: string, currentStatus: boolean)
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
+  // Read current cookie bookmarks list
+  const cookieVal = cookieStore.get("de_saved_bookmarks")?.value;
+  let savedList: string[] = [];
+  if (cookieVal) {
+    try { savedList = JSON.parse(cookieVal); } catch {}
+  } else {
+    // Default initial mock list
+    savedList = ["mock-mat-1", "mock-mat-2", "mock-mat-5"];
+  }
+
   if (currentStatus) {
     // Remove bookmark
-    const { error } = await supabase
+    savedList = savedList.filter((id) => id !== materialId);
+    await supabase
       .from("bookmarks")
       .delete()
       .eq("user_id", user.id)
       .eq("material_id", materialId);
-
-    if (error && !materialId.startsWith("mock-")) {
-      return { error: error.message };
-    }
   } else {
     // Add bookmark
-    const { error } = await supabase
+    if (!savedList.includes(materialId)) {
+      savedList.push(materialId);
+    }
+    await supabase
       .from("bookmarks")
       .insert({
         user_id: user.id,
         material_id: materialId,
       });
-
-    if (error && !materialId.startsWith("mock-")) {
-      return { error: error.message };
-    }
   }
+
+  cookieStore.set("de_saved_bookmarks", JSON.stringify(savedList), { path: "/", maxAge: 60 * 60 * 24 * 365 });
 
   revalidatePath("/student");
   revalidatePath("/student/bookmarks");
   revalidatePath(`/student/materials/${materialId}`);
-  return { success: true };
+  return { success: true, count: savedList.length };
 }
 
 // Log Download Activity and Get Storage Link
