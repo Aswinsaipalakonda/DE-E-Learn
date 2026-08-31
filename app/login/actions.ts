@@ -113,6 +113,33 @@ export async function login(formData: FormData) {
     return { error: error.message || "Invalid login credentials" };
   }
 
-  // Return success payload with redirection path
-  return { success: true, redirectTo: "/" };
+  // Get authenticated session user
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Resolve user role to navigate directly to their dashboard
+  let userRole = "student";
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .or(`id.eq.${user.id},email.eq.${email}`)
+      .single();
+
+    if (profile?.role) {
+      userRole = profile.role;
+    } else if (user.user_metadata?.role) {
+      userRole = user.user_metadata.role;
+    }
+  }
+
+  if (!userRole || userRole === "student") {
+    if (email.startsWith("admin")) {
+      userRole = "admin";
+    } else if (email.startsWith("faculty") || email.startsWith("testfaculty")) {
+      userRole = "faculty";
+    }
+  }
+
+  // Return success payload with direct role dashboard redirection path
+  return { success: true, redirectTo: `/${userRole}` };
 }

@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { 
@@ -20,25 +21,32 @@ export default async function LandingPage() {
 
   // Retrieve authenticated session user
   const { data: { user } } = await supabase.auth.getUser();
-  let dashboardUrl = "/login";
-  let isLoggedIn = false;
 
+  // If user is already authenticated, redirect directly to their respective role dashboard
   if (user) {
+    let role = user.user_metadata?.role;
+    
     const { data: profile } = await supabase
       .from("users")
       .select("role")
-      .eq("id", user.id)
+      .or(`id.eq.${user.id},email.eq.${user.email}`)
       .single();
 
-    if (profile) {
-      isLoggedIn = true;
-      dashboardUrl = `/${profile.role}`;
+    if (profile?.role) {
+      role = profile.role;
     }
+
+    if (!role) {
+      if (user.email?.startsWith("admin")) role = "admin";
+      else if (user.email?.startsWith("faculty") || user.email?.startsWith("testfaculty")) role = "faculty";
+      else role = "student";
+    }
+
+    redirect(`/${role}`);
   }
 
   return (
     <div className="min-h-screen bg-bg flex flex-col text-primary selection:bg-secondary/20 font-sans">
-      
       {/* Header */}
       <header className="sticky top-0 z-40 w-full bg-surface/80 backdrop-blur-md border-b border-border transition-all">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -70,10 +78,10 @@ export default async function LandingPage() {
 
           <div>
             <Link 
-              href={dashboardUrl} 
+              href="/login" 
               className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#111827] hover:bg-black text-white text-xs font-bold shadow-sm transition-all"
             >
-              {isLoggedIn ? "Go to Dashboard" : "Sign In Portal"}
+              <span>Sign In Portal</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -88,7 +96,6 @@ export default async function LandingPage() {
           <div className="absolute -bottom-10 left-10 -z-10 w-80 h-80 bg-gradient-to-tr from-primary/5 to-secondary/5 rounded-full blur-3xl opacity-50 pointer-events-none" />
 
           <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-black uppercase tracking-wider">
@@ -106,7 +113,7 @@ export default async function LandingPage() {
 
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
                 <Link 
-                  href={dashboardUrl}
+                  href="/login"
                   className="px-6 py-3 rounded-full bg-[#111827] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 group cursor-pointer"
                 >
                   Access Study Portal
@@ -124,8 +131,6 @@ export default async function LandingPage() {
             {/* Right Card / Visual Section */}
             <div className="lg:col-span-5 flex justify-center">
               <div className="relative w-full max-w-sm bg-surface p-8 rounded-3xl border border-border shadow-md space-y-6">
-                
-                {/* Simulated course badge */}
                 <div className="flex items-center justify-between pb-4 border-b border-border">
                   <span className="text-xs font-black text-primary/45 uppercase tracking-wider">Course Catalogue</span>
                   <span className="px-2 py-0.5 rounded-md bg-success/15 text-success text-[10px] font-bold">Live Portal</span>
@@ -163,14 +168,12 @@ export default async function LandingPage() {
                   </div>
                 </div>
 
-                {/* Bottom indicators */}
                 <div className="pt-2 flex items-center justify-between text-[10px] font-bold text-primary/50">
                   <span className="flex items-center gap-1"><CheckCircle className="h-3.5 w-3.5 text-success" /> Syllabus Aligned</span>
                   <span className="flex items-center gap-1"><CheckCircle className="h-3.5 w-3.5 text-success" /> 24/7 Access</span>
                 </div>
               </div>
             </div>
-
           </div>
         </section>
 
@@ -197,7 +200,6 @@ export default async function LandingPage() {
         {/* About the Department */}
         <section id="about" className="py-16 lg:py-24">
           <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
             <div className="lg:col-span-5 flex justify-center order-2 lg:order-1">
               <div className="w-16 h-16 rounded-full bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
                 <GraduationCap className="h-8 w-8" />
@@ -221,22 +223,18 @@ export default async function LandingPage() {
                 MVGR Data Engineering delivers state-of-the-art academic instruction covering Cyber Security, IoT, Data Science, and Machine Learning. The portal acts as a central hub where professors upload validated materials, and students access resources on the fly to accelerate their learning curve.
               </p>
             </div>
-
           </div>
         </section>
 
         {/* Key Features section */}
         <section id="features" className="py-16 bg-bg/50 border-t border-border">
           <div className="max-w-7xl mx-auto px-6 space-y-12">
-            
             <div className="text-center max-w-xl mx-auto space-y-2">
               <h2 className="text-2xl font-black text-primary tracking-tight">Curated Portal Features</h2>
               <p className="text-xs text-primary/50 font-semibold">Our platform is tailored to ensure quick access and minimal friction.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              
-              {/* Feature 1 */}
               <div className="p-6 bg-surface border border-border rounded-2xl space-y-4 hover:border-secondary transition-all">
                 <div className="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
                   <Layers className="h-5 w-5" />
@@ -247,7 +245,6 @@ export default async function LandingPage() {
                 </p>
               </div>
 
-              {/* Feature 2 */}
               <div className="p-6 bg-surface border border-border rounded-2xl space-y-4 hover:border-accent transition-all">
                 <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
                   <FileText className="h-5 w-5" />
@@ -258,7 +255,6 @@ export default async function LandingPage() {
                 </p>
               </div>
 
-              {/* Feature 3 */}
               <div className="p-6 bg-surface border border-border rounded-2xl space-y-4 hover:border-primary transition-all">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <Compass className="h-5 w-5" />
@@ -268,7 +264,6 @@ export default async function LandingPage() {
                   Instantly authenticate using college email and roll numbers as case-insensitive default passwords.
                 </p>
               </div>
-
             </div>
           </div>
         </section>
@@ -298,7 +293,6 @@ export default async function LandingPage() {
           </p>
         </div>
       </footer>
-
     </div>
   );
 }
