@@ -196,22 +196,14 @@ export function LandingHero() {
               </span>
             </Link>
 
-            {/* Verification Trust Pill */}
-            <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200/80 shadow-xs">
-              <div className="flex items-center -space-x-2">
-                <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
-                  CIC
-                </div>
-                <div className="w-7 h-7 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
-                  CSD
-                </div>
-                <div className="w-7 h-7 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
-                  CSM
-                </div>
+            {/* Clean Minimalist Accreditation Pill */}
+            <div className="inline-flex items-center gap-3 px-4.5 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-xs">
+              <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200/80">
+                <ShieldCheck className="h-4.5 w-4.5" />
               </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-slate-900">100% Verified Notes</p>
-                <p className="text-[10px] text-slate-500">UGC Autonomous Curriculum</p>
+              <div className="text-left leading-tight">
+                <span className="text-xs font-bold text-slate-900 block">100% Verified Notes</span>
+                <span className="text-[11px] text-slate-500 font-medium block">UGC Autonomous Curriculum</span>
               </div>
             </div>
 
