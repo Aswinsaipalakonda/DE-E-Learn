@@ -15,8 +15,8 @@ import {
   ChevronRight
 } from "lucide-react";
 import { LandingHeader, LandingHero } from "@/components/landing-hero";
+import { AboutUsSection01 } from "@/components/about-us-section";
 import { 
-  TechStackMarquee, 
   BentoGridSection, 
   HowItWorksSection, 
   TestimonialsSection, 
@@ -63,59 +63,28 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-900 selection:bg-slate-900 selection:text-white font-sans antialiased overflow-x-hidden">
       
       {/* ========================================================================= */}
-      {/* 1. HERO-01 INSPIRED FLOATING PILL NAVBAR */}
+      {/* 1. STATIC PILL NAVBAR */}
       {/* ========================================================================= */}
       <LandingHeader />
 
       {/* ========================================================================= */}
-      {/* 2. HERO-01 ACCENT HERO SECTION WITH CRYSTAL WAVE BACKGROUND */}
+      {/* 2. HERO SECTION WITH CRYSTAL WAVE BACKGROUND */}
       {/* ========================================================================= */}
       <main className="flex-1">
         <LandingHero />
 
         {/* ========================================================================= */}
-        {/* 3. TECH STACK MARQUEE CLOUD */}
+        {/* 3. ABOUT US & IMPACT STATS SECTION (@shadcn-space/radix/about-us-section-01) */}
         {/* ========================================================================= */}
-        <TechStackMarquee />
-
-        {/* ========================================================================= */}
-        {/* 4. KPI METRICS RIBBON */}
-        {/* ========================================================================= */}
-        <section className="py-10 bg-white border-b border-slate-200/80">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-100">
-              
-              <div className="pt-4 md:pt-0">
-                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 block tracking-tight">3+</span>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mt-1">Specialized Branches</span>
-              </div>
-
-              <div className="pt-4 md:pt-0">
-                <span className="text-3xl sm:text-4xl font-extrabold text-blue-600 block tracking-tight">8</span>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mt-1">Curriculum Semesters</span>
-              </div>
-
-              <div className="pt-4 md:pt-0">
-                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 block tracking-tight">100%</span>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mt-1">Faculty Verified Notes</span>
-              </div>
-
-              <div className="pt-4 md:pt-0">
-                <span className="text-3xl sm:text-4xl font-extrabold text-emerald-600 block tracking-tight">24/7</span>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mt-1">Instant Cloud Downloads</span>
-              </div>
-
-            </div>
-          </div>
-        </section>
+        <AboutUsSection01 />
 
         {/* ========================================================================= */}
-        {/* 5. BENTO GRID FEATURES SHOWCASE */}
+        {/* 4. BENTO GRID FEATURES SHOWCASE */}
         {/* ========================================================================= */}
         <BentoGridSection />
 
         {/* ========================================================================= */}
-        {/* 6. SPECIALIZATIONS GRID */}
+        {/* 5. SPECIALIZATIONS GRID */}
         {/* ========================================================================= */}
         <section id="specializations" className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
@@ -187,12 +156,12 @@ export default async function LandingPage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* 7. HOW IT WORKS 3-STEP PIPELINE */}
+        {/* 6. HOW IT WORKS 3-STEP PIPELINE */}
         {/* ========================================================================= */}
         <HowItWorksSection />
 
         {/* ========================================================================= */}
-        {/* 8. ROLE PORTAL PATHWAYS */}
+        {/* 7. ROLE PORTAL PATHWAYS */}
         {/* ========================================================================= */}
         <section id="roles" className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="p-8 sm:p-12 rounded-[32px] bg-[#0F172A] text-white border border-slate-800 shadow-xl space-y-8">
@@ -275,23 +244,23 @@ export default async function LandingPage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* 9. TESTIMONIALS & COHORT ENDORSEMENTS */}
+        {/* 8. TESTIMONIALS & COHORT ENDORSEMENTS */}
         {/* ========================================================================= */}
         <TestimonialsSection />
 
         {/* ========================================================================= */}
-        {/* 10. INTERACTIVE FAQ ACCORDION */}
+        {/* 9. INTERACTIVE FAQ ACCORDION */}
         {/* ========================================================================= */}
         <FAQSection />
 
         {/* ========================================================================= */}
-        {/* 11. PRE-FOOTER CTA CONVERSION BANNER */}
+        {/* 10. PRE-FOOTER CTA CONVERSION BANNER */}
         {/* ========================================================================= */}
         <PreFooterCTABanner />
       </main>
 
       {/* ========================================================================= */}
-      {/* 12. INSTITUTIONAL FOOTER */}
+      {/* 11. INSTITUTIONAL FOOTER */}
       {/* ========================================================================= */}
       <footer className="bg-white border-t border-slate-200/90 py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
