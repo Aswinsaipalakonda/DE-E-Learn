@@ -268,7 +268,7 @@ export default async function StudentDashboard({
           </div>
           <div>
             <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Sem {selectedSemester}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Enrolled up to Sem {maxAllowedSemester}</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Current Semester {maxAllowedSemester}</span>
           </div>
         </div>
 
