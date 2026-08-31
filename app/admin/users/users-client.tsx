@@ -14,16 +14,13 @@ import {
   BookOpen, 
   ShieldCheck, 
   FileSpreadsheet, 
-  Sparkles,
   ChevronRight,
   ChevronLeft,
   Mail,
   Plus,
   Pencil,
   Trash2,
-  Briefcase,
-  AlertCircle,
-  Hash
+  AlertCircle
 } from "lucide-react";
 
 interface BranchOption {
@@ -67,7 +64,6 @@ const DEFAULT_DESIGNATIONS = [
 function isValidRollNumber(roll: string): boolean {
   if (!roll || roll.length !== 10) return false;
   const upper = roll.toUpperCase();
-  // Format: 2 digits + 33 + 6 alphanumeric characters
   const regex = /^\d{2}33[0-9A-Z]{6}$/;
   return regex.test(upper);
 }
@@ -144,8 +140,31 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setRollNumber(upper);
     if (upper) {
       setEmail(`${upper.toLowerCase()}@mvgrce.edu.in`);
+    } else {
+      setEmail("");
     }
   };
+
+  // Duplicate Checks
+  const isDuplicateRollNumber = useMemo(() => {
+    if (role !== "student" || !rollNumber) return false;
+    const upper = rollNumber.toUpperCase().trim();
+    return users.some(
+      (u) =>
+        u.id !== editingUser?.id &&
+        u.role === "student" &&
+        (u.roll_number?.toUpperCase() === upper || (u.email.includes("@") && u.email.split("@")[0].toUpperCase() === upper))
+    );
+  }, [role, rollNumber, users, editingUser]);
+
+  const isDuplicateEmail = useMemo(() => {
+    if (role === "student") return false;
+    if (!email) return false;
+    const lower = email.toLowerCase().trim();
+    return users.some(
+      (u) => u.id !== editingUser?.id && u.email.toLowerCase().trim() === lower
+    );
+  }, [role, email, users, editingUser]);
 
   // Roll Number validation status
   const isRollInvalid = useMemo(() => {
@@ -351,10 +370,20 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       return;
     }
 
+    if (isDuplicateRollNumber) {
+      addToast("error", "Duplicate Roll Number", `A student account with roll number ${rollNumber} already exists.`);
+      return;
+    }
+
+    if (isDuplicateEmail) {
+      addToast("error", "Duplicate Email", `A user with email ${email} already exists.`);
+      return;
+    }
+
     setLoading(true);
 
     const semNum = role === "student" && semester ? parseInt(semester, 10) : null;
-    const branchVal = role === "admin" ? null : branch;
+    const branchVal = role === "student" ? branch : null;
     const sectionVal = role === "student" ? section : null;
     const designationVal = role === "faculty" ? designation : null;
     const rollVal = role === "student" ? rollNumber : null;
@@ -563,7 +592,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   };
 
   return (
-    <div className="space-y-6 relative pb-10">
+    <div className="space-y-6 relative pb-10 w-full">
       {/* Toast Alert Notifications Container */}
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
@@ -741,9 +770,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* IMMERSIVE ROSTER DIRECTORY TABLE WITH ROLL NUMBERS & FULL CRUD */}
+      {/* IMMERSIVE ROSTER DIRECTORY TABLE */}
       {/* ========================================================================= */}
-      <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
+      <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs w-full">
         {paginatedUsers.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
@@ -752,7 +781,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   <th className="py-3.5 pl-6 pr-4">User</th>
                   <th className="py-3.5 px-4">Official Email</th>
                   <th className="py-3.5 px-4">Role</th>
-                  <th className="py-3.5 px-4">Scope, Term / Designation</th>
+                  <th className="py-3.5 px-4">Scope / Designation</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
                 </tr>
@@ -780,7 +809,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                                 {u.name}
                               </h3>
                               {displayRoll && (
-                                <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 text-[11px] font-bold text-blue-700 font-mono">
+                                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-700 font-mono">
                                   {displayRoll}
                                 </span>
                               )}
@@ -807,7 +836,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         </span>
                       </td>
 
-                      {/* Scope, Term / Designation */}
+                      {/* Scope / Designation */}
                       <td className="py-3.5 px-4">
                         {u.role === "student" ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -827,18 +856,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           </div>
                         ) : u.role === "faculty" ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-semibold text-emerald-800 flex items-center gap-1">
-                              <Briefcase className="h-3 w-3 text-emerald-600" />
+                            <span className="px-3 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-800">
                               {u.designation || "Assistant Professor"}
                             </span>
-                            {u.branch && (
-                              <span className="px-2 py-0.5 rounded-full bg-bg border border-border text-[11px] font-medium text-primary/70">
-                                {u.branch}
-                              </span>
-                            )}
                           </div>
                         ) : (
-                          <span className="text-primary/40 font-normal text-xs">— System Administrator</span>
+                          <span className="text-primary/40 font-normal text-xs">— Department Administrator</span>
                         )}
                       </td>
 
@@ -857,10 +880,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         )}
                       </td>
 
-                      {/* Full CRUD Actions: Edit, Status Toggle, Delete */}
+                      {/* Full CRUD Actions */}
                       <td className="py-3.5 pl-4 pr-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Edit Trigger */}
                           <button
                             onClick={() => openEditDrawer(u)}
                             title="Edit User Profile"
@@ -869,7 +891,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
 
-                          {/* Activate / Deactivate Toggle */}
                           <button
                             onClick={() => handleStatusToggle(u.id, u.status, u.name)}
                             disabled={isToggling}
@@ -888,7 +909,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                             )}
                           </button>
 
-                          {/* Delete Trigger */}
                           <button
                             onClick={() => setDeletingUser(u)}
                             title="Delete User"
@@ -1014,66 +1034,59 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* REDESIGNED CRISP SLIDE-OVER RIGHT DRAWER (CREATE / EDIT USER) */}
+      {/* CLEAN, MINIMALIST SLIDE-OVER RIGHT DRAWER */}
       {/* ========================================================================= */}
       {isDrawerMounted && (
         <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop Blur */}
           <div
-            className={`fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isDrawerVisible ? "opacity-100" : "opacity-0"
             }`}
             onClick={() => !loading && closeDrawer()}
           />
 
-          {/* Slide Drawer Panel */}
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
             <div
               data-lenis-prevent
-              className={`w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+              className={`w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
                 isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
               }`}
             >
-              {/* Drawer Header */}
-              <div className="p-5 sm:p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-primary text-white shadow-xs">
-                    {editingUser ? <Pencil className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-primary leading-tight">
-                      {editingUser ? "Edit User Profile" : "Add New User"}
-                    </h3>
-                    <p className="text-xs text-primary/55 font-normal mt-0.5">
-                      {editingUser
-                        ? `Modify account scope and role for ${editingUser.name}`
-                        : "Provision student, faculty, or admin account"}
-                    </p>
-                  </div>
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 leading-tight">
+                    {editingUser ? "Edit User Profile" : "Add New User"}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-normal mt-0.5">
+                    {editingUser
+                      ? `Updating details for ${editingUser.name}`
+                      : "Provision student, faculty, or admin access"}
+                  </p>
                 </div>
 
                 <button
                   onClick={closeDrawer}
                   disabled={loading}
-                  className="p-2 rounded-full text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
-              {/* Drawer Form Body with Crisp Card Sections */}
+              {/* Form Body */}
               <form 
                 id="user-manage-form" 
                 data-lenis-prevent
                 onSubmit={handleFormSubmit} 
-                className="p-5 sm:p-6 space-y-4.5 flex-1 overflow-y-auto overscroll-contain"
+                className="px-6 py-5 space-y-5 flex-1 overflow-y-auto overscroll-contain"
               >
-                {/* 1. Account Role Segmented Buttons */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                    Account Role *
+                {/* 1. Account Role Segmented Control */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Account Role
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-2xl">
                     {(
                       [
                         { id: "student", label: "Student", icon: GraduationCap },
@@ -1088,13 +1101,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           key={r.id}
                           type="button"
                           onClick={() => setRole(r.id)}
-                          className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-xs transition-all cursor-pointer ${
+                          className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-primary text-white border-primary shadow-2xs font-semibold"
-                              : "bg-bg text-primary/70 border-border hover:border-primary/30 font-medium"
+                              ? "bg-white text-slate-900 shadow-xs font-semibold"
+                              : "text-slate-600 hover:text-slate-900 font-medium"
                           }`}
                         >
-                          <Icon className="h-4 w-4 mb-1" />
+                          <Icon className="h-3.5 w-3.5" />
                           <span>{r.label}</span>
                         </button>
                       );
@@ -1103,30 +1116,30 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 </div>
 
                 {/* 2. Full Name */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                    Full Name *
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g., Aswin Sai"
-                    className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40"
+                    placeholder="Enter full name"
+                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
                   />
                 </div>
 
-                {/* 3. Role-Specific Identifiers: Roll Number for Students */}
+                {/* 3. Student Identification (Roll Number -> Auto Email Sync) */}
                 {role === "student" && (
-                  <div className="p-4 bg-blue-50/40 border border-blue-200/70 rounded-2xl space-y-3">
-                    <div className="space-y-1">
+                  <div className="space-y-3.5 pt-1 border-t border-slate-100">
+                    {/* Roll Number Input */}
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
-                          <Hash className="h-3.5 w-3.5 text-blue-600" />
-                          <span>Student Roll Number *</span>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Roll Number <span className="text-red-500">*</span>
                         </label>
-                        <span className="text-[11px] text-blue-600/80 font-mono">10 Characters</span>
+                        <span className="text-[11px] text-slate-400 font-mono">e.g. 23331A4745</span>
                       </div>
                       <input
                         type="text"
@@ -1134,182 +1147,73 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         maxLength={10}
                         value={rollNumber}
                         onChange={(e) => handleRollNumberChange(e.target.value)}
-                        placeholder="e.g., 23331A4745"
-                        className={`w-full px-4 py-2.5 text-sm font-mono uppercase bg-white border rounded-full focus:outline-none focus:ring-2 transition-all ${
-                          isRollInvalid
-                            ? "border-red-400 focus:ring-red-400 text-red-700"
-                            : "border-blue-200 focus:ring-blue-400 text-primary"
+                        placeholder="Enter 10-character roll number"
+                        className={`w-full px-4 py-2.5 text-sm font-mono uppercase bg-white border rounded-full focus:outline-none transition-all ${
+                          isDuplicateRollNumber
+                            ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
+                            : isRollInvalid
+                            ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-900"
+                            : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
                         }`}
                       />
-                      {/* Helpful validation warning without leaking internal constraints */}
-                      {isRollInvalid && (
-                        <div className="flex items-center gap-1.5 text-xs text-red-600 pt-1 font-medium animate-in fade-in">
+
+                      {/* Duplicate Warning */}
+                      {isDuplicateRollNumber && (
+                        <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
                           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                          <span>Please enter a valid 10-character college roll number in standard format (e.g. 23331A4745).</span>
+                          <span>A student with this roll number already exists in the roster.</span>
+                        </div>
+                      )}
+
+                      {/* Format Warning */}
+                      {!isDuplicateRollNumber && isRollInvalid && (
+                        <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium pt-0.5">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                          <span>Please enter a valid 10-character college roll number (e.g. 23331A4745).</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Auto-Generated College Email Preview */}
-                    <div className="space-y-1 pt-1">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-blue-900/80">
-                        Official College Email (Auto-Generated)
+                    {/* Auto-Generated Email Display */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        College Email (Auto-Generated)
                       </label>
-                      <div className="px-4 py-2.5 bg-white/80 border border-blue-200/60 rounded-full text-xs font-mono text-blue-800 flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                      <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-full text-xs font-mono text-slate-700 flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         <span className="truncate">
                           {rollNumber ? `${rollNumber.toLowerCase()}@mvgrce.edu.in` : "rollnumber@mvgrce.edu.in"}
                         </span>
                       </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Email Address for Faculty & Admin */}
-                {role !== "student" && (
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                      Official College Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      disabled={!!editingUser}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={role === "faculty" ? "e.g., faculty@mvgrce.edu.in" : "e.g., admin@mvgrce.edu.in"}
-                      className={`w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40 ${
-                        editingUser ? "opacity-60 cursor-not-allowed bg-border/40" : ""
-                      }`}
-                    />
-                    {editingUser && (
-                      <span className="text-[11px] text-primary/40 mt-1 block">Email address cannot be changed once provisioned.</span>
-                    )}
-                  </div>
-                )}
-
-                {/* 4. Faculty Designations & Department */}
-                {role === "faculty" && (
-                  <div className="space-y-3.5 pt-0.5">
-                    <div className="p-4 bg-emerald-50/30 border border-emerald-200/70 rounded-2xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                          <Briefcase className="h-3.5 w-3.5 text-emerald-600" />
-                          <span>Faculty Designation *</span>
-                        </label>
-                        {!isAddingNewDesignation && (
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingNewDesignation(true)}
-                            className="text-xs font-medium text-emerald-700 hover:underline cursor-pointer flex items-center gap-1"
-                          >
-                            <Plus className="h-3 w-3" />
-                            <span>Add Designation</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Designation Selection Pills */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {availableDesignations.map((desig) => {
-                          const isDesigSelected = designation === desig;
-                          return (
-                            <button
-                              key={desig}
-                              type="button"
-                              onClick={() => setDesignation(desig)}
-                              className={`px-3.5 py-2 rounded-2xl text-xs text-left border transition-all cursor-pointer flex items-center justify-between ${
-                                isDesigSelected
-                                  ? "bg-primary text-white border-primary shadow-2xs font-semibold"
-                                  : "bg-white text-primary/70 border-emerald-200/60 hover:border-emerald-400 font-medium"
-                              }`}
-                            >
-                              <span>{desig}</span>
-                              {isDesigSelected && <span className="h-1.5 w-1.5 rounded-full bg-white ml-2" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Inline Input for Custom Designation */}
-                      {isAddingNewDesignation && (
-                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-white border border-emerald-200 rounded-full animate-in fade-in">
-                          <input
-                            type="text"
-                            placeholder="e.g. Dean of Academic Affairs"
-                            value={customDesignationInput}
-                            onChange={(e) => setCustomDesignationInput(e.target.value)}
-                            className="px-3.5 py-1 text-xs bg-transparent border-none font-medium text-primary flex-1 focus:outline-none"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddCustomDesignation}
-                            disabled={!customDesignationInput.trim()}
-                            className="px-3.5 py-1 bg-primary text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
-                          >
-                            Add & Select
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingNewDesignation(false)}
-                            className="p-1 text-primary/40 hover:text-primary cursor-pointer"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Department Branch for Faculty */}
-                    <div className="space-y-1">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                        Department Specialization
-                      </label>
-                      <select
-                        value={branch}
-                        onChange={(e) => setBranch(e.target.value)}
-                        className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
-                      >
-                        {branches.map((b) => (
-                          <option key={b.code} value={b.code}>
-                            {b.code} - {b.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* 5. Student Branch, Semester & Section */}
-                {role === "student" && (
-                  <div className="space-y-3.5 pt-0.5">
                     {/* Branch & Semester Grid */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                          Branch *
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Branch Specialization
                         </label>
                         <select
                           value={branch}
                           onChange={(e) => setBranch(e.target.value)}
-                          className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                          className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                         >
                           {branches.map((b) => (
                             <option key={b.code} value={b.code}>
-                              {b.code}
+                              {b.code} - {b.name}
                             </option>
                           ))}
                         </select>
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                          Semester *
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Semester
                         </label>
                         <select
                           value={semester}
                           onChange={(e) => setSemester(e.target.value)}
-                          className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                          className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                         >
                           {semesters.map((s) => (
                             <option key={s.number} value={s.number.toString()}>
@@ -1321,16 +1225,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     </div>
 
                     {/* Section Selector */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-2 pt-1">
                       <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                          Section Cohort *
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Section Cohort
                         </label>
                         {!isAddingNewSection && (
                           <button
                             type="button"
                             onClick={() => setIsAddingNewSection(true)}
-                            className="text-xs font-medium text-secondary hover:underline cursor-pointer flex items-center gap-1"
+                            className="text-xs font-medium text-slate-900 hover:underline cursor-pointer flex items-center gap-1"
                           >
                             <Plus className="h-3 w-3" />
                             <span>Add Section</span>
@@ -1338,7 +1242,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         )}
                       </div>
 
-                      {/* Section Pills */}
                       <div className="flex flex-wrap items-center gap-2">
                         {availableSections.map((sec) => {
                           const isSecSelected = section === sec;
@@ -1349,8 +1252,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                               onClick={() => setSection(sec)}
                               className={`px-4 py-1.5 rounded-full text-xs border transition-all cursor-pointer ${
                                 isSecSelected
-                                  ? "bg-primary text-white border-primary shadow-2xs font-semibold"
-                                  : "bg-bg text-primary/70 border-border hover:border-primary/40 font-medium"
+                                  ? "bg-slate-900 text-white border-slate-900 font-medium"
+                                  : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-normal"
                               }`}
                             >
                               Section {sec}
@@ -1361,27 +1264,27 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
                       {/* Inline Input for New Section */}
                       {isAddingNewSection && (
-                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-bg border border-border rounded-full animate-in fade-in">
+                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-slate-50 border border-slate-200 rounded-full animate-in fade-in">
                           <input
                             type="text"
                             maxLength={3}
                             placeholder="e.g. C"
                             value={customSectionInput}
                             onChange={(e) => setCustomSectionInput(e.target.value.toUpperCase())}
-                            className="px-3 py-1 text-xs bg-surface border border-border rounded-full uppercase font-semibold text-primary w-20 focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                            className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-full uppercase font-medium text-slate-900 w-20 focus:outline-none focus:border-slate-800"
                           />
                           <button
                             type="button"
                             onClick={handleAddCustomSection}
                             disabled={!customSectionInput.trim()}
-                            className="px-3 py-1 bg-primary text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
+                            className="px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
                           >
-                            Add & Select
+                            Add
                           </button>
                           <button
                             type="button"
                             onClick={() => setIsAddingNewSection(false)}
-                            className="p-1 text-primary/40 hover:text-primary cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -1391,54 +1294,166 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 )}
 
-                {/* 6. Edit Mode: Account Status Selector */}
+                {/* 4. Faculty Configuration (No Department Specialization as requested) */}
+                {role === "faculty" && (
+                  <div className="space-y-3.5 pt-1 border-t border-slate-100">
+                    {/* Faculty Email */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Official College Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        disabled={!!editingUser}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="e.g., faculty@mvgrce.edu.in"
+                        className={`w-full px-4 py-2.5 text-sm bg-white border rounded-full focus:outline-none transition-all ${
+                          isDuplicateEmail
+                            ? "border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
+                            : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
+                        } ${editingUser ? "opacity-60 cursor-not-allowed bg-slate-50" : ""}`}
+                      />
+                      {isDuplicateEmail && (
+                        <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                          <span>An account with this email already exists.</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Faculty Designation Selection */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Designation Rank
+                        </label>
+                        {!isAddingNewDesignation && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewDesignation(true)}
+                            className="text-xs font-medium text-slate-900 hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <Plus className="h-3 w-3" />
+                            <span>Add Custom</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {availableDesignations.map((desig) => {
+                          const isDesigSelected = designation === desig;
+                          return (
+                            <button
+                              key={desig}
+                              type="button"
+                              onClick={() => setDesignation(desig)}
+                              className={`px-3.5 py-2 rounded-2xl text-xs text-left border transition-all cursor-pointer flex items-center justify-between ${
+                                isDesigSelected
+                                  ? "bg-slate-900 text-white border-slate-900 font-medium"
+                                  : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-normal"
+                              }`}
+                            >
+                              <span>{desig}</span>
+                              {isDesigSelected && <span className="h-1.5 w-1.5 rounded-full bg-white ml-2" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Inline Input for Custom Designation */}
+                      {isAddingNewDesignation && (
+                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-slate-50 border border-slate-200 rounded-full animate-in fade-in">
+                          <input
+                            type="text"
+                            placeholder="e.g. Dean of Academic Affairs"
+                            value={customDesignationInput}
+                            onChange={(e) => setCustomDesignationInput(e.target.value)}
+                            className="px-3.5 py-1 text-xs bg-white border border-slate-200 rounded-full font-medium text-slate-900 flex-1 focus:outline-none focus:border-slate-800"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddCustomDesignation}
+                            disabled={!customDesignationInput.trim()}
+                            className="px-3.5 py-1 bg-slate-900 text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewDesignation(false)}
+                            className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Admin Email */}
+                {role === "admin" && (
+                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Official Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      disabled={!!editingUser}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g., admin@mvgrce.edu.in"
+                      className={`w-full px-4 py-2.5 text-sm bg-white border rounded-full focus:outline-none transition-all ${
+                        isDuplicateEmail
+                          ? "border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
+                          : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
+                      } ${editingUser ? "opacity-60 cursor-not-allowed bg-slate-50" : ""}`}
+                    />
+                    {isDuplicateEmail && (
+                      <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        <span>An account with this email already exists.</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 6. Edit Mode: Account Status */}
                 {editingUser && (
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
+                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Account Status
                     </label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value as "active" | "deactivated")}
-                      className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                     >
                       <option value="active">Active (Access Enabled)</option>
                       <option value="deactivated">Deactivated (Locked Out)</option>
                     </select>
                   </div>
                 )}
-
-                {/* Security Policy Info Card */}
-                <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs">
-                  <div className="flex items-center gap-1.5 font-semibold text-primary">
-                    <Sparkles className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>Security & Initial Credentials</span>
-                  </div>
-                  <p className="text-[11px] text-primary/65 leading-relaxed font-normal">
-                    {editingUser
-                      ? "Modifying profile information will immediately update access scopes and subject enrollments."
-                      : role === "student"
-                      ? "Initial password will default to student's uppercase roll number. Forced password change is required upon first login."
-                      : "Initial password will default to 'ChangeMe1234!'. Forced password change is enforced on first sign-in."}
-                  </p>
-                </div>
               </form>
 
               {/* Drawer Footer */}
-              <div className="p-5 sm:p-6 border-t border-border bg-bg/40 flex items-center justify-end gap-2.5 shrink-0">
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={closeDrawer}
                   disabled={loading}
-                  className="px-5 py-2.5 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
+                  className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   form="user-manage-form"
-                  disabled={loading || (role === "student" && isRollInvalid)}
-                  className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
+                  disabled={loading || (role === "student" && (isRollInvalid || isDuplicateRollNumber)) || (role !== "student" && isDuplicateEmail)}
+                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {loading ? (
                     <>
@@ -1464,25 +1479,25 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {deletingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-300"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
             onClick={() => !isDeleteLoading && setDeletingUser(null)}
           />
-          <div className="bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
+          <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 text-red-600">
               <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
                 <Trash2 className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-primary">Delete User Account</h3>
+              <h3 className="text-base font-bold text-slate-900">Delete User Account</h3>
             </div>
-            <p className="text-xs sm:text-sm text-primary/70 font-normal leading-relaxed">
-              Are you sure you want to permanently delete <strong className="text-primary font-semibold">{deletingUser.name}</strong> (<span className="text-primary/80 font-mono text-xs">{deletingUser.email}</span>)? This action cannot be undone.
+            <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-slate-900 font-semibold">{deletingUser.name}</strong> (<span className="text-slate-700 font-mono text-xs">{deletingUser.email}</span>)? This action cannot be undone.
             </p>
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setDeletingUser(null)}
                 disabled={isDeleteLoading}
-                className="px-5 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
+                className="px-5 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
               >
                 Cancel
               </button>
@@ -1512,41 +1527,41 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {isCsvMounted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className={`fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isCsvVisible ? "opacity-100" : "opacity-0"
             }`}
             onClick={() => !csvLoading && closeCsvModal()}
           />
           <div
             data-lenis-prevent
-            className={`bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-2xl p-6 space-y-5 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+            className={`bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-2xl p-6 space-y-5 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
               isCsvVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-border pb-4 shrink-0">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-secondary/10 text-secondary">
+                <div className="p-2.5 rounded-2xl bg-slate-100 text-slate-700">
                   <FileSpreadsheet className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-primary">Batch Import Roster (CSV)</h3>
-                  <p className="text-xs text-primary/60 font-normal mt-0.5">Bulk provision student and faculty accounts</p>
+                  <h3 className="text-base font-bold text-slate-900">Batch Import Roster (CSV)</h3>
+                  <p className="text-xs text-slate-500 font-normal mt-0.5">Bulk provision student and faculty accounts</p>
                 </div>
               </div>
               <button
                 onClick={closeCsvModal}
                 disabled={csvLoading}
-                className="p-2 text-primary/50 hover:text-primary rounded-full cursor-pointer hover:bg-bg"
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-full cursor-pointer hover:bg-slate-100"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div data-lenis-prevent className="space-y-4 overflow-y-auto flex-1 pr-1 overscroll-contain">
-              <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center hover:border-secondary/50 transition-colors bg-bg/50">
-                <Upload className="h-7 w-7 text-primary/40 mx-auto mb-2" />
-                <label className="text-xs font-semibold text-secondary hover:underline cursor-pointer block">
+              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-slate-400 transition-colors bg-slate-50">
+                <Upload className="h-7 w-7 text-slate-400 mx-auto mb-2" />
+                <label className="text-xs font-semibold text-slate-800 hover:underline cursor-pointer block">
                   Select or drag CSV file
                   <input
                     type="file"
@@ -1555,19 +1570,19 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     className="hidden"
                   />
                 </label>
-                <span className="text-[11px] text-primary/50 mt-1 block font-normal">
+                <span className="text-[11px] text-slate-500 mt-1 block font-normal">
                   Required columns: <code>email, name, role, branch, semester, section, designation, roll_number</code>
                 </span>
               </div>
 
               {csvPreview.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-primary">
+                  <span className="text-xs font-semibold text-slate-800">
                     Preview Data ({csvPreview.length} entries parsed):
                   </span>
-                  <div className="max-h-48 overflow-y-auto border border-border rounded-2xl">
+                  <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-2xl">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-bg font-semibold text-primary/50 border-b border-border">
+                      <thead className="bg-slate-50 font-semibold text-slate-500 border-b border-slate-200">
                         <tr>
                           <th className="p-2.5">Email / Roll</th>
                           <th className="p-2.5">Name</th>
@@ -1575,11 +1590,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           <th className="p-2.5">Scope/Designation</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border">
+                      <tbody className="divide-y divide-slate-100">
                         {csvPreview.slice(0, 10).map((row, i) => (
-                          <tr key={i} className="hover:bg-bg/25">
-                            <td className="p-2.5 font-normal text-primary">{row.email || row.roll_number}</td>
-                            <td className="p-2.5 text-primary/80 font-normal">{row.name}</td>
+                          <tr key={i} className="hover:bg-slate-50/50">
+                            <td className="p-2.5 font-normal text-slate-800">{row.email || row.roll_number}</td>
+                            <td className="p-2.5 text-slate-800 font-normal">{row.name}</td>
                             <td className="p-2.5 font-medium uppercase">{row.role || "student"}</td>
                             <td className="p-2.5 font-normal">
                               {row.role === "faculty" ? (row.designation || "Assistant Professor") : `${row.branch || "-"} Sec ${row.section || "A"}`}
@@ -1593,12 +1608,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border shrink-0">
+            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 shrink-0">
               <button
                 type="button"
                 onClick={closeCsvModal}
                 disabled={csvLoading}
-                className="px-5 py-2.5 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
+                className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
               >
                 Cancel
               </button>
@@ -1606,7 +1621,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 type="button"
                 onClick={handleCsvSubmit}
                 disabled={csvLoading || csvPreview.length === 0}
-                className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {csvLoading ? (
                   <>

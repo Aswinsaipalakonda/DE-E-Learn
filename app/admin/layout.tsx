@@ -49,7 +49,7 @@ export default async function AdminLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 lg:pl-64 flex flex-col min-h-screen pb-20 lg:pb-0">
-        <main className="flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full mt-0 lg:mt-0">
+        <main className="flex-1 px-5 sm:px-8 py-6 w-full">
           <div className="flex items-center justify-between gap-4 mb-6">
             <Breadcrumbs />
             <div className="flex items-center gap-3">
@@ -59,6 +59,7 @@ export default async function AdminLayout({
           {children}
         </main>
       </div>
+
 
       <BottomNav 
         userRole="admin" 
