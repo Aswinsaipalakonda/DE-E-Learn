@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Eye, 
   Download, 
@@ -76,6 +76,18 @@ export default function AnalyticsClient({
 
   // Toast Notifications State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Body Scroll Lock when Modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isModalOpen]);
 
   const addToast = (type: "success" | "error" | "info", title: string, description?: string) => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -488,13 +500,13 @@ export default function AnalyticsClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* FULL-SCREEN RESPONSIVE MODAL: STUDENT COHORT PROGRESS MATRIX (Smooth Scroll) */}
+      {/* FIXED VIEWPORT MODAL: STUDENT COHORT PROGRESS MATRIX WITH DIRECT SCROLL */}
       {/* ========================================================================= */}
       {isModalOpen && inspectingMaterial && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-slate-900/70 backdrop-blur-md p-3 sm:p-6 md:p-8 flex justify-center items-start">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full my-auto overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 md:p-8 bg-slate-900/70 backdrop-blur-md">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/80 sticky top-0 z-20 backdrop-blur-xs">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/90 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200">
                   <GraduationCap className="h-5 w-5" />
@@ -519,8 +531,8 @@ export default function AnalyticsClient({
               </button>
             </div>
 
-            {/* Modal Scrollable Body */}
-            <div className="p-6 sm:p-8 space-y-6">
+            {/* Dedicated Scrollable Viewport */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-8 space-y-6">
               <StudentCohortProgressMatrix
                 materialId={inspectingMaterial.id}
                 materialTitle={inspectingMaterial.title}
@@ -533,7 +545,7 @@ export default function AnalyticsClient({
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between sticky bottom-0 z-20">
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
               <span className="text-xs text-slate-500 font-normal">
                 Total Tracked Events: <strong className="text-slate-900 font-semibold">{inspectingMaterial.engagementLogs?.length || 0}</strong>
               </span>

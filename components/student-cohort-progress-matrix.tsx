@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Eye, 
   Download, 
@@ -70,8 +70,9 @@ interface StudentProgressRecord {
   branch: string;
   semester: number;
   section: string;
-  overallStatus: "downloaded" | "viewed" | "not_opened";
-  selectedFileStatus: "downloaded" | "viewed" | "not_opened";
+  hasDownloaded: boolean;
+  hasViewed: boolean;
+  isPending: boolean;
   files: StudentFileStatus[];
   totalViews: number;
   totalDownloads: number;
@@ -150,7 +151,7 @@ export default function StudentCohortProgressMatrix({
   uploaderName,
 }: StudentCohortProgressMatrixProps) {
   const [selectedFileFilter, setSelectedFileFilter] = useState<string>("ALL");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "downloaded" | "viewed" | "not_opened">("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "downloaded" | "viewed" | "pending">("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [inspectingStudent, setInspectingStudent] = useState<StudentProgressRecord | null>(null);
@@ -181,7 +182,7 @@ export default function StudentCohortProgressMatrix({
         const normTarget = normalizeFileName(f.file_name);
 
         const fileEvents = studentEvents.filter((e) => {
-          if (!e.fileName) return e.action === "view"; // general workspace view
+          if (!e.fileName) return e.action === "view";
           const normEv = normalizeFileName(e.fileName);
           return normEv === normTarget || normEv.includes(normTarget) || normTarget.includes(normEv);
         });
@@ -204,29 +205,20 @@ export default function StudentCohortProgressMatrix({
         };
       });
 
-      const hasAnyDownload = fileStatuses.some((fs) => fs.downloaded);
-      const hasAnyView = fileStatuses.some((fs) => fs.viewed) || studentEvents.length > 0;
+      let hasDownloaded = false;
+      let hasViewed = false;
 
-      let overallStatus: "downloaded" | "viewed" | "not_opened" = "not_opened";
-      if (hasAnyDownload) {
-        overallStatus = "downloaded";
-      } else if (hasAnyView) {
-        overallStatus = "viewed";
-      }
-
-      let selectedFileStatus: "downloaded" | "viewed" | "not_opened" = overallStatus;
-      if (selectedFileFilter !== "ALL") {
+      if (selectedFileFilter === "ALL") {
+        hasDownloaded = fileStatuses.some((fs) => fs.downloaded);
+        hasViewed = fileStatuses.some((fs) => fs.viewed) || studentEvents.some((e) => e.action === "view");
+      } else {
         const normFilter = normalizeFileName(selectedFileFilter);
-        const targetFs = fileStatuses.find(
-          (fs) => normalizeFileName(fs.fileName) === normFilter
-        );
-        if (targetFs) {
-          if (targetFs.downloaded) selectedFileStatus = "downloaded";
-          else if (targetFs.viewed) selectedFileStatus = "viewed";
-          else selectedFileStatus = "not_opened";
-        }
+        const targetFs = fileStatuses.find((fs) => normalizeFileName(fs.fileName) === normFilter);
+        hasDownloaded = !!targetFs?.downloaded;
+        hasViewed = !!targetFs?.viewed;
       }
 
+      const isPending = !hasDownloaded && !hasViewed;
       const totalViews = fileStatuses.reduce((acc, curr) => acc + curr.viewCount, 0);
       const totalDownloads = fileStatuses.reduce((acc, curr) => acc + curr.downloadCount, 0);
       const lastActivityAt = studentEvents.length > 0 ? studentEvents[0].timestamp : undefined;
@@ -238,8 +230,9 @@ export default function StudentCohortProgressMatrix({
         branch: branch || "CIC",
         semester: semester || 3,
         section: c.section,
-        overallStatus,
-        selectedFileStatus,
+        hasDownloaded,
+        hasViewed,
+        isPending,
         files: fileStatuses,
         totalViews,
         totalDownloads,
@@ -249,19 +242,21 @@ export default function StudentCohortProgressMatrix({
   }, [branch, semester, activityLogs, normalizedFiles, selectedFileFilter]);
 
   const totalCount = cohortRecords.length;
-  const downloadedCount = cohortRecords.filter((r) => r.selectedFileStatus === "downloaded").length;
-  const viewedCount = cohortRecords.filter((r) => r.selectedFileStatus === "viewed").length;
-  const notOpenedCount = cohortRecords.filter((r) => r.selectedFileStatus === "not_opened").length;
+  // Accurate Counts: Anyone who downloaded is counted in Downloaded; Anyone who viewed is counted in Viewed
+  const downloadedCount = cohortRecords.filter((r) => r.hasDownloaded).length;
+  const viewedCount = cohortRecords.filter((r) => r.hasViewed).length;
+  const pendingCount = cohortRecords.filter((r) => r.isPending).length;
 
   const downloadPct = Math.round((downloadedCount / totalCount) * 100) || 0;
   const viewPct = Math.round((viewedCount / totalCount) * 100) || 0;
-  const notOpenedPct = 100 - downloadPct - viewPct;
+  const pendingPct = Math.max(0, 100 - downloadPct);
 
   const filteredCohort = useMemo(() => {
     return cohortRecords.filter((r) => {
-      if (statusFilter !== "ALL" && r.selectedFileStatus !== statusFilter) {
-        return false;
-      }
+      if (statusFilter === "downloaded" && !r.hasDownloaded) return false;
+      if (statusFilter === "viewed" && !r.hasViewed) return false;
+      if (statusFilter === "pending" && !r.isPending) return false;
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const rollMatch = r.rollNumber.toLowerCase().includes(q);
@@ -281,7 +276,8 @@ export default function StudentCohortProgressMatrix({
       "Branch",
       "Semester",
       "Section",
-      "Current Status",
+      "Downloaded Any",
+      "Viewed Any",
       ...normalizedFiles.flatMap((f) => [`${f.file_name} (Viewed)`, `${f.file_name} (Downloaded)`]),
       "Total Views",
       "Total Downloads",
@@ -295,7 +291,8 @@ export default function StudentCohortProgressMatrix({
       `"${r.branch}"`,
       r.semester,
       `"${r.section}"`,
-      r.selectedFileStatus.toUpperCase(),
+      r.hasDownloaded ? "YES" : "NO",
+      r.hasViewed ? "YES" : "NO",
       ...r.files.flatMap((f) => [
         f.viewed ? `YES (${f.viewCount})` : "NO",
         f.downloaded ? `YES (${f.downloadCount})` : "NO",
@@ -369,10 +366,10 @@ export default function StudentCohortProgressMatrix({
             </div>
           </div>
 
-          {/* Viewed Only */}
+          {/* Viewed */}
           <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 backdrop-blur-md space-y-1">
             <div className="flex items-center justify-between text-amber-300 text-xs font-semibold">
-              <span>Viewed / In Progress</span>
+              <span>Viewed Documents</span>
               <Eye className="h-4 w-4 text-amber-400" />
             </div>
             <div className="flex items-baseline gap-2">
@@ -381,15 +378,15 @@ export default function StudentCohortProgressMatrix({
             </div>
           </div>
 
-          {/* Not Opened */}
+          {/* Pending / Not Opened */}
           <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 backdrop-blur-md space-y-1">
             <div className="flex items-center justify-between text-rose-300 text-xs font-semibold">
               <span>Pending / Not Opened</span>
               <MinusCircle className="h-4 w-4 text-rose-400" />
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-white">{notOpenedCount}</span>
-              <span className="text-xs text-rose-300 font-medium">({notOpenedPct}% of class)</span>
+              <span className="text-2xl sm:text-3xl font-bold text-white">{pendingCount}</span>
+              <span className="text-xs text-rose-300 font-medium">({Math.round((pendingCount/totalCount)*100)}% of class)</span>
             </div>
           </div>
         </div>
@@ -404,18 +401,18 @@ export default function StudentCohortProgressMatrix({
                 title={`Downloaded: ${downloadedCount}`}
               />
             )}
-            {viewPct > 0 && (
+            {viewPct > downloadPct && (
               <div 
-                style={{ width: `${viewPct}%` }} 
+                style={{ width: `${viewPct - downloadPct}%` }} 
                 className="bg-amber-400 h-full transition-all duration-500" 
-                title={`Viewed: ${viewedCount}`}
+                title={`Viewed Only: ${viewedCount - downloadedCount}`}
               />
             )}
-            {notOpenedPct > 0 && (
+            {pendingPct > 0 && (
               <div 
-                style={{ width: `${notOpenedPct}%` }} 
+                style={{ width: `${pendingPct}%` }} 
                 className="bg-rose-400/80 h-full transition-all duration-500" 
-                title={`Not Opened: ${notOpenedCount}`}
+                title={`Pending: ${pendingCount}`}
               />
             )}
           </div>
@@ -498,15 +495,15 @@ export default function StudentCohortProgressMatrix({
             <span>Viewed ({viewedCount})</span>
           </button>
           <button
-            onClick={() => setStatusFilter("not_opened")}
+            onClick={() => setStatusFilter("pending")}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              statusFilter === "not_opened"
+              statusFilter === "pending"
                 ? "bg-rose-600 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
-            <span>Pending ({notOpenedCount})</span>
+            <span>Pending ({pendingCount})</span>
           </button>
         </div>
 
@@ -554,7 +551,7 @@ export default function StudentCohortProgressMatrix({
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. STUDENT ROLL CARDS MATRIX (GRID VIEW) - Smooth natural grid */}
+      {/* 4. STUDENT ROLL CARDS MATRIX (GRID VIEW) */}
       {/* ========================================================================= */}
       {viewMode === "grid" ? (
         <div className="space-y-3">
@@ -566,8 +563,8 @@ export default function StudentCohortProgressMatrix({
           {filteredCohort.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 p-3 border border-slate-200/80 rounded-3xl bg-slate-50/50">
               {filteredCohort.map((student) => {
-                const isDownloaded = student.selectedFileStatus === "downloaded";
-                const isViewed = student.selectedFileStatus === "viewed";
+                const isDownloaded = student.hasDownloaded;
+                const isViewed = student.hasViewed;
 
                 let borderClasses = "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80 text-slate-700";
                 let badgeClasses = "bg-slate-100 text-slate-600";
@@ -649,8 +646,8 @@ export default function StudentCohortProgressMatrix({
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
                 {filteredCohort.map((student) => {
-                  const isDownloaded = student.selectedFileStatus === "downloaded";
-                  const isViewed = student.selectedFileStatus === "viewed";
+                  const isDownloaded = student.hasDownloaded;
+                  const isViewed = student.hasViewed;
 
                   return (
                     <tr key={student.rollNumber} className="hover:bg-slate-50/80 transition-colors">
@@ -707,10 +704,10 @@ export default function StudentCohortProgressMatrix({
       )}
 
       {/* ========================================================================= */}
-      {/* 6. STUDENT DETAILED PER-FILE AUDIT MODAL (Smooth Scroll) */}
+      {/* 6. STUDENT DETAILED PER-FILE AUDIT MODAL */}
       {/* ========================================================================= */}
       {inspectingStudent && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden space-y-5 p-6 sm:p-7 my-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div className="space-y-1">
@@ -719,15 +716,15 @@ export default function StudentCohortProgressMatrix({
                     {inspectingStudent.rollNumber}
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                    inspectingStudent.overallStatus === "downloaded"
+                    inspectingStudent.hasDownloaded
                       ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : inspectingStudent.overallStatus === "viewed"
+                      : inspectingStudent.hasViewed
                       ? "bg-amber-50 text-amber-800 border-amber-200"
                       : "bg-slate-100 text-slate-600 border-slate-200"
                   }`}>
-                    {inspectingStudent.overallStatus === "downloaded"
+                    {inspectingStudent.hasDownloaded
                       ? "Downloaded Files"
-                      : inspectingStudent.overallStatus === "viewed"
+                      : inspectingStudent.hasViewed
                       ? "Viewed Material"
                       : "Pending"}
                   </span>
@@ -754,7 +751,7 @@ export default function StudentCohortProgressMatrix({
                 Per-File Access & Download Breakdown:
               </span>
 
-              <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+              <div className="space-y-2.5 max-h-[50vh] overflow-y-auto overscroll-contain pr-1">
                 {inspectingStudent.files.map((file) => (
                   <div
                     key={file.fileId}
