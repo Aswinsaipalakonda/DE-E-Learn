@@ -62,7 +62,35 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
             ))}
           </select>
         </div>
+        <div>
+          <button
+            onClick={() => {
+              const headers = ["Timestamp", "Action", "Actor Email", "Object ID", "Before Summary", "After Summary"];
+              const rows = filteredLogs.map((l) => [
+                `"${new Date(l.created_at).toISOString()}"`,
+                `"${l.action}"`,
+                `"${l.users?.email || "system"}"`,
+                `"${l.object_id}"`,
+                `"${JSON.stringify(l.before_summary || {}).replace(/"/g, '""')}"`,
+                `"${JSON.stringify(l.after_summary || {}).replace(/"/g, '""')}"`,
+              ]);
+              const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+              const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.setAttribute("download", `mvgr_de_audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            className="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-primary/95 text-white font-semibold text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            Export Logs CSV
+          </button>
+        </div>
       </div>
+
 
       {/* Logs Table */}
       <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">

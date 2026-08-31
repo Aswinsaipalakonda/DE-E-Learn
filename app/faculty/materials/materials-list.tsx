@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { toggleMaterialState, deleteMaterial } from "./actions";
+import { toggleMaterialState, deleteMaterial, getFacultyFilePreviewUrl } from "./actions";
 import ReplaceDialog from "./replace-dialog";
+import FilePreviewModal from "@/components/file-preview-modal";
 import { 
   FileText, 
   Archive, 
   Trash, 
   RefreshCw, 
-  Globe
+  Globe,
+  Eye,
+  Download,
+  Loader2
 } from "lucide-react";
 
 interface FileItem {
@@ -45,6 +49,16 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
     fileName: string;
   } | null>(null);
 
+  // File preview modal state
+  const [previewingFile, setPreviewingFile] = useState<{
+    fileName: string;
+    fileUrl: string | null;
+    mimeType: string;
+    storageRef: string;
+  } | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [downloadingRef, setDownloadingRef] = useState<string | null>(null);
+
   const filteredMaterials = materials.filter(m => m.state === activeTab);
 
   const handleStateToggle = async (id: string, newState: "draft" | "published" | "archived") => {
@@ -66,6 +80,55 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
       setMaterials(prev => prev.filter(m => m.id !== id));
     } else {
       alert(result.error);
+    }
+  };
+
+  const handlePreview = async (file: FileItem) => {
+    setPreviewingFile({
+      fileName: file.file_name,
+      fileUrl: null,
+      mimeType: file.mime_type,
+      storageRef: file.storage_ref,
+    });
+    setIsPreviewOpen(true);
+
+    try {
+      const res = await getFacultyFilePreviewUrl(file.storage_ref);
+      if (res.error) {
+        alert(res.error);
+        setIsPreviewOpen(false);
+        return;
+      }
+      if (res.previewUrl) {
+        setPreviewingFile(prev => prev ? { ...prev, fileUrl: res.previewUrl } : null);
+      }
+    } catch {
+      alert("Failed to load preview.");
+      setIsPreviewOpen(false);
+    }
+  };
+
+  const handleDownload = async (storageRef: string, fileName: string) => {
+    setDownloadingRef(storageRef);
+    try {
+      const res = await getFacultyFilePreviewUrl(storageRef);
+      if (res.error) {
+        alert(res.error);
+        return;
+      }
+      if (res.previewUrl) {
+        const link = document.createElement("a");
+        link.href = res.previewUrl;
+        link.download = fileName;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch {
+      alert("Failed to download file.");
+    } finally {
+      setDownloadingRef(null);
     }
   };
 
@@ -155,29 +218,54 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
                     // Group files by name and show the latest version (highest version number)
                     m.material_files
                       .filter((f, idx, self) => self.findIndex(t => t.file_name === f.file_name) === idx)
-                      .map(file => (
-                        <div key={file.id} className="flex items-center justify-between p-3 bg-bg/50 rounded-lg border border-border text-xs">
-                          <div className="flex items-center gap-2 truncate">
-                            <FileText className="h-4 w-4 text-primary/40 shrink-0" />
-                            <span className="font-bold text-primary truncate max-w-[200px]">{file.file_name}</span>
-                            <span className="px-1.5 py-0.5 rounded-md bg-secondary/15 text-secondary text-[9px] font-black border border-secondary/10">
-                              v{file.version}
-                            </span>
-                            <span className="text-primary/40">{formatSize(file.size)}</span>
+                      .map(file => {
+                        const isDownloading = downloadingRef === file.storage_ref;
+                        return (
+                          <div key={file.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-bg/50 rounded-xl border border-border text-xs gap-3">
+                            <div className="flex items-center gap-2 truncate">
+                              <FileText className="h-4 w-4 text-primary/40 shrink-0" />
+                              <span className="font-bold text-primary truncate max-w-[200px] sm:max-w-xs">{file.file_name}</span>
+                              <span className="px-1.5 py-0.5 rounded-md bg-secondary/15 text-secondary text-[9px] font-black border border-secondary/10">
+                                v{file.version}
+                              </span>
+                              <span className="text-primary/40">{formatSize(file.size)}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                              <button
+                                onClick={() => handlePreview(file)}
+                                className="px-2.5 py-1.5 bg-secondary/10 hover:bg-secondary/20 text-secondary text-[11px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Eye className="h-3 w-3" /> Preview
+                              </button>
+
+                              <button
+                                onClick={() => handleDownload(file.storage_ref, file.file_name)}
+                                disabled={isDownloading}
+                                className="px-2.5 py-1.5 bg-primary/5 hover:bg-primary/10 text-primary text-[11px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
+                              >
+                                {isDownloading ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Download className="h-3 w-3" />
+                                )}
+                                Download
+                              </button>
+
+                              <button
+                                onClick={() => setReplaceTarget({
+                                  materialId: m.id,
+                                  fileId: file.id,
+                                  fileName: file.file_name,
+                                })}
+                                className="px-2.5 py-1.5 bg-surface hover:bg-border text-primary/80 hover:text-primary text-[11px] font-bold rounded-lg border border-border flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <RefreshCw className="h-3 w-3" /> Replace
+                              </button>
+                            </div>
                           </div>
-                          
-                          <button
-                            onClick={() => setReplaceTarget({
-                              materialId: m.id,
-                              fileId: file.id,
-                              fileName: file.file_name,
-                            })}
-                            className="px-2 py-1 bg-surface hover:bg-border text-primary/80 hover:text-primary text-[10px] font-bold rounded-md border border-border flex items-center gap-1 cursor-pointer transition-colors"
-                          >
-                            <RefreshCw className="h-3 w-3" /> Replace
-                          </button>
-                        </div>
-                      ))
+                        );
+                      })
                   ) : (
                     <span className="text-xs text-primary/40">No files registered.</span>
                   )}
@@ -202,6 +290,20 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
           onClose={() => setReplaceTarget(null)}
         />
       )}
+
+      {/* Render File Preview Modal */}
+      {previewingFile && (
+        <FilePreviewModal
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          fileName={previewingFile.fileName}
+          fileUrl={previewingFile.fileUrl}
+          mimeType={previewingFile.mimeType}
+          onDownload={() => handleDownload(previewingFile.storageRef, previewingFile.fileName)}
+          isDownloading={downloadingRef === previewingFile.storageRef}
+        />
+      )}
     </div>
   );
 }
+

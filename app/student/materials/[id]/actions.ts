@@ -66,3 +66,34 @@ export async function trackDownloadAndGetUrl(fileId: string, materialId: string,
 
   return { downloadUrl: data.signedUrl };
 }
+
+// Log Preview Activity and Get Storage Link for In-Browser Viewing
+export async function trackPreviewAndGetUrl(fileId: string, materialId: string, storageRef: string) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  // Log preview activity event
+  await supabase
+    .from("activity_events")
+    .insert({
+      type: "view",
+      actor_id: user.id,
+      target_id: materialId,
+      metadata: { file_id: fileId, mode: "preview_modal" },
+    });
+
+  // Get signed URL with 10-minute validity for reading in modal
+  const { data, error } = await supabase.storage
+    .from("materials")
+    .createSignedUrl(storageRef, 600);
+
+  if (error || !data) {
+    return { error: error?.message || "Failed to generate preview URL." };
+  }
+
+  return { previewUrl: data.signedUrl };
+}
+

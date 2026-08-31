@@ -57,7 +57,7 @@ export async function createUserAction(
   }
 
   // 3. Create/Update Profile in public.users
-  const { error: profileError } = await adminClient
+  const { data: profileData, error: profileError } = await adminClient
     .from("users")
     .upsert({
       id: authData.user.id,
@@ -66,20 +66,22 @@ export async function createUserAction(
       role,
       status: "active",
       branch: branch || null,
-      current_semester: null,
+      current_semester: semester || null,
       first_login_pending: true,
-    });
+    })
+    .select()
+    .single();
 
   if (profileError) {
-    // Attempt rollback from auth (admin client can delete if policies/keys match, or we inform admin)
     return { error: `Profile creation failed: ${profileError.message}` };
   }
 
-  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester: null });
+  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester });
 
   revalidatePath("/admin/users");
-  return { success: true };
+  return { success: true, user: profileData };
 }
+
 
 // Batch Create Users (from CSV Roster)
 export async function batchCreateUsersAction(

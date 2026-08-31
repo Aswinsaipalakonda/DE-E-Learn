@@ -2,11 +2,22 @@
 
 import { useState } from "react";
 import { createUserAction, batchCreateUsersAction, toggleUserStatus } from "./actions";
+import { ToastContainer, ToastMessage } from "@/components/toast";
 import { 
   Users as UsersIcon, 
   UserPlus, 
   Upload, 
-  Search
+  Search, 
+  X, 
+  Check, 
+  Loader2, 
+  GraduationCap, 
+  BookOpen, 
+  ShieldCheck, 
+  FileSpreadsheet, 
+  AlertCircle,
+  Sparkles,
+  ChevronRight
 } from "lucide-react";
 
 interface BranchOption {
@@ -38,39 +49,57 @@ interface UsersClientProps {
 
 export default function UsersClient({ initialUsers, branches, semesters }: UsersClientProps) {
   const [users, setUsers] = useState<UserItem[]>(initialUsers);
-  const [activeTab, setActiveTab] = useState<"directory" | "single" | "csv">("directory");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
-  // Single User State
+  // Slide-over Right Drawer State
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+
+  // Single User Form State
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"student" | "faculty" | "admin">("student");
-  const [branch, setBranch] = useState("");
-  const [semester, setSemester] = useState("");
+  const [branch, setBranch] = useState(branches[0]?.code || "CIC");
+  const [semester, setSemester] = useState("1");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // CSV State
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<Record<string, string>[]>([]);
+  const [csvLoading, setCsvLoading] = useState(false);
 
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase());
+  // Toast Notifications State
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (type: "success" | "error" | "info", title: string, description?: string) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, title, description }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch =
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter ? u.role === roleFilter : true;
     return matchesSearch && matchesRole;
   });
 
-  // Simple CSV text parser
+  // CSV Parser
   const parseCSV = (text: string) => {
-    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
     const result = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const cells = lines[i].split(",").map(c => c.trim());
+      const cells = lines[i].split(",").map((c) => c.trim());
       if (cells.length < headers.length) continue;
 
       const obj: Record<string, string> = {};
@@ -100,340 +129,549 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const handleSingleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
 
-    const result = await createUserAction(
-      email,
-      name,
-      role,
-      role === "student" ? branch || null : null,
-      null
-    );
+    const semNum = role === "student" && semester ? parseInt(semester, 10) : null;
+    const branchVal = role === "student" ? branch : null;
 
-    setLoading(false);
-    if (result.error) {
-      setMessage({ text: result.error, type: "error" });
-    } else {
-      setMessage({ text: "User created successfully! Default password is 'ChangeMe1234!'", type: "success" });
-      // Reset form
-      setEmail("");
-      setName("");
-      setBranch("");
-      setSemester("");
-      window.location.reload();
+    try {
+      const result = await createUserAction(email, name, role, branchVal, semNum);
+
+      if (result.error) {
+        addToast("error", "Failed to create user", result.error);
+      } else {
+        addToast(
+          "success",
+          "User Created Successfully",
+          `${name} (${role.toUpperCase()}) account has been registered.`
+        );
+
+        // Optimistically add user to table list
+        if (result.user) {
+          setUsers((prev) => [result.user as UserItem, ...prev]);
+        }
+
+        // Reset form & close drawer
+        setEmail("");
+        setName("");
+        setIsDrawerOpen(false);
+      }
+    } catch {
+      addToast("error", "Error", "An unexpected error occurred while creating user.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCsvSubmit = async () => {
     if (csvPreview.length === 0) return;
-    setLoading(true);
-    setMessage(null);
+    setCsvLoading(true);
 
-    const formattedList = csvPreview.map(item => ({
-      email: item.email || "",
-      name: item.name || "",
-      role: (item.role || "student") as "student" | "faculty" | "admin",
-      branch: item.branch || null,
-      semester: null
-    })).filter(u => u.email && u.name);
+    const formattedList = csvPreview
+      .map((item) => ({
+        email: item.email || "",
+        name: item.name || "",
+        role: (item.role || "student") as "student" | "faculty" | "admin",
+        branch: item.branch || null,
+        semester: item.semester ? parseInt(item.semester, 10) : null,
+      }))
+      .filter((u) => u.email && u.name);
 
-    const result = await batchCreateUsersAction(formattedList);
-    setLoading(false);
-
-    if (result.error) {
-      setMessage({ text: result.error, type: "error" });
-    } else {
-      setMessage({
-        text: `Batch processing complete. Successfully created ${result.successCount ?? 0} users. Failed ${result.failCount ?? 0}.`,
-        type: (result.failCount ?? 0) > 0 ? "error" : "success"
-      });
-      if (result.errors && result.errors.length > 0) {
-        console.error("Batch creation warnings:", result.errors);
+    try {
+      const result = await batchCreateUsersAction(formattedList);
+      if (result.error) {
+        addToast("error", "Batch Import Failed", result.error);
+      } else {
+        addToast(
+          "success",
+          "Batch Processing Complete",
+          `Successfully provisioned ${result.successCount ?? 0} users. (Failed: ${result.failCount ?? 0})`
+        );
+        setCsvFile(null);
+        setCsvPreview([]);
+        setIsCsvModalOpen(false);
+        setTimeout(() => window.location.reload(), 1500);
       }
-      setCsvFile(null);
-      setCsvPreview([]);
-      setTimeout(() => window.location.reload(), 2000);
+    } catch {
+      addToast("error", "Error", "Batch upload failed.");
+    } finally {
+      setCsvLoading(false);
     }
   };
 
-  const handleStatusToggle = async (userId: string, currentStatus: string) => {
-    const result = await toggleUserStatus(userId, currentStatus);
-    if (result.success) {
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: u.status === "active" ? "deactivated" : "active" } : u));
-    } else {
-      alert(result.error);
+  const handleStatusToggle = async (userId: string, currentStatus: string, userName: string) => {
+    setTogglingId(userId);
+    const newStatus = currentStatus === "active" ? "deactivated" : "active";
+
+    try {
+      const result = await toggleUserStatus(userId, currentStatus);
+      if (result.success) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, status: newStatus as "active" | "deactivated" } : u))
+        );
+        addToast(
+          "info",
+          "Status Updated",
+          `${userName}'s access has been set to ${newStatus.toUpperCase()}.`
+        );
+      } else {
+        addToast("error", "Status Update Failed", result.error);
+      }
+    } catch {
+      addToast("error", "Error", "Failed to update account status.");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const getRoleBadge = (userRole: string) => {
+    switch (userRole.toLowerCase()) {
+      case "student":
+        return <span className="font-extrabold text-secondary tracking-wide text-xs">STUDENT</span>;
+      case "faculty":
+        return <span className="font-extrabold text-primary tracking-wide text-xs">FACULTY</span>;
+      case "admin":
+        return <span className="font-extrabold text-accent tracking-wide text-xs">ADMIN</span>;
+      default:
+        return <span className="font-extrabold text-primary/60 tracking-wide text-xs">{userRole.toUpperCase()}</span>;
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex border-b border-border">
-        <button
-          onClick={() => setActiveTab("directory")}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "directory" ? "border-primary text-primary" : "border-transparent text-primary/50 hover:text-primary"
-          }`}
-        >
-          <UsersIcon className="h-4 w-4" /> Roster Directory
-        </button>
-        <button
-          onClick={() => setActiveTab("single")}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "single" ? "border-primary text-primary" : "border-transparent text-primary/50 hover:text-primary"
-          }`}
-        >
-          <UserPlus className="h-4 w-4" /> Add Single User
-        </button>
-        <button
-          onClick={() => setActiveTab("csv")}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "csv" ? "border-primary text-primary" : "border-transparent text-primary/50 hover:text-primary"
-          }`}
-        >
-          <Upload className="h-4 w-4" /> Batch Import CSV
-        </button>
+    <div className="space-y-6 relative">
+      {/* Toast Alert Notifications Container */}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+
+      {/* Top Controls Header with Action Buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-primary tracking-tight">Roster Directory</h2>
+          <p className="text-xs text-primary/60 mt-0.5">
+            Total registered accounts ({users.length}) across all departments.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          <button
+            onClick={() => setIsCsvModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-border bg-surface hover:bg-bg text-primary font-semibold text-xs transition-all shadow-xs cursor-pointer"
+          >
+            <Upload className="h-4 w-4 text-primary/60" />
+            <span>Batch Import CSV</span>
+          </button>
+
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Add User</span>
+          </button>
+        </div>
       </div>
 
-      {message && (
-        <div role="alert" className={`p-4 rounded-xl border text-sm font-semibold ${
-          message.type === "success" ? "bg-success/10 border-success/20 text-success" : "bg-danger/10 border-danger/20 text-danger"
-        }`}>
-          {message.text}
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-surface p-4 rounded-2xl border border-border shadow-xs">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-primary/40" />
+          <input
+            placeholder="Search user name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 text-xs bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 font-medium text-primary"
+          />
         </div>
-      )}
 
-      {/* Directory tab */}
-      {activeTab === "directory" && (
-        <div className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 bg-surface p-4 rounded-xl border border-border shadow-xs">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-primary/40" />
-              <input
-                placeholder="Search user name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-border bg-surface text-xs focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all"
-              />
-            </div>
-            <div className="flex gap-2">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-border bg-surface text-xs text-primary font-semibold focus:outline-none"
-              >
-                <option value="">All Roles</option>
-                <option value="student">Student</option>
-                <option value="faculty">Faculty</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3.5 py-2 text-xs font-semibold bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+          >
+            <option value="">All Roles</option>
+            <option value="student">Student</option>
+            <option value="faculty">Faculty</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
 
-          {/* Roster Listing */}
-          <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
-            {filteredUsers.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-bg/40 text-primary/50 font-bold border-b border-border">
-                      <th className="p-4">Name</th>
-                      <th className="p-4">Email</th>
-                      <th className="p-4">Role</th>
-                      <th className="p-4">Scope</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-bg/20 transition-all font-medium">
-                        <td className="p-4 font-bold text-primary">{u.name}</td>
-                        <td className="p-4 text-primary/80">{u.email}</td>
-                        <td className="p-4 uppercase tracking-wider text-[10px] font-black text-secondary">{u.role}</td>
-                        <td className="p-4">
-                          {u.branch ? (
-                            <span className="inline-flex gap-1.5 items-center">
-                              <span className="px-1.5 py-0.5 rounded-md bg-primary/5 border border-primary/10 text-[10px] font-bold">{u.branch}</span>
-                              {u.current_semester && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-secondary/10 border border-secondary/10 text-[10px] font-bold">Sem {u.current_semester}</span>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-primary/30">-</span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold border ${
-                            u.status === "active" ? "bg-success/10 text-success border-success/15" : "bg-danger/10 text-danger border-danger/15"
-                          }`}>
-                            {u.status}
+      {/* Roster Table (Matching User Screenshot) */}
+      <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
+        {filteredUsers.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-bg/40 text-primary/50 font-bold border-b border-border">
+                  <th className="p-4 pl-6">Name</th>
+                  <th className="p-4">Email</th>
+                  <th className="p-4">Role</th>
+                  <th className="p-4">Scope</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 pr-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredUsers.map((u) => {
+                  const isToggling = togglingId === u.id;
+                  return (
+                    <tr key={u.id} className="hover:bg-bg/25 transition-all font-medium">
+                      <td className="p-4 pl-6 font-bold text-primary">{u.name}</td>
+                      <td className="p-4 text-primary/70">{u.email}</td>
+                      <td className="p-4">{getRoleBadge(u.role)}</td>
+                      <td className="p-4">
+                        {u.branch ? (
+                          <span className="px-2 py-0.5 rounded-md bg-bg border border-border text-[10px] font-bold text-primary/70">
+                            {u.branch}
+                            {u.current_semester ? ` • Sem ${u.current_semester}` : ""}
                           </span>
-                        </td>
-                        <td className="p-4 text-right">
-                          <button
-                            onClick={() => handleStatusToggle(u.id, u.status)}
-                            className="px-2.5 py-1.5 bg-bg hover:bg-border text-primary/75 hover:text-primary rounded-lg border border-border font-bold transition-all cursor-pointer"
-                          >
-                            {u.status === "active" ? "Deactivate" : "Activate"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        ) : (
+                          <span className="text-primary/30 font-semibold">—</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            u.status === "active"
+                              ? "bg-success/10 text-success border border-success/20"
+                              : "bg-danger/10 text-danger border border-danger/20"
+                          }`}
+                        >
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="p-4 pr-6 text-right">
+                        <button
+                          onClick={() => handleStatusToggle(u.id, u.status, u.name)}
+                          disabled={isToggling}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer disabled:opacity-50 ${
+                            u.status === "active"
+                              ? "bg-surface hover:bg-danger/10 text-primary/70 hover:text-danger border-border hover:border-danger/30"
+                              : "bg-success/10 text-success border-success/20 hover:bg-success/20"
+                          }`}
+                        >
+                          {isToggling ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
+                          ) : u.status === "active" ? (
+                            "Deactivate"
+                          ) : (
+                            "Activate"
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-20 text-center text-primary/45 font-semibold text-sm">
+            No registered users found matching the filter.
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SLIDE-OVER RIGHT WINDOW / DRAWER (CREATE USER) */}
+      {/* ========================================================================= */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => !loading && setIsDrawerOpen(false)}
+          />
+
+          {/* Slide Drawer Panel */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
+              {/* Drawer Header */}
+              <div className="p-6 border-b border-border bg-bg/40 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-primary text-white shadow-xs">
+                    <UserPlus className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-primary">Add New User</h3>
+                    <p className="text-xs text-primary/50 mt-0.5">
+                      Provision student, faculty, or admin account
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  disabled={loading}
+                  className="p-1.5 rounded-xl text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-            ) : (
-              <div className="py-20 text-center text-primary/45 font-semibold text-xs">
-                No matching system users found.
+
+              {/* Drawer Form Body */}
+              <form id="create-user-form" onSubmit={handleSingleSubmit} className="p-6 space-y-5 flex-1 overflow-y-auto">
+                {/* Role Selector Segmented Buttons */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-2">
+                    Account Role *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        { id: "student", label: "Student", icon: GraduationCap },
+                        { id: "faculty", label: "Faculty", icon: BookOpen },
+                        { id: "admin", label: "Admin", icon: ShieldCheck },
+                      ] as const
+                    ).map((r) => {
+                      const Icon = r.icon;
+                      const isSelected = role === r.id;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => setRole(r.id)}
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-primary text-white border-primary shadow-xs"
+                              : "bg-bg text-primary/70 border-border hover:border-primary/30"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4 mb-1" />
+                          <span>{r.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Name Input */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g., Aswin Sai"
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                  />
+                </div>
+
+                {/* Email Address Input */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                    Official College Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={
+                      role === "student"
+                        ? "e.g., 23331a4745@mvgrce.edu.in"
+                        : "e.g., faculty@mvgrce.edu.in"
+                    }
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                  />
+                </div>
+
+                {/* Conditional Fields for Students */}
+                {role === "student" && (
+                  <div className="space-y-4 pt-1">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                        Branch Specialization *
+                      </label>
+                      <select
+                        value={branch}
+                        onChange={(e) => setBranch(e.target.value)}
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                      >
+                        {branches.map((b) => (
+                          <option key={b.code} value={b.code}>
+                            {b.code} - {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
+                        Current Semester *
+                      </label>
+                      <select
+                        value={semester}
+                        onChange={(e) => setSemester(e.target.value)}
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-medium"
+                      >
+                        {semesters.map((s) => (
+                          <option key={s.number} value={s.number.toString()}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Password Policy Info Note */}
+                <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-primary">
+                    <Sparkles className="h-3.5 w-3.5 text-secondary" />
+                    <span>Security & Initial Credentials</span>
+                  </div>
+                  <p className="text-[11px] text-primary/70 leading-relaxed">
+                    {role === "student"
+                      ? "Initial password will default to student's uppercase roll number. Forced password change is required upon first login."
+                      : "Initial password will default to 'ChangeMe1234!'. Forced password change is enforced on first sign-in."}
+                  </p>
+                </div>
+              </form>
+
+              {/* Drawer Footer */}
+              <div className="p-6 border-t border-border bg-bg/40 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDrawerOpen(false)}
+                  disabled={loading}
+                  className="px-5 py-2.5 text-xs font-semibold text-primary/70 hover:text-primary rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="create-user-form"
+                  disabled={loading}
+                  className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white font-semibold text-xs rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Create Account</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </>
+                  )}
+                </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Register Single user */}
-      {activeTab === "single" && (
-        <form onSubmit={handleSingleSubmit} className="bg-surface p-6 rounded-2xl border border-border shadow-xs max-w-xl space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="name" className="block text-xs font-bold text-primary mb-2 uppercase tracking-wider text-primary/60">Full Name</label>
-              <input
-                id="name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Aswin Sai"
-                className="w-full px-3 py-2.5 rounded-lg border border-border bg-surface text-xs focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-xs font-bold text-primary mb-2 uppercase tracking-wider text-primary/60">Email Address</label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g., student@mvgrce.edu.in"
-                className="w-full px-3 py-2.5 rounded-lg border border-border bg-surface text-xs focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="role" className="block text-xs font-bold text-primary mb-2 uppercase tracking-wider text-primary/60">System Role</label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as "student" | "faculty" | "admin")}
-                className="w-full px-3 py-2.5 rounded-lg border border-border bg-surface text-xs focus:outline-none"
+      {/* ========================================================================= */}
+      {/* BATCH IMPORT CSV MODAL */}
+      {/* ========================================================================= */}
+      {isCsvModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div
+            className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-6 max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-secondary/10 text-secondary">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-primary">Batch Import Roster (CSV)</h3>
+                  <p className="text-xs text-primary/60 mt-0.5">Bulk provision student and faculty accounts</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCsvModalOpen(false)}
+                disabled={csvLoading}
+                className="p-1.5 text-primary/50 hover:text-primary rounded-lg"
               >
-                <option value="student">Student</option>
-                <option value="faculty">Faculty</option>
-                <option value="admin">Admin</option>
-              </select>
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            {role === "student" && (
-              <div>
-                <label htmlFor="branch" className="block text-xs font-bold text-primary mb-2 uppercase tracking-wider text-primary/60">Academic Branch</label>
-                <select
-                  id="branch"
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-border bg-surface text-xs focus:outline-none"
-                >
-                  <option value="">-- Choose Branch --</option>
-                  {branches.map(b => (
-                    <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
-                  ))}
-                </select>
+            <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+              <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center hover:border-secondary/50 transition-colors bg-bg/50">
+                <Upload className="h-8 w-8 text-primary/40 mx-auto mb-2" />
+                <label className="text-xs font-bold text-secondary hover:underline cursor-pointer block">
+                  Select or drag CSV file
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCsvChange}
+                    className="hidden"
+                  />
+                </label>
+                <span className="text-[11px] text-primary/50 mt-1 block">
+                  Required columns: <code>email, name, role, branch, semester</code>
+                </span>
               </div>
-            )}
-          </div>
 
-          <div className="flex justify-end pt-4 border-t border-border">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2.5 bg-primary hover:bg-primary/95 text-white font-semibold text-xs rounded-lg disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              {loading ? "Registering..." : "Create User Account"}
-            </button>
-          </div>
-        </form>
-      )}
+              {csvPreview.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-primary">
+                    Preview Data ({csvPreview.length} entries parsed):
+                  </span>
+                  <div className="max-h-48 overflow-y-auto border border-border rounded-xl">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="bg-bg font-bold text-primary/50 border-b border-border">
+                        <tr>
+                          <th className="p-2">Email</th>
+                          <th className="p-2">Name</th>
+                          <th className="p-2">Role</th>
+                          <th className="p-2">Branch</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {csvPreview.slice(0, 10).map((row, i) => (
+                          <tr key={i} className="hover:bg-bg/25">
+                            <td className="p-2 font-medium text-primary">{row.email}</td>
+                            <td className="p-2 text-primary/80">{row.name}</td>
+                            <td className="p-2 font-bold uppercase">{row.role || "student"}</td>
+                            <td className="p-2">{row.branch || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {csvPreview.length > 10 && (
+                    <span className="text-[10px] text-primary/40 italic block">
+                      Showing first 10 rows of {csvPreview.length} total.
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
 
-      {/* CSV upload tab */}
-      {activeTab === "csv" && (
-        <div className="space-y-6">
-          <div className="bg-surface p-6 rounded-2xl border border-border shadow-xs max-w-xl space-y-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary/50">Batch CSV Upload Instructions</h3>
-            <p className="text-xs text-primary/60 leading-relaxed">
-              Format your CSV file with headers: <span className="font-bold text-secondary">email, name, role, branch</span>. Default credentials will be created dynamically as <span className="font-semibold text-secondary">ChangeMe1234!</span> for all provisioned users.
-            </p>
-
-            <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border hover:border-secondary rounded-xl bg-bg/30 text-center relative group transition-colors cursor-pointer">
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleCsvChange}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              />
-              <Upload className="h-8 w-8 text-primary/40 group-hover:text-secondary mb-2 transition-colors" />
-              <span className="text-xs font-semibold text-primary">
-                {csvFile ? csvFile.name : "Select student roster CSV file"}
-              </span>
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setIsCsvModalOpen(false)}
+                disabled={csvLoading}
+                className="px-5 py-2.5 text-xs font-semibold text-primary/70 hover:text-primary rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCsvSubmit}
+                disabled={csvLoading || csvPreview.length === 0}
+                className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {csvLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing Roster...
+                  </>
+                ) : (
+                  "Execute Import"
+                )}
+              </button>
             </div>
           </div>
-
-          {csvPreview.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-primary/60">CSV Import Preview ({csvPreview.length} records)</h3>
-              <div className="bg-surface rounded-2xl border border-border overflow-hidden max-h-60 overflow-y-auto">
-                <table className="w-full text-left border-collapse text-[10px]">
-                  <thead>
-                    <tr className="bg-bg/40 text-primary/50 font-bold border-b border-border">
-                      <th className="p-3">Email</th>
-                      <th className="p-3">Name</th>
-                      <th className="p-3">Role</th>
-                      <th className="p-3">Branch</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {csvPreview.slice(0, 10).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-bg/25">
-                        <td className="p-3 truncate">{row.email}</td>
-                        <td className="p-3 font-semibold">{row.name}</td>
-                        <td className="p-3 uppercase">{row.role || "student"}</td>
-                        <td className="p-3">{row.branch || "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-border">
-                <button
-                  onClick={() => { setCsvFile(null); setCsvPreview([]); }}
-                  className="px-4 py-2 bg-surface hover:bg-bg border border-border text-primary font-semibold text-xs rounded-lg transition-all cursor-pointer"
-                >
-                  Clear File
-                </button>
-                <button
-                  onClick={handleCsvSubmit}
-                  disabled={loading}
-                  className="px-5 py-2.5 bg-primary hover:bg-primary/95 text-white font-semibold text-xs rounded-lg disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  {loading ? "Processing..." : "Import Users Roster"}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

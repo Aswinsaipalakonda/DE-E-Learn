@@ -11,8 +11,11 @@ import {
   Users,
   Settings,
   LogOut,
-  User
+  User,
+  Megaphone,
+  HelpCircle
 } from "lucide-react";
+
 
 interface BottomNavProps {
   userRole: "student" | "faculty" | "admin";
@@ -27,21 +30,25 @@ export default function BottomNav({ userRole, signOutAction }: BottomNavProps) {
       { name: "Dashboard", href: "/student", icon: LayoutDashboard },
       { name: "Subjects", href: "/student/subjects", icon: BookOpen },
       { name: "Bookmarks", href: "/student/bookmarks", icon: Bookmark },
+      { name: "Help", href: "/help", icon: HelpCircle },
       { name: "Profile", href: "/student/profile", icon: User },
     ],
     faculty: [
       { name: "Dashboard", href: "/faculty", icon: LayoutDashboard },
       { name: "Upload", href: "/faculty/upload", icon: Upload },
       { name: "Materials", href: "/faculty/materials", icon: FileText },
+      { name: "Help", href: "/help", icon: HelpCircle },
       { name: "Profile", href: "/faculty/profile", icon: User },
     ],
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Users", href: "/admin/users", icon: Users },
-      { name: "Courses", href: "/admin/taxonomy", icon: Settings },
+      { name: "Broadcast", href: "/admin/announcements", icon: Megaphone },
+      { name: "Help", href: "/help", icon: HelpCircle },
       { name: "Profile", href: "/admin/profile", icon: User },
     ],
   };
+
 
   const navItems = navigation[userRole] || [];
 

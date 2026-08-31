@@ -137,12 +137,22 @@ export default async function FacultyDashboardPage() {
           <div className="w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
             <HardDrive className="h-6 w-6" />
           </div>
-          <div>
-            <span className="block text-2xl font-black text-primary">{formatStorage(totalStorageBytes)}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="block text-2xl font-black text-primary">{formatStorage(totalStorageBytes)}</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-success/15 text-success">Healthy</span>
+            </div>
             <span className="text-xs text-primary/50 font-semibold uppercase tracking-wider mt-0.5 block">Storage Used</span>
+            <div className="w-full bg-border h-1.5 rounded-full mt-2 overflow-hidden">
+              <div 
+                className="bg-warning h-full rounded-full transition-all" 
+                style={{ width: `${Math.min(Math.max((totalStorageBytes / (5 * 1024 * 1024 * 1024)) * 100, 2), 100)}%` }} 
+              />
+            </div>
           </div>
         </div>
       </section>
+
 
       {/* Main content split */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

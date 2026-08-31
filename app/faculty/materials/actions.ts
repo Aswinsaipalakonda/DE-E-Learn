@@ -119,3 +119,23 @@ export async function replaceFileVersion(formData: FormData) {
   revalidatePath("/faculty/materials");
   return { success: true };
 }
+
+// Get Signed URL for Faculty Preview/Download
+export async function getFacultyFilePreviewUrl(storageRef: string) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data, error } = await supabase.storage
+    .from("materials")
+    .createSignedUrl(storageRef, 600);
+
+  if (error || !data) {
+    return { error: error?.message || "Failed to generate preview URL." };
+  }
+
+  return { previewUrl: data.signedUrl };
+}
+

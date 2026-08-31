@@ -10,14 +10,16 @@ import {
   LayoutDashboard, 
   LogOut, 
   Menu, 
-  X,
-  Upload,
-  FileText,
-  Users,
-  Settings,
-  BarChart,
-  History,
-  User
+  X, 
+  Upload, 
+  FileText, 
+  Users, 
+  Settings, 
+  BarChart, 
+  History, 
+  User,
+  Megaphone,
+  HelpCircle
 } from "lucide-react";
 
 interface SidebarProps {
@@ -38,23 +40,28 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
       { name: "Dashboard", href: "/student", icon: LayoutDashboard },
       { name: "Subjects", href: "/student/subjects", icon: BookOpen },
       { name: "Bookmarks", href: "/student/bookmarks", icon: Bookmark },
+      { name: "Help & FAQs", href: "/help", icon: HelpCircle },
       { name: "Profile", href: "/student/profile", icon: User },
     ],
     faculty: [
       { name: "Dashboard", href: "/faculty", icon: LayoutDashboard },
       { name: "Upload Material", href: "/faculty/upload", icon: Upload },
       { name: "My Materials", href: "/faculty/materials", icon: FileText },
+      { name: "Help & FAQs", href: "/help", icon: HelpCircle },
       { name: "Profile", href: "/faculty/profile", icon: User },
     ],
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Student Roster", href: "/admin/users", icon: Users },
       { name: "Courses & Branches", href: "/admin/taxonomy", icon: Settings },
+      { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
       { name: "Usage Metrics", href: "/admin/analytics", icon: BarChart },
       { name: "System Logs", href: "/admin/logs", icon: History },
+      { name: "Help & FAQs", href: "/help", icon: HelpCircle },
       { name: "Profile", href: "/admin/profile", icon: User },
     ],
   };
+
 
   const navItems = navigation[userRole] || [];
 

@@ -110,9 +110,18 @@ export default async function AdminDashboardPage() {
           <div className="w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
             <HardDrive className="h-6 w-6" />
           </div>
-          <div>
-            <span className="block text-2xl font-black text-primary">{formatStorage(totalStorageBytes)}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="block text-2xl font-black text-primary">{formatStorage(totalStorageBytes)}</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-success/15 text-success">Healthy</span>
+            </div>
             <span className="text-xs text-primary/50 font-semibold uppercase tracking-wider mt-0.5 block">Repository Storage</span>
+            <div className="w-full bg-border h-1.5 rounded-full mt-2 overflow-hidden">
+              <div 
+                className="bg-secondary h-full rounded-full transition-all" 
+                style={{ width: `${Math.min(Math.max((totalStorageBytes / (50 * 1024 * 1024 * 1024)) * 100, 2), 100)}%` }} 
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -160,19 +169,40 @@ export default async function AdminDashboardPage() {
         <div className="space-y-6">
           <div className="p-6 bg-surface rounded-2xl border border-border shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-primary/40 uppercase tracking-widest">Quick Operations</h2>
-            <div className="flex flex-col gap-3 font-semibold text-sm">
+            <div className="flex flex-col gap-2.5 font-semibold text-xs sm:text-sm">
               <Link
                 href="/admin/users"
-                className="flex items-center justify-between p-3.5 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
+                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
               >
                 <span>Student Roster Manager</span>
                 <ArrowRight className="h-4 w-4 text-primary/40" />
               </Link>
               <Link
+                href="/admin/announcements"
+                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
+              >
+                <span>Announcements Manager</span>
+                <ArrowRight className="h-4 w-4 text-primary/40" />
+              </Link>
+              <Link
                 href="/admin/taxonomy"
-                className="flex items-center justify-between p-3.5 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
+                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
               >
                 <span>Courses & Branches</span>
+                <ArrowRight className="h-4 w-4 text-primary/40" />
+              </Link>
+              <Link
+                href="/admin/analytics"
+                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
+              >
+                <span>Usage Metrics & CSV Export</span>
+                <ArrowRight className="h-4 w-4 text-primary/40" />
+              </Link>
+              <Link
+                href="/admin/logs"
+                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
+              >
+                <span>System Security Logs</span>
                 <ArrowRight className="h-4 w-4 text-primary/40" />
               </Link>
             </div>
@@ -182,3 +212,4 @@ export default async function AdminDashboardPage() {
     </div>
   );
 }
+
