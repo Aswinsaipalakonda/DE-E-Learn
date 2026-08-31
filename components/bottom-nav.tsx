@@ -60,7 +60,7 @@ export default function BottomNav({ userRole, signOutAction }: BottomNavProps) {
             href={item.href}
             className={`flex flex-col items-center justify-center flex-1 py-1.5 px-2 rounded-full transition-all duration-200 cursor-pointer ${
               isActive 
-                ? "bg-blue-600 text-white shadow-xs" 
+                ? "bg-primary text-white shadow-xs" 
                 : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
             }`}
           >
