@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import MaterialsList from "./materials-list";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 
 interface FileItem {
   id: string;
@@ -71,13 +71,24 @@ export default async function FacultyMaterialsPage() {
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-6xl pb-10">
-      <div>
-        <Link 
-          href="/faculty" 
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+      {/* Top Header Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <Link 
+            href="/faculty" 
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Return to Dashboard</span>
+          </Link>
+        </div>
+
+        <Link
+          href="/faculty/upload"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-semibold text-xs sm:text-sm transition-all shadow-2xs self-start sm:self-auto cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Return to Dashboard</span>
+          <Plus className="h-4 w-4" />
+          <span>Upload Material</span>
         </Link>
       </div>
 
