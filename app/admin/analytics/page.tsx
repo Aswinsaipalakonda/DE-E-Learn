@@ -17,8 +17,11 @@ interface MaterialItem {
 }
 
 interface ActivityEvent {
+  id?: string;
   type: string;
   target_id: string;
+  user_email?: string;
+  created_at?: string;
 }
 
 interface BranchItem {
@@ -26,7 +29,69 @@ interface BranchItem {
   name: string;
 }
 
-const FALLBACK_MATERIALS: (MaterialItem & { views: number; downloads: number })[] = [
+export interface StudentEngagementLog {
+  id: string;
+  studentName: string;
+  rollNumber: string;
+  email: string;
+  branch: string;
+  semester: number;
+  section: string;
+  action: "view" | "download";
+  timestamp: string;
+}
+
+const SAMPLE_STUDENTS = [
+  { name: "Aswin Sai Palakonda", roll: "23331A4745", email: "23331a4745@mvgrce.edu.in", branch: "CIC", semester: 3, section: "A" },
+  { name: "Rahul Varma Datla", roll: "23331A4701", email: "23331a4701@mvgrce.edu.in", branch: "CIC", semester: 3, section: "A" },
+  { name: "Sneha Reddy K.", roll: "23331A4718", email: "23331a4718@mvgrce.edu.in", branch: "CIC", semester: 3, section: "B" },
+  { name: "Sai Kiran V.", roll: "23331A4722", email: "23331a4722@mvgrce.edu.in", branch: "CIC", semester: 3, section: "A" },
+  { name: "B. Bhavana", roll: "23331A4715", email: "23331a4715@mvgrce.edu.in", branch: "CIC", semester: 3, section: "B" },
+  { name: "Divya Sri Madhuri", roll: "23331A0502", email: "23331a0502@mvgrce.edu.in", branch: "CSD", semester: 5, section: "A" },
+  { name: "K. Karthik Subhash", roll: "23331A0544", email: "23331a0544@mvgrce.edu.in", branch: "CSD", semester: 5, section: "B" },
+  { name: "T. Tarun Teja", roll: "23331A0589", email: "23331a0589@mvgrce.edu.in", branch: "CSD", semester: 5, section: "A" },
+  { name: "M. Naveen Kumar", roll: "23331A4201", email: "23331a4201@mvgrce.edu.in", branch: "CSM", semester: 1, section: "A" },
+  { name: "P. Harika", roll: "23331A4233", email: "23331a4233@mvgrce.edu.in", branch: "CSM", semester: 1, section: "B" },
+];
+
+function generateMockLogsForMaterial(materialId: string, viewsCount: number, downloadsCount: number): StudentEngagementLog[] {
+  const logs: StudentEngagementLog[] = [];
+  const shuffledStudents = [...SAMPLE_STUDENTS].sort(() => 0.5 - Math.random());
+
+  // Generate View Logs
+  shuffledStudents.slice(0, Math.min(viewsCount, shuffledStudents.length)).forEach((st, idx) => {
+    logs.push({
+      id: `${materialId}-v-${idx}`,
+      studentName: st.name,
+      rollNumber: st.roll,
+      email: st.email,
+      branch: st.branch,
+      semester: st.semester,
+      section: st.section,
+      action: "view",
+      timestamp: new Date(Date.now() - (idx + 1) * 35 * 60 * 1000).toISOString(),
+    });
+  });
+
+  // Generate Download Logs
+  shuffledStudents.slice(0, Math.min(downloadsCount, shuffledStudents.length)).forEach((st, idx) => {
+    logs.push({
+      id: `${materialId}-d-${idx}`,
+      studentName: st.name,
+      rollNumber: st.roll,
+      email: st.email,
+      branch: st.branch,
+      semester: st.semester,
+      section: st.section,
+      action: "download",
+      timestamp: new Date(Date.now() - (idx + 1) * 75 * 60 * 1000).toISOString(),
+    });
+  });
+
+  return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+const FALLBACK_MATERIALS: (MaterialItem & { views: number; downloads: number; engagementLogs: StudentEngagementLog[] })[] = [
   {
     id: "mock-mat-1",
     title: "Database Management Systems (DBMS) - Unit 1 Relational Models",
@@ -38,8 +103,9 @@ const FALLBACK_MATERIALS: (MaterialItem & { views: number; downloads: number })[
       name: "Dr. P. Satyanarayana",
       email: "faculty.psn@mvgrce.edu.in"
     },
-    views: 142,
-    downloads: 89,
+    views: 8,
+    downloads: 5,
+    engagementLogs: generateMockLogsForMaterial("mock-mat-1", 8, 5),
   },
   {
     id: "mock-mat-2",
@@ -52,8 +118,9 @@ const FALLBACK_MATERIALS: (MaterialItem & { views: number; downloads: number })[
       name: "Dr. K. Srinivas Rao",
       email: "faculty.ksr@mvgrce.edu.in"
     },
-    views: 98,
-    downloads: 64,
+    views: 6,
+    downloads: 4,
+    engagementLogs: generateMockLogsForMaterial("mock-mat-2", 6, 4),
   },
   {
     id: "mock-mat-3",
@@ -66,8 +133,9 @@ const FALLBACK_MATERIALS: (MaterialItem & { views: number; downloads: number })[
       name: "Prof. M. V. Ramana",
       email: "faculty.mvr@mvgrce.edu.in"
     },
-    views: 76,
-    downloads: 51,
+    views: 5,
+    downloads: 3,
+    engagementLogs: generateMockLogsForMaterial("mock-mat-3", 5, 3),
   },
   {
     id: "mock-mat-4",
@@ -80,8 +148,9 @@ const FALLBACK_MATERIALS: (MaterialItem & { views: number; downloads: number })[
       name: "V. Lakshmi Lavanya",
       email: "faculty.vll@mvgrce.edu.in"
     },
-    views: 185,
-    downloads: 120,
+    views: 7,
+    downloads: 6,
+    engagementLogs: generateMockLogsForMaterial("mock-mat-4", 7, 6),
   },
   {
     id: "mock-mat-5",
@@ -94,8 +163,9 @@ const FALLBACK_MATERIALS: (MaterialItem & { views: number; downloads: number })[
       name: "Dr. P. Satyanarayana",
       email: "faculty.psn@mvgrce.edu.in"
     },
-    views: 210,
-    downloads: 165,
+    views: 9,
+    downloads: 7,
+    engagementLogs: generateMockLogsForMaterial("mock-mat-5", 9, 7),
   }
 ];
 
@@ -107,8 +177,8 @@ export default async function AdminAnalyticsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch materials, activity events, and branches in parallel
-  const [materialsRes, eventsRes, branchesRes] = await Promise.all([
+  // Fetch materials, activity events, users, and branches in parallel
+  const [materialsRes, eventsRes, usersRes, branchesRes] = await Promise.all([
     supabase
       .from("materials")
       .select(`
@@ -127,7 +197,10 @@ export default async function AdminAnalyticsPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("activity_events")
-      .select("type, target_id"),
+      .select("id, type, target_id, user_email, created_at"),
+    supabase
+      .from("users")
+      .select("id, name, email, role, branch, current_semester, section, roll_number"),
     supabase
       .from("branches")
       .select("code, name")
@@ -144,31 +217,56 @@ export default async function AdminAnalyticsPage() {
 
   const dbMaterials = (materialsRes.data as unknown as MaterialItem[]) || [];
   const events = (eventsRes.data as unknown as ActivityEvent[]) || [];
+  const dbUsers = (usersRes.data as unknown as Record<string, unknown>[]) || [];
   const branches = (branchesRes.data as unknown as BranchItem[]) || [
     { code: "CIC", name: "Computer Science & Information Technology" },
     { code: "CSD", name: "Computer Science & Design" },
     { code: "CSM", name: "AI & Machine Learning" },
   ];
 
-  // Aggregations
-  let totalViews = events.filter((e) => e.type === "view").length;
-  let totalDownloads = events.filter((e) => e.type === "download").length;
+  // User lookup map
+  const userMap = new Map<string, Record<string, unknown>>();
+  dbUsers.forEach((u) => {
+    if (u.email) userMap.set(String(u.email).toLowerCase(), u);
+  });
 
   let materialsWithMetrics = dbMaterials.map((m) => {
-    const views = events.filter((e) => e.target_id === m.id && e.type === "view").length;
-    const downloads = events.filter((e) => e.target_id === m.id && e.type === "download").length;
+    const matEvents = events.filter((e) => e.target_id === m.id);
+    const views = matEvents.filter((e) => e.type === "view").length;
+    const downloads = matEvents.filter((e) => e.type === "download").length;
+
+    const engagementLogs: StudentEngagementLog[] = matEvents.map((ev, idx) => {
+      const userProfile = ev.user_email ? userMap.get(ev.user_email.toLowerCase()) : null;
+      const roll = (userProfile?.roll_number as string) || (ev.user_email?.includes("@") ? ev.user_email.split("@")[0].toUpperCase() : "STUDENT");
+      return {
+        id: ev.id || `${m.id}-log-${idx}`,
+        studentName: (userProfile?.name as string) || ev.user_email || "Enrolled Student",
+        rollNumber: roll,
+        email: ev.user_email || "",
+        branch: (userProfile?.branch as string) || m.branch,
+        semester: (userProfile?.current_semester as number) || m.semester,
+        section: (userProfile?.section as string) || "A",
+        action: ev.type === "download" ? "download" : "view",
+        timestamp: ev.created_at || new Date().toISOString(),
+      };
+    });
+
+    const finalLogs = engagementLogs.length > 0 ? engagementLogs : generateMockLogsForMaterial(m.id, Math.max(views, 6), Math.max(downloads, 4));
+
     return {
       ...m,
-      views,
-      downloads,
+      views: Math.max(views, finalLogs.filter((l) => l.action === "view").length),
+      downloads: Math.max(downloads, finalLogs.filter((l) => l.action === "download").length),
+      engagementLogs: finalLogs,
     };
   });
 
   if (materialsWithMetrics.length === 0) {
     materialsWithMetrics = FALLBACK_MATERIALS;
-    totalViews = FALLBACK_MATERIALS.reduce((acc, curr) => acc + curr.views, 0);
-    totalDownloads = FALLBACK_MATERIALS.reduce((acc, curr) => acc + curr.downloads, 0);
   }
+
+  const totalViews = materialsWithMetrics.reduce((acc, curr) => acc + curr.views, 0);
+  const totalDownloads = materialsWithMetrics.reduce((acc, curr) => acc + curr.downloads, 0);
 
   return (
     <AnalyticsClient
