@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { toggleMaterialState, deleteMaterial, getFacultyFilePreviewUrl } from "./actions";
 import ReplaceDialog from "./replace-dialog";
@@ -76,17 +76,22 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inspectingMaterial, setInspectingMaterial] = useState<MaterialItem | null>(null);
 
-  // Body scroll locking when drawer is open
+  // Scroll Container Ref
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Focus scroll container on open
   useEffect(() => {
-    if (isModalOpen || isPreviewOpen || replaceTarget) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+    if (isModalOpen && scrollContainerRef.current) {
+      scrollContainerRef.current.focus();
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isModalOpen, isPreviewOpen, replaceTarget]);
+  }, [isModalOpen]);
+
+  // Direct wheel scroll handler
+  const handleScrollWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop += e.deltaY;
+    }
+  };
 
   const filteredMaterials = materials.filter(m => m.state === activeTab);
 
@@ -455,7 +460,7 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
       )}
 
       {/* ========================================================================= */}
-      {/* RIGHT-SIDE SLIDE-OVER WINDOW (DRAWER) FOR FACULTY WITH DEDICATED SCROLL */}
+      {/* RIGHT-SIDE SLIDE-OVER WINDOW (DRAWER) WITH DIRECT HARDWARE WHEEL SCROLL */}
       {/* ========================================================================= */}
       {isModalOpen && inspectingMaterial && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -495,11 +500,16 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
                 </button>
               </div>
 
-              {/* Dedicated Full-Height Scrolling Viewport */}
+              {/* Dedicated Scroll Container with onWheel & Direct Scroll Bridge */}
               <div 
+                ref={scrollContainerRef}
                 tabIndex={0}
-                className="flex-1 overflow-y-scroll p-6 sm:p-8 space-y-6 focus:outline-none"
-                style={{ WebkitOverflowScrolling: "touch" }}
+                onWheel={handleScrollWheel}
+                className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 focus:outline-none"
+                style={{
+                  overscrollBehavior: "contain",
+                  touchAction: "pan-y",
+                }}
               >
                 <StudentCohortProgressMatrix
                   materialId={inspectingMaterial.id}
@@ -510,7 +520,7 @@ export default function MaterialsList({ initialMaterials }: MaterialsListProps) 
                   activityLogs={inspectingMaterial.engagementLogs || []}
                   uploaderName="You (Faculty)"
                 />
-                <div className="h-16" />
+                <div className="h-20" />
               </div>
 
               {/* Fixed Footer */}

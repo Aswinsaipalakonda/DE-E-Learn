@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { 
   Eye, 
   Download, 
@@ -64,20 +64,25 @@ export default function AnalyticsClient({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inspectingMaterial, setInspectingMaterial] = useState<MaterialWithMetrics | null>(null);
 
+  // Scroll Container Ref
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   // Toast Notifications State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Body Scroll Lock when Drawer is open
+  // Focus scroll container on open
   useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+    if (isModalOpen && scrollContainerRef.current) {
+      scrollContainerRef.current.focus();
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
   }, [isModalOpen]);
+
+  // Native wheel scroll bridge to guarantee wheel works 100% on Windows/Chrome
+  const handleScrollWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop += e.deltaY;
+    }
+  };
 
   const addToast = (type: "success" | "error" | "info", title: string, description?: string) => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -490,7 +495,7 @@ export default function AnalyticsClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* RIGHT-SIDE SLIDE-OVER WINDOW (DRAWER) WITH DEDICATED FULL-HEIGHT SCROLL */}
+      {/* RIGHT-SIDE SLIDE-OVER WINDOW (DRAWER) WITH DIRECT HARDWARE WHEEL SCROLL */}
       {/* ========================================================================= */}
       {isModalOpen && inspectingMaterial && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -530,11 +535,16 @@ export default function AnalyticsClient({
                 </button>
               </div>
 
-              {/* Dedicated Full-Height Scrolling Viewport */}
+              {/* Dedicated Scroll Container with onWheel & Direct Scroll Bridge */}
               <div 
+                ref={scrollContainerRef}
                 tabIndex={0}
-                className="flex-1 overflow-y-scroll p-6 sm:p-8 space-y-6 focus:outline-none"
-                style={{ WebkitOverflowScrolling: "touch" }}
+                onWheel={handleScrollWheel}
+                className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 focus:outline-none"
+                style={{
+                  overscrollBehavior: "contain",
+                  touchAction: "pan-y",
+                }}
               >
                 <StudentCohortProgressMatrix
                   materialId={inspectingMaterial.id}
@@ -545,7 +555,7 @@ export default function AnalyticsClient({
                   activityLogs={inspectingMaterial.engagementLogs || []}
                   uploaderName={inspectingMaterial.users?.name || "Faculty Member"}
                 />
-                <div className="h-16" />
+                <div className="h-20" />
               </div>
 
               {/* Fixed Footer */}
