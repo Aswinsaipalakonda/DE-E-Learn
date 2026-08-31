@@ -85,7 +85,7 @@ export default async function LandingPage() {
         <BentoGrid01Section />
 
         {/* ========================================================================= */}
-        {/* 5. ACADEMIC SPECIALIZATIONS SERVICES 02 (@shadcn-space/radix/services-02) */}
+        {/* 5. ACADEMIC TRACKS - SERVICES 02 (@shadcn-space/radix/services-02) */}
         {/* ========================================================================= */}
         <Services02Section />
 

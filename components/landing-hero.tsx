@@ -117,26 +117,16 @@ export function LandingHeader() {
 }
 
 export function LandingHero() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 60);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <section className="relative pt-12 pb-24 sm:pt-16 sm:pb-32 lg:pt-20 lg:pb-40 overflow-hidden">
       
-      {/* Background Image placed at z-0 */}
+      {/* Background Image placed at z-0 so it is guaranteed visible */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/hero-bg.webp"
           alt="Data Engineering Hero Background"
-          className={cn(
-            "w-full h-full object-cover object-bottom sm:object-center transition-opacity duration-1000 ease-out",
-            mounted ? "opacity-100" : "opacity-0"
-          )}
+          className="w-full h-full object-cover object-bottom sm:object-center"
         />
         {/* Soft fade at the very bottom edge */}
         <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#F8FAFC] to-transparent pointer-events-none" />
@@ -146,78 +136,28 @@ export function LandingHero() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col items-center text-center space-y-8 max-w-4xl mx-auto">
           
-          {/* Top Status Badge Reveal */}
-          <div
-            className={cn(
-              "inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200/90 text-slate-700 text-xs font-semibold shadow-xs transition-all duration-700 ease-out",
-              mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
-            )}
-          >
-            <Sparkles className="h-3.5 w-3.5 text-blue-600 animate-pulse" />
+          {/* Top Status Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200/90 text-slate-700 text-xs font-semibold shadow-xs">
+            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
             <span>Department of Data Engineering • Academic Learning Cloud</span>
           </div>
 
-          {/* Master Headline with Staggered Word Reveal */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.14]">
-            <span
-              className={cn(
-                "inline-block transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] delay-100 mr-3 sm:mr-4",
-                mounted ? "opacity-100 translate-y-0 filter-none" : "opacity-0 translate-y-8 blur-xs"
-              )}
-            >
-              Architecting
-            </span>
-            <span
-              className={cn(
-                "inline-block transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] delay-200 mr-3 sm:mr-4",
-                mounted ? "opacity-100 translate-y-0 filter-none" : "opacity-0 translate-y-8 blur-xs"
-              )}
-            >
-              Data
-            </span>
-            <span
-              className={cn(
-                "inline-block transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] delay-300 mr-3 sm:mr-4",
-                mounted ? "opacity-100 translate-y-0 filter-none" : "opacity-0 translate-y-8 blur-xs"
-              )}
-            >
-              Intelligence
-            </span>
-            <span
-              className={cn(
-                "inline-block transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] delay-400 mr-3 sm:mr-4",
-                mounted ? "opacity-100 translate-y-0 filter-none" : "opacity-0 translate-y-8 blur-xs"
-              )}
-            >
-              with
-            </span>
-            <span
-              className={cn(
-                "inline-block font-serif italic font-normal text-blue-600 tracking-normal transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] delay-500",
-                mounted ? "opacity-100 translate-y-0 filter-none" : "opacity-0 translate-y-8 blur-xs"
-              )}
-            >
+          {/* Master Headline with Italics Serif Accent */}
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.12]">
+            Architecting Data Intelligence with{" "}
+            <span className="font-serif italic font-normal text-blue-600 tracking-normal">
               academic excellence
             </span>
           </h1>
 
-          {/* Subtitle Reveal */}
-          <p
-            className={cn(
-              "text-base sm:text-lg text-slate-600 max-w-2xl font-normal leading-relaxed transition-all duration-700 ease-out delay-600",
-              mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-            )}
-          >
+          {/* Subtitle */}
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl font-normal leading-relaxed">
             The centralized learning and materials platform for MVGR College of Engineering. Access verified semester course notes, lab manuals, question banks, and cohort trackers.
           </p>
 
-          {/* Interactive CTA Group Reveal */}
-          <div
-            className={cn(
-              "flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 pt-2 transition-all duration-700 ease-out delay-700",
-              mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            )}
-          >
+          {/* Interactive CTA Group with Hero-01 Sliding Button */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 pt-2">
+            
             {/* Primary Action Button */}
             <Link
               href="/login"

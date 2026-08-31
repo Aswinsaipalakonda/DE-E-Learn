@@ -14,7 +14,6 @@ import {
   GraduationCap, 
   Database,
   Check,
-  AppWindow,
   Cpu,
   Lock,
   LucideIcon
@@ -165,9 +164,7 @@ function AnimatedUiBlock() {
         </span>
       </div>
 
-      {/* Floating Satellites with Keyframe Animations */}
-      
-      {/* Satellite 1: Top Right */}
+      {/* Floating Satellites */}
       <div className="absolute top-2 right-[20%] z-10 animate-bounce duration-[3000ms]">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-slate-200 shadow-md text-slate-800 text-xs font-semibold">
           <Bookmark className="h-3.5 w-3.5 text-blue-600 fill-blue-500" />
@@ -175,14 +172,12 @@ function AnimatedUiBlock() {
         </div>
       </div>
 
-      {/* Satellite 2: Far Right */}
       <div className="absolute top-[48%] right-[6%] z-10 animate-pulse duration-[2500ms]">
         <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-md flex items-center justify-center">
           <ShieldCheck className="h-5 w-5" />
         </div>
       </div>
 
-      {/* Satellite 3: Bottom Right */}
       <div className="absolute bottom-3 right-[18%] z-10 animate-bounce duration-[3500ms]">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-slate-200 shadow-md text-slate-800 text-xs font-semibold">
           <Layers className="h-3.5 w-3.5 text-purple-600" />
@@ -190,7 +185,6 @@ function AnimatedUiBlock() {
         </div>
       </div>
 
-      {/* Satellite 4: Top Left */}
       <div className="absolute top-3 left-[18%] z-10 animate-bounce duration-[3200ms]">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-slate-200 shadow-md text-slate-800 text-xs font-semibold">
           <GraduationCap className="h-3.5 w-3.5 text-indigo-600" />
@@ -198,14 +192,12 @@ function AnimatedUiBlock() {
         </div>
       </div>
 
-      {/* Satellite 5: Far Left */}
       <div className="absolute top-[48%] left-[6%] z-10 animate-pulse duration-[2800ms]">
         <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200 shadow-md flex items-center justify-center">
           <BookOpen className="h-5 w-5" />
         </div>
       </div>
 
-      {/* Satellite 6: Bottom Left */}
       <div className="absolute bottom-3 left-[18%] z-10 animate-bounce duration-[3800ms]">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-slate-200 shadow-md text-slate-800 text-xs font-semibold">
           <Sparkles className="h-3.5 w-3.5 text-amber-500" />
