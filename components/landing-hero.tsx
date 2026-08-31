@@ -24,8 +24,8 @@ export function LandingHeader() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 px-4 sm:px-6 lg:px-8 pt-3 pb-2 transition-all duration-300">
-      <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-2.5 rounded-full bg-white/90 backdrop-blur-xl border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow">
+    <header className="fixed top-0 inset-x-0 z-50 px-4 sm:px-6 lg:px-8 pt-3.5 pb-2 pointer-events-none transition-all duration-300">
+      <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-2.5 rounded-full bg-white/90 backdrop-blur-xl border border-slate-200/90 shadow-md pointer-events-auto hover:shadow-lg transition-shadow">
         
         {/* Brand Identity */}
         <Link href="/" className="flex items-center gap-3 group shrink-0">
@@ -90,7 +90,7 @@ export function LandingHeader() {
 
       {/* Mobile Slide-down Menu */}
       {isOpen && (
-        <div className="lg:hidden mt-2 p-5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl shadow-xl max-w-6xl mx-auto space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="lg:hidden mt-2 p-5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl shadow-xl max-w-6xl mx-auto space-y-4 animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-auto">
           <div className="flex flex-col gap-2">
             {navigationData.map((item) => (
               <a
@@ -137,7 +137,7 @@ export function LandingHero() {
   ];
 
   return (
-    <section className="relative pt-12 pb-24 sm:pt-16 sm:pb-32 lg:pt-20 lg:pb-40 overflow-hidden">
+    <section className="relative pt-24 pb-24 sm:pt-28 sm:pb-32 lg:pt-36 lg:pb-40 overflow-hidden">
       
       {/* Background Image placed at z-0 */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
