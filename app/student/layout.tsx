@@ -1,11 +1,14 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 import Sidebar from "@/components/sidebar";
 import Breadcrumbs from "@/components/breadcrumbs";
 import BottomNav from "@/components/bottom-nav";
 import NotificationBell from "@/components/notification-bell";
 import GlobalSearch from "@/components/global-search";
+import { GraduationCap } from "lucide-react";
 
 export default async function StudentLayout({
   children,
@@ -24,7 +27,7 @@ export default async function StudentLayout({
   // Fetch user profile
   const { data: profile } = await supabase
     .from("users")
-    .select("role, branch, current_semester")
+    .select("role, branch, current_semester, section")
     .eq("id", user.id)
     .single();
 
@@ -41,7 +44,7 @@ export default async function StudentLayout({
   };
 
   return (
-    <div className="min-h-screen bg-bg flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       <Sidebar 
         userRole="student" 
         userScope={{
@@ -52,18 +55,62 @@ export default async function StudentLayout({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen pb-20 lg:pb-0">
-        <main className="flex-1 px-5 sm:px-8 py-6 w-full">
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <Breadcrumbs />
-            <div className="flex items-center gap-3">
-              <NotificationBell />
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen pb-24 lg:pb-8">
+        {/* Top Header Navigation Bar */}
+        <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3 flex items-center justify-between gap-3 transition-all">
+          <div className="flex items-center gap-3">
+            {/* Mobile Logo Branding */}
+            <Link href="/student" className="flex items-center gap-2.5 lg:hidden">
+              <div className="w-8 h-8 rounded-xl overflow-hidden border border-slate-200 bg-white p-0.5 shrink-0 shadow-2xs">
+                <Image
+                  src="/De_logo.jpg"
+                  alt="DE Logo"
+                  width={32}
+                  height={32}
+                  className="object-contain w-full h-full"
+                  priority
+                />
+              </div>
+              <div className="leading-tight">
+                <span className="text-xs font-bold text-slate-900 block">Data Engineering</span>
+                <span className="text-[10px] text-slate-500 font-medium block">MVGR College</span>
+              </div>
+            </Link>
+
+            {/* Desktop Breadcrumbs */}
+            <div className="hidden lg:block">
+              <Breadcrumbs />
             </div>
           </div>
+
+          <div className="flex items-center gap-2.5">
+            {/* Scope Badge (Branch/Semester) */}
+            {profile.branch && (
+              <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/70 text-xs font-medium text-blue-800">
+                <span>{profile.branch}</span>
+                {profile.current_semester && <span>• Sem {profile.current_semester}</span>}
+              </div>
+            )}
+
+            {/* Notification Bell */}
+            <NotificationBell />
+
+            {/* Clean Student Role Badge */}
+            <Link
+              href="/student/profile"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-700 text-white shadow-2xs hover:bg-blue-800 transition-all cursor-pointer"
+              title="Student Profile"
+            >
+              <GraduationCap className="h-3.5 w-3.5 text-blue-200 shrink-0" />
+              <span>Student</span>
+            </Link>
+          </div>
+        </header>
+
+        <main className="flex-1 px-4 sm:px-8 py-6 w-full">
           {children}
         </main>
       </div>
-
 
       <BottomNav 
         userRole="student" 
