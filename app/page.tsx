@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import { LandingHeader, LandingHero } from "@/components/landing-hero";
 import { AboutUsSection01 } from "@/components/about-us-section";
+import { BentoGrid01Section } from "@/components/bento-grid-section";
 import { 
-  BentoGridSection, 
   HowItWorksSection, 
   TestimonialsSection, 
   FAQSection, 
@@ -79,9 +79,9 @@ export default async function LandingPage() {
         <AboutUsSection01 />
 
         {/* ========================================================================= */}
-        {/* 4. BENTO GRID FEATURES SHOWCASE */}
+        {/* 4. BENTO GRID 01 MODULES (@shadcn-space/radix/bento-grid-01) */}
         {/* ========================================================================= */}
-        <BentoGridSection />
+        <BentoGrid01Section />
 
         {/* ========================================================================= */}
         {/* 5. SPECIALIZATIONS GRID */}
