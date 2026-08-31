@@ -58,21 +58,32 @@ export async function createUserAction(
   }
 
   // 3. Create/Update Profile in public.users
-  const { data: profileData, error: profileError } = await adminClient
+  const profilePayload: Record<string, unknown> = {
+    id: authData.user.id,
+    email,
+    name,
+    role,
+    status: "active",
+    branch: branch || null,
+    current_semester: semester || null,
+    first_login_pending: true,
+  };
+  if (section) {
+    profilePayload.section = section.toUpperCase().trim();
+  }
+
+  let { data: profileData, error: profileError } = await adminClient
     .from("users")
-    .upsert({
-      id: authData.user.id,
-      email,
-      name,
-      role,
-      status: "active",
-      branch: branch || null,
-      current_semester: semester || null,
-      section: section ? section.toUpperCase().trim() : null,
-      first_login_pending: true,
-    })
+    .upsert(profilePayload)
     .select()
     .single();
+
+  if (profileError && profileError.message?.toLowerCase().includes("section")) {
+    delete profilePayload.section;
+    const retry = await adminClient.from("users").upsert(profilePayload).select().single();
+    profileData = retry.data;
+    profileError = retry.error;
+  }
 
   if (profileError) {
     return { error: `Profile creation failed: ${profileError.message}` };
@@ -83,6 +94,7 @@ export async function createUserAction(
   revalidatePath("/admin/users");
   return { success: true, user: profileData };
 }
+
 
 
 // Batch Create Users (from CSV Roster)

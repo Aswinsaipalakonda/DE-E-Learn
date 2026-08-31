@@ -276,7 +276,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-surface p-6 sm:p-7 rounded-3xl border border-border shadow-xs">
         <div className="space-y-1.5">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary text-white shadow-xs">
+            <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
               <Layers className="h-5 w-5" />
             </div>
             <div>
@@ -291,26 +291,26 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
 
           {/* Stat Badges */}
           <div className="flex flex-wrap items-center gap-2 pt-1.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-medium text-blue-700">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-medium text-blue-700">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
               Subjects: <span className="font-semibold">{stats.totalSubjects}</span> ({stats.activeSubjects} Active)
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-medium text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-medium text-emerald-700">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
               Branches: <span className="font-semibold">{stats.totalBranches}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-100 border border-slate-300 text-xs font-medium text-slate-800">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-xs font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-700" />
               Semesters: <span className="font-semibold">{stats.totalSemesters}</span>
             </span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 self-start lg:self-center shrink-0">
+        {/* Action Buttons (Fully Rounded Corners) */}
+        <div className="flex items-center gap-3 self-start lg:self-center shrink-0">
           <button
             onClick={openBranchModal}
-            className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-2xl border border-border bg-bg hover:bg-surface text-primary font-medium text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-bg hover:bg-surface text-primary font-medium text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
           >
             <FolderPlus className="h-4 w-4 text-primary/70" />
             <span>Add Branch</span>
@@ -318,7 +318,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
 
           <button
             onClick={openSubjectDrawer}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary hover:bg-primary/95 text-white font-medium text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center gap-2 px-5.5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-medium text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
           >
             <BookOpen className="h-4 w-4" />
             <span>Add Subject</span>
@@ -327,7 +327,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
       </div>
 
       {/* ========================================================================= */}
-      {/* NAVIGATION TABS */}
+      {/* NAVIGATION TABS (Fully Rounded Pills) */}
       {/* ========================================================================= */}
       <div className="bg-surface p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-4">
         <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3">
@@ -345,7 +345,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   setActiveTab(tab.id as "subjects" | "branches" | "semesters");
                   setCurrentPage(1);
                 }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-full text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
                   isActive
                     ? "bg-primary text-white shadow-xs font-semibold"
                     : "bg-bg text-primary/70 hover:text-primary hover:bg-border/60 font-normal"
@@ -354,7 +354,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                 <Icon className="h-3.5 w-3.5" />
                 <span>{tab.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-md text-[11px] font-semibold ${
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                     isActive ? "bg-white/20 text-white" : "bg-surface border border-border text-primary/60"
                   }`}
                 >
@@ -365,12 +365,12 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
           })}
         </div>
 
-        {/* Subjects Tab Toolbar Filter Controls */}
+        {/* Subjects Tab Toolbar Filter Controls (Fully Rounded Corners) */}
         {activeTab === "subjects" && (
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-0.5">
             {/* Search Box */}
             <div className="sm:col-span-5 relative">
-              <Search className="absolute left-3.5 top-3 h-4 w-4 text-primary/40" />
+              <Search className="absolute left-4 top-3 h-4 w-4 text-primary/40" />
               <input
                 placeholder="Search subject code or title..."
                 value={searchQuery}
@@ -378,7 +378,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-10 pr-9 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 font-normal text-primary placeholder:text-primary/40 transition-all"
+                className="w-full pl-11 pr-10 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 font-normal text-primary placeholder:text-primary/40 transition-all"
               />
               {searchQuery && (
                 <button
@@ -386,7 +386,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                     setSearchQuery("");
                     setCurrentPage(1);
                   }}
-                  className="absolute right-3 top-3 text-primary/40 hover:text-primary p-0.5 rounded-full hover:bg-border cursor-pointer"
+                  className="absolute right-3.5 top-3 text-primary/40 hover:text-primary p-0.5 rounded-full hover:bg-border cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -401,7 +401,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   setBranchFilter(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full px-3.5 py-2.5 text-sm font-normal bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+                className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
               >
                 <option value="all">All Branches</option>
                 {branches.map((b) => (
@@ -420,7 +420,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   setSemesterFilter(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full px-3.5 py-2.5 text-sm font-normal bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+                className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
               >
                 <option value="all">All Semesters</option>
                 {semesters.map((s) => (
@@ -439,7 +439,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   setStatusFilter(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full px-3.5 py-2.5 text-sm font-normal bg-bg border border-border rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+                className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
               >
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
@@ -476,7 +476,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                       <tr key={`${sub.code}-${sub.branch}`} className="hover:bg-bg/30 transition-colors group">
                         {/* Course Code Badge */}
                         <td className="py-3.5 pl-6 pr-4">
-                          <span className="px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200/80 text-blue-700 font-bold text-xs">
+                          <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 font-bold text-xs">
                             {sub.code}
                           </span>
                         </td>
@@ -488,14 +488,14 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
 
                         {/* Branch */}
                         <td className="py-3.5 px-4">
-                          <span className="px-2 py-0.5 rounded-md bg-bg border border-border text-xs font-medium text-primary">
+                          <span className="px-2.5 py-0.5 rounded-full bg-bg border border-border text-xs font-medium text-primary">
                             {sub.branch}
                           </span>
                         </td>
 
                         {/* Semester */}
                         <td className="py-3.5 px-4">
-                          <span className="px-2 py-0.5 rounded-md bg-secondary/10 border border-secondary/20 text-xs font-medium text-secondary">
+                          <span className="px-2.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 text-xs font-medium text-secondary">
                             Semester {sub.semester}
                           </span>
                         </td>
@@ -503,24 +503,24 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                         {/* Status */}
                         <td className="py-3.5 px-4">
                           {sub.active ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                               Active
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-300">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-300">
                               <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
                               Inactive
                             </span>
                           )}
                         </td>
 
-                        {/* Actions */}
+                        {/* Actions (Rounded Full Buttons) */}
                         <td className="py-3.5 pl-4 pr-6 text-right">
                           <button
                             onClick={() => handleToggleSubject(sub.code, sub.branch, sub.active)}
                             disabled={isToggling}
-                            className={`px-3.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
+                            className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
                               sub.active
                                 ? "bg-surface hover:bg-red-50 text-primary/70 hover:text-red-700 border-border hover:border-red-200/80 shadow-2xs"
                                 : "bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border-emerald-200/80 shadow-2xs"
@@ -543,7 +543,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
             </div>
           ) : (
             <div className="py-20 text-center space-y-2.5">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-bg border border-border flex items-center justify-center text-primary/40">
+              <div className="w-12 h-12 mx-auto rounded-full bg-bg border border-border flex items-center justify-center text-primary/40">
                 <BookOpen className="h-6 w-6" />
               </div>
               <div>
@@ -554,7 +554,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
               </div>
               <button
                 onClick={openSubjectDrawer}
-                className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-medium shadow-xs hover:bg-primary/95 transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-full bg-primary text-white text-xs font-medium shadow-xs hover:bg-primary/95 transition-all cursor-pointer"
               >
                 + Add First Subject
               </button>
@@ -586,7 +586,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                       setPageSize(parseInt(e.target.value, 10));
                       setCurrentPage(1);
                     }}
-                    className="px-2 py-0.5 text-xs font-medium bg-surface border border-border rounded-md text-primary focus:outline-none cursor-pointer"
+                    className="px-2.5 py-0.5 text-xs font-medium bg-surface border border-border rounded-full text-primary focus:outline-none cursor-pointer"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
@@ -595,11 +595,11 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                 </div>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="p-2 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -609,11 +609,11 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   .map((p, idx, arr) => {
                     const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
                     return (
-                      <div key={p} className="flex items-center gap-1">
+                      <div key={p} className="flex items-center gap-1.5">
                         {showEllipsis && <span className="px-1 text-xs text-primary/40 font-normal">...</span>}
                         <button
                           onClick={() => setCurrentPage(p)}
-                          className={`w-7 h-7 rounded-lg text-xs transition-all cursor-pointer ${
+                          className={`w-8 h-8 rounded-full text-xs transition-all cursor-pointer ${
                             currentPage === p
                               ? "bg-primary text-white shadow-2xs font-semibold"
                               : "bg-surface border border-border text-primary/70 hover:text-primary hover:bg-bg font-normal"
@@ -628,7 +628,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="p-2 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -652,7 +652,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
             </div>
             <button
               onClick={openBranchModal}
-              className="inline-flex items-center gap-2 px-4.5 py-2 rounded-2xl bg-primary text-white font-medium text-xs shadow-xs hover:bg-primary/95 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-white font-medium text-xs shadow-xs hover:bg-primary/95 transition-all cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Add Branch</span>
@@ -672,7 +672,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                 {branches.map((b) => (
                   <tr key={b.code} className="hover:bg-bg/30 transition-colors">
                     <td className="py-3.5 pl-6 pr-4">
-                      <span className="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 font-bold text-xs">
+                      <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-700 font-bold text-xs">
                         {b.code}
                       </span>
                     </td>
@@ -680,7 +680,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                       {b.name}
                     </td>
                     <td className="py-3.5 pl-4 pr-6 text-right">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         Active
                       </span>
@@ -709,10 +709,10 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
             {semesters.map((s) => (
               <div
                 key={s.number}
-                className="p-4.5 rounded-2xl border border-border bg-bg/50 hover:bg-surface hover:shadow-xs transition-all space-y-1.5"
+                className="p-5 rounded-3xl border border-border bg-bg/50 hover:bg-surface hover:shadow-xs transition-all space-y-1.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-bold text-xs">
+                  <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs">
                     TERM 0{s.number}
                   </span>
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -748,7 +748,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
               {/* Header */}
               <div className="p-5 sm:p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-primary text-white shadow-xs">
+                  <div className="p-2.5 rounded-2xl bg-primary text-white shadow-xs">
                     <BookOpen className="h-5 w-5" />
                   </div>
                   <div>
@@ -762,7 +762,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                 <button
                   onClick={closeSubjectDrawer}
                   disabled={subjectLoading}
-                  className="p-1.5 rounded-lg text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
+                  className="p-2 rounded-full text-primary/40 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -785,7 +785,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                     value={subCode}
                     onChange={(e) => setSubCode(e.target.value)}
                     placeholder="e.g., 23CI3001"
-                    className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40 uppercase"
+                    className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40 uppercase"
                   />
                 </div>
 
@@ -799,7 +799,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                     value={subTitle}
                     onChange={(e) => setSubTitle(e.target.value)}
                     placeholder="e.g., Database Management Systems"
-                    className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40"
+                    className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40"
                   />
                 </div>
 
@@ -811,7 +811,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                     <select
                       value={subBranch}
                       onChange={(e) => setSubBranch(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                      className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
                     >
                       {branches.map((b) => (
                         <option key={b.code} value={b.code}>
@@ -828,7 +828,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                     <select
                       value={subSemester}
                       onChange={(e) => setSubSemester(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                      className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
                     >
                       {semesters.map((s) => (
                         <option key={s.number} value={s.number.toString()}>
@@ -839,7 +839,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-primary/5 border border-primary/10 rounded-xl space-y-1 text-xs">
+                <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs">
                   <div className="flex items-center gap-1.5 font-semibold text-primary">
                     <Sparkles className="h-3.5 w-3.5 text-secondary shrink-0" />
                     <span>Curriculum Alignment</span>
@@ -856,7 +856,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   type="button"
                   onClick={closeSubjectDrawer}
                   disabled={subjectLoading}
-                  className="px-4 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-xl cursor-pointer"
+                  className="px-5 py-2.5 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -864,7 +864,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   type="submit"
                   form="create-subject-form"
                   disabled={subjectLoading}
-                  className="px-5 py-2.5 bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
+                  className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {subjectLoading ? (
                     <>
@@ -904,7 +904,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
           >
             <div className="flex items-center justify-between border-b border-border pb-4 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-secondary/10 text-secondary">
+                <div className="p-2.5 rounded-2xl bg-secondary/10 text-secondary">
                   <FolderPlus className="h-5 w-5" />
                 </div>
                 <div>
@@ -917,7 +917,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
               <button
                 onClick={closeBranchModal}
                 disabled={branchLoading}
-                className="p-1.5 text-primary/50 hover:text-primary rounded-lg cursor-pointer hover:bg-bg"
+                className="p-2 text-primary/50 hover:text-primary rounded-full cursor-pointer hover:bg-bg"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -934,7 +934,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   value={branchCode}
                   onChange={(e) => setBranchCode(e.target.value)}
                   placeholder="e.g., CIC"
-                  className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal uppercase"
+                  className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal uppercase"
                 />
               </div>
 
@@ -947,7 +947,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
                   placeholder="e.g., Computer Science & Design"
-                  className="w-full px-3.5 py-2.5 text-sm bg-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal"
+                  className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal"
                 />
               </div>
 
@@ -956,14 +956,14 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   type="button"
                   onClick={closeBranchModal}
                   disabled={branchLoading}
-                  className="px-4 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-xl cursor-pointer"
+                  className="px-5 py-2.5 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={branchLoading}
-                  className="px-5 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs sm:text-sm font-medium rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {branchLoading ? (
                     <>
