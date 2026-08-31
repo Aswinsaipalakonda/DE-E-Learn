@@ -46,8 +46,8 @@ export function LandingHeader() {
         className={cn(
           "w-full max-w-6xl mx-auto flex items-center justify-between gap-4 transition-all duration-500 px-4 py-2.5 rounded-full",
           sticky
-            ? "bg-white/85 backdrop-blur-xl border border-slate-200/90 shadow-[0_12px_40px_rgba(0,0,0,0.06)]"
-            : "bg-white/60 backdrop-blur-md border border-slate-200/60 shadow-xs"
+            ? "bg-white/90 backdrop-blur-xl border border-slate-200/90 shadow-[0_12px_40px_rgba(0,0,0,0.06)]"
+            : "bg-white/70 backdrop-blur-md border border-slate-200/70 shadow-xs"
         )}
       >
         {/* Brand Identity */}
@@ -143,27 +143,26 @@ export function LandingHeader() {
 
 export function LandingHero() {
   return (
-    <section className="relative pt-10 pb-20 sm:pt-16 sm:pb-28 lg:pt-20 lg:pb-36 overflow-hidden">
+    <section className="relative pt-12 pb-24 sm:pt-16 sm:pb-32 lg:pt-20 lg:pb-40 overflow-hidden">
       
-      {/* Crisp High-Definition Hero Background Image */}
-      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none select-none">
-        <Image
+      {/* Background Image placed at z-0 so it is guaranteed visible */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/hero-bg.webp"
           alt="Data Engineering Hero Background"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-bottom sm:object-center opacity-100"
+          className="w-full h-full object-cover object-bottom sm:object-center"
         />
-        {/* Subtle fade only at the bottom border to blend seamlessly into metrics */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#F8FAFC] to-transparent" />
+        {/* Soft fade at the very bottom edge */}
+        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#F8FAFC] to-transparent pointer-events-none" />
       </div>
 
+      {/* Foreground Content at z-10 */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col items-center text-center space-y-8 max-w-4xl mx-auto">
           
           {/* Top Status Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-slate-200/90 text-slate-700 text-xs font-semibold shadow-xs">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200/90 text-slate-700 text-xs font-semibold shadow-xs">
             <Sparkles className="h-3.5 w-3.5 text-blue-600" />
             <span>Department of Data Engineering • Academic Learning Cloud</span>
           </div>
@@ -198,7 +197,7 @@ export function LandingHero() {
             </Link>
 
             {/* Verification Trust Pill */}
-            <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white border border-slate-200/80 shadow-xs">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200/80 shadow-xs">
               <div className="flex items-center -space-x-2">
                 <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
                   CIC
