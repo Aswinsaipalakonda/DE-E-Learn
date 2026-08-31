@@ -423,12 +423,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           {/* Slide Drawer Panel (Slides Right-to-Left on open, Left-to-Right on close) */}
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
             <div
-              className={`w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              data-lenis-prevent
+              className={`w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
                 isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
               }`}
             >
               {/* Drawer Header */}
-              <div className="p-6 border-b border-border bg-bg/40 flex items-center justify-between">
+              <div className="p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
                     <UserPlus className="h-6 w-6" />
@@ -450,8 +451,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 </button>
               </div>
 
-              {/* Drawer Form Body */}
-              <form id="create-user-form" onSubmit={handleSingleSubmit} className="p-6 space-y-5 flex-1 overflow-y-auto">
+              {/* Drawer Form Body - fully scrollable with mouse wheel, touch & trackpad */}
+              <form 
+                id="create-user-form" 
+                data-lenis-prevent
+                onSubmit={handleSingleSubmit} 
+                className="p-6 space-y-5 flex-1 overflow-y-auto overscroll-contain"
+              >
+
                 {/* Role Selector Segmented Buttons */}
                 <div>
                   <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-primary/60 mb-2.5">
@@ -619,12 +626,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             onClick={() => !csvLoading && closeCsvModal()}
           />
           <div
-            className={`bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-6 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            data-lenis-prevent
+            className={`bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-6 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
               isCsvVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-border pb-4">
+            <div className="flex items-center justify-between border-b border-border pb-4 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-xl bg-secondary/10 text-secondary">
                   <FileSpreadsheet className="h-5 w-5" />
@@ -643,7 +651,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </button>
             </div>
 
-            <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+            <div data-lenis-prevent className="space-y-4 overflow-y-auto flex-1 pr-1 overscroll-contain">
+
               <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center hover:border-secondary/50 transition-colors bg-bg/50">
                 <Upload className="h-8 w-8 text-primary/40 mx-auto mb-2" />
                 <label className="text-sm font-bold text-secondary hover:underline cursor-pointer block">

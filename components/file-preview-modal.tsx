@@ -56,13 +56,15 @@ export default function FilePreviewModal({
       onClick={onClose}
     >
       <div 
-        className={`bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-in zoom-in-95 ${
+        data-lenis-prevent
+        className={`bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] animate-in zoom-in-95 overscroll-contain ${
           isFullscreen 
             ? "w-full h-full rounded-none" 
             : "w-full max-w-5xl h-[85vh] max-h-[900px]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
+
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-border bg-bg/50 shrink-0">

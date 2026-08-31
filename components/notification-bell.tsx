@@ -98,7 +98,8 @@ export default function NotificationBell() {
             </button>
           </div>
 
-          <div className="space-y-3 max-h-60 overflow-y-auto">
+          <div data-lenis-prevent className="space-y-3 max-h-60 overflow-y-auto overscroll-contain">
+
             {announcements.length > 0 ? (
               announcements.map((ann) => (
                 <div key={ann.id} className="p-3 bg-bg rounded-xl border border-border space-y-1.5 text-xs font-medium">

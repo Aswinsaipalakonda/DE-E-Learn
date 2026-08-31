@@ -84,5 +84,30 @@ html.lenis, html.lenis body {
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Custom Modern Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(11, 31, 59, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(11, 31, 59, 0.4);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(11, 31, 59, 0.2) transparent;
+}
+
+
 
 

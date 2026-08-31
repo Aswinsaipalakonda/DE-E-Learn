@@ -252,7 +252,12 @@ export default function AnnouncementsClient({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1">
+            <form 
+              data-lenis-prevent
+              onSubmit={handleSubmit} 
+              className="space-y-4 overflow-y-auto pr-1 overscroll-contain"
+            >
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-primary/60 mb-1.5">
                   Announcement Title *

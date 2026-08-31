@@ -151,7 +151,8 @@ export default function GlobalSearch() {
         </div>
 
         {/* Results listing */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div data-lenis-prevent className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
+
           {flatResults.length > 0 ? (
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest px-3 mb-2 block">
