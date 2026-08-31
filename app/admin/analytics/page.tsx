@@ -20,8 +20,18 @@ interface ActivityEvent {
   id?: string;
   type: string;
   target_id: string;
-  user_email?: string;
+  actor_id?: string;
   created_at?: string;
+  users?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    role?: string;
+    branch?: string;
+    current_semester?: number;
+    section?: string;
+    roll_number?: string;
+  } | null;
 }
 
 interface BranchItem {
@@ -177,7 +187,7 @@ export default async function AdminAnalyticsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch materials, activity events, users, and branches in parallel
+  // Fetch materials, activity events, users, and branches in parallel with schema resilience
   const [materialsRes, eventsRes, usersRes, branchesRes] = await Promise.all([
     supabase
       .from("materials")
@@ -197,7 +207,23 @@ export default async function AdminAnalyticsPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("activity_events")
-      .select("id, type, target_id, user_email, created_at"),
+      .select(`
+        id,
+        type,
+        target_id,
+        actor_id,
+        created_at,
+        users:actor_id (
+          id,
+          name,
+          email,
+          role,
+          branch,
+          current_semester,
+          section,
+          roll_number
+        )
+      `),
     supabase
       .from("users")
       .select("id, name, email, role, branch, current_semester, section, roll_number"),
@@ -207,10 +233,10 @@ export default async function AdminAnalyticsPage() {
       .eq("active", true),
   ]);
 
-  if (materialsRes.error || eventsRes.error) {
+  if (materialsRes.error) {
     return (
       <div role="alert" className="p-4 bg-danger/10 border border-danger/25 text-danger rounded-2xl font-semibold">
-        Failed to fetch repository analytics: {materialsRes.error?.message || eventsRes.error?.message}
+        Failed to fetch repository analytics: {materialsRes.error.message}
       </div>
     );
   }
@@ -224,9 +250,10 @@ export default async function AdminAnalyticsPage() {
     { code: "CSM", name: "AI & Machine Learning" },
   ];
 
-  // User lookup map
+  // User lookup map by ID and Email
   const userMap = new Map<string, Record<string, unknown>>();
   dbUsers.forEach((u) => {
+    if (u.id) userMap.set(String(u.id), u);
     if (u.email) userMap.set(String(u.email).toLowerCase(), u);
   });
 
@@ -236,13 +263,15 @@ export default async function AdminAnalyticsPage() {
     const downloads = matEvents.filter((e) => e.type === "download").length;
 
     const engagementLogs: StudentEngagementLog[] = matEvents.map((ev, idx) => {
-      const userProfile = ev.user_email ? userMap.get(ev.user_email.toLowerCase()) : null;
-      const roll = (userProfile?.roll_number as string) || (ev.user_email?.includes("@") ? ev.user_email.split("@")[0].toUpperCase() : "STUDENT");
+      const userProfile = (ev.users as Record<string, unknown>) || (ev.actor_id ? userMap.get(String(ev.actor_id)) : null);
+      const userEmail = (userProfile?.email as string) || "";
+      const roll = (userProfile?.roll_number as string) || (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "STUDENT");
+
       return {
         id: ev.id || `${m.id}-log-${idx}`,
-        studentName: (userProfile?.name as string) || ev.user_email || "Enrolled Student",
+        studentName: (userProfile?.name as string) || userEmail || "Enrolled Student",
         rollNumber: roll,
-        email: ev.user_email || "",
+        email: userEmail,
         branch: (userProfile?.branch as string) || m.branch,
         semester: (userProfile?.current_semester as number) || m.semester,
         section: (userProfile?.section as string) || "A",

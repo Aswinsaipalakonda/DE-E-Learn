@@ -88,7 +88,16 @@ export default async function AdminDashboardPage() {
     supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "faculty"),
     supabase.from("materials").select("id", { count: "exact", head: true }),
     supabase.from("material_files").select("size"),
-    supabase.from("activity_events").select("id, created_at, type, user_email, metadata").order("created_at", { ascending: false }).limit(6),
+    supabase.from("activity_events").select(`
+      id,
+      created_at,
+      type,
+      metadata,
+      users:actor_id (
+        email,
+        name
+      )
+    `).order("created_at", { ascending: false }).limit(6),
     supabase.from("branches").select("code", { count: "exact", head: true })
   ]);
 
@@ -116,7 +125,17 @@ export default async function AdminDashboardPage() {
     return (mb / 1024).toFixed(2) + " GB";
   };
 
-  const rawEvents = (eventsRes.data as unknown as ActivityEvent[]) || [];
+  const rawEvents = ((eventsRes.data || []) as Record<string, unknown>[]).map((ev) => {
+    const userObj = ev.users as { email?: string; name?: string } | null;
+    return {
+      id: String(ev.id || ""),
+      created_at: String(ev.created_at || ""),
+      type: String(ev.type || ""),
+      user_email: userObj?.email || userObj?.name || "User",
+      metadata: (ev.metadata as { title?: string; subject?: string }) || {},
+    };
+  });
+
   const events = rawEvents.length > 0 ? rawEvents : FALLBACK_EVENTS;
 
   return (
