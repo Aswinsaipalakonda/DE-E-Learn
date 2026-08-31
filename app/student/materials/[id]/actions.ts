@@ -20,7 +20,9 @@ export async function toggleBookmark(materialId: string, currentStatus: boolean)
       .eq("user_id", user.id)
       .eq("material_id", materialId);
 
-    if (error) return { error: error.message };
+    if (error && !materialId.startsWith("mock-")) {
+      return { error: error.message };
+    }
   } else {
     // Add bookmark
     const { error } = await supabase
@@ -30,9 +32,13 @@ export async function toggleBookmark(materialId: string, currentStatus: boolean)
         material_id: materialId,
       });
 
-    if (error) return { error: error.message };
+    if (error && !materialId.startsWith("mock-")) {
+      return { error: error.message };
+    }
   }
 
+  revalidatePath("/student");
+  revalidatePath("/student/bookmarks");
   revalidatePath(`/student/materials/${materialId}`);
   return { success: true };
 }
@@ -96,4 +102,3 @@ export async function trackPreviewAndGetUrl(fileId: string, materialId: string, 
 
   return { previewUrl: data.signedUrl };
 }
-
