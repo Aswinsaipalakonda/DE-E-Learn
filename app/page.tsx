@@ -17,6 +17,7 @@ import {
 import { LandingHeader, LandingHero } from "@/components/landing-hero";
 import { AboutUsSection01 } from "@/components/about-us-section";
 import { BentoGrid01Section } from "@/components/bento-grid-section";
+import { Services02Section } from "@/components/services-section";
 import { 
   HowItWorksSection, 
   TestimonialsSection, 
@@ -84,76 +85,9 @@ export default async function LandingPage() {
         <BentoGrid01Section />
 
         {/* ========================================================================= */}
-        {/* 5. SPECIALIZATIONS GRID */}
+        {/* 5. ACADEMIC SPECIALIZATIONS SERVICES 02 (@shadcn-space/radix/services-02) */}
         {/* ========================================================================= */}
-        <section id="specializations" className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
-            <span className="text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
-              Academic Tracks
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Data Engineering Specializations
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 font-normal">
-              Structured course material taxonomies aligned with autonomous department curricula.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            
-            {/* Card 1: CIC */}
-            <div className="p-7 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-blue-300 transition-all space-y-5 group">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold text-sm border border-blue-200 group-hover:scale-105 transition-transform">
-                CIC
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900">Cyber Security & IoT</h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                  In-depth course repositories covering cryptographic protocols, threat intelligence, secure hardware interfaces, and embedded IoT architectures.
-                </p>
-              </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-700">
-                <span>Semester 1 to 8 Syllabi</span>
-                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Card 2: CSD */}
-            <div className="p-7 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all space-y-5 group">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-extrabold text-sm border border-emerald-200 group-hover:scale-105 transition-transform">
-                CSD
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900">Data Science Specialization</h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                  Comprehensive notes and lab manuals on distributed computing, Apache Spark clusters, predictive statistics, and high-throughput data warehousing.
-                </p>
-              </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-700">
-                <span>Semester 1 to 8 Syllabi</span>
-                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Card 3: CSM */}
-            <div className="p-7 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all space-y-5 group">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-extrabold text-sm border border-indigo-200 group-hover:scale-105 transition-transform">
-                CSM
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900">AI & Machine Learning</h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                  Structured learning materials spanning deep neural networks, transformer architectures, reinforcement learning models, and computer vision pipelines.
-                </p>
-              </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-indigo-700">
-                <span>Semester 1 to 8 Syllabi</span>
-                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-          </div>
-        </section>
+        <Services02Section />
 
         {/* ========================================================================= */}
         {/* 6. HOW IT WORKS 3-STEP PIPELINE */}
