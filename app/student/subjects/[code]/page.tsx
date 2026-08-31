@@ -1,13 +1,12 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { 
   FileText, 
   Search, 
   ArrowRight,
-  ArrowLeft,
-  BookOpen,
+  ArrowLeft, 
+  BookOpen, 
   ChevronRight,
   Layers,
   Sparkles
@@ -27,7 +26,7 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
       {
         id: "mock-mat-1",
         title: "Unit 1: Relational Data Models, ER Diagrams, and Schema Normalization",
-        type: "Lecture Notes",
+        type: "Notes",
         created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["Relational Model", "ER Diagrams", "BCNF"],
       },
@@ -41,7 +40,7 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
       {
         id: "mock-mat-9",
         title: "Unit 3: Transaction Processing, ACID Properties, and Concurrency Control",
-        type: "Lecture Notes",
+        type: "Notes",
         created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["Transactions", "ACID", "2PL Locking"],
       },
@@ -69,7 +68,7 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
     ],
   },
   "23CIC302": {
-    title: "Cloud Infrastructure & Distributed Computing",
+    title: "Cloud Infrastructure & Distributed Systems",
     branch: "CIC",
     semester: 3,
     materials: [
@@ -90,37 +89,37 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
       {
         id: "mock-mat-18",
         title: "Unit 2: AWS Elastic Compute Cloud (EC2) & S3 Storage Architecture",
-        type: "Lecture Notes",
+        type: "Notes",
         created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["AWS", "EC2", "S3"],
       },
     ],
   },
   "23CIC303": {
-    title: "Big Data Processing & Stream Analytics",
+    title: "Big Data Processing with Apache Spark",
     branch: "CIC",
     semester: 3,
     materials: [
       {
         id: "mock-mat-5",
-        title: "Apache Spark RDD & DataFrames - Mid-Term Question Bank",
+        title: "Big Data Processing with Apache Spark - Mid-Term Question Bank",
         type: "Question Banks",
         created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Spark", "Hadoop", "MapReduce"],
+        tags: ["Spark", "Big Data", "MapReduce"],
       },
       {
         id: "mock-mat-19",
-        title: "Unit 1: Hadoop Distributed File System (HDFS) & MapReduce Notes",
-        type: "Lecture Notes",
+        title: "Unit 1: Hadoop Distributed File System (HDFS) & MapReduce Paradigms",
+        type: "Notes",
         created_at: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["HDFS", "MapReduce", "Big Data"],
+        tags: ["Hadoop", "HDFS", "MapReduce"],
       },
       {
         id: "mock-mat-20",
-        title: "Unit 2: Real-Time Streaming with Apache Kafka Slides",
+        title: "PySpark Resilient Distributed Datasets (RDD) Architecture Slides",
         type: "Lecture Slides",
-        created_at: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Kafka", "Streaming", "Producers/Consumers"],
+        created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["PySpark", "RDD", "Transformations"],
       },
     ],
   },
@@ -139,7 +138,7 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
       {
         id: "mock-mat-21",
         title: "Unit 1: CPU Scheduling Algorithms & Process Synchronization Notes",
-        type: "Lecture Notes",
+        type: "Notes",
         created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["Scheduling", "Semaphores", "Mutex"],
       },
@@ -160,7 +159,7 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
       {
         id: "mock-mat-23",
         title: "Unit 1: OSI 7-Layer Architecture & TCP/IP Protocol Stack Notes",
-        type: "Lecture Notes",
+        type: "Notes",
         created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["OSI", "TCP/IP", "Subnetting"],
       },
@@ -211,19 +210,12 @@ export default async function SubjectDetailPage(props: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Get student profile
-  const { data: profile } = await supabase
-    .from("users")
-    .select("branch, current_semester")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .single();
-
   // Fetch subject from DB
   const { data: dbSubject } = await supabase
     .from("subjects")
     .select("*")
     .eq("code", code)
-    .single();
+    .maybeSingle();
 
   const fallbackData = FALLBACK_SUBJECT_CATALOG[code] || FALLBACK_SUBJECT_CATALOG["23CIC301"];
   const subject = dbSubject || {
@@ -233,18 +225,34 @@ export default async function SubjectDetailPage(props: PageProps) {
     semester: fallbackData.semester,
   };
 
-  // Build Materials query
-  let dbQuery = supabase
+  // Build Materials query from DB
+  const { data: dbMaterials } = await supabase
     .from("materials")
     .select("id, title, type, created_at, tags")
     .eq("subject", code)
-    .eq("state", "published");
+    .eq("state", "published")
+    .order("created_at", { ascending: false });
 
-  const { data: dbMaterials } = await dbQuery.order("created_at", { ascending: false });
-  const rawMaterials = (dbMaterials && dbMaterials.length > 0) ? dbMaterials : fallbackData.materials;
+  // Prioritize real uploaded materials from database!
+  let rawMaterials: any[] = [];
+  if (dbMaterials && dbMaterials.length > 0) {
+    // Show real uploaded materials
+    rawMaterials = dbMaterials;
+  } else {
+    // Fallback demo catalog
+    rawMaterials = fallbackData.materials;
+  }
 
-  // Apply robust category and search filtering
-  const normalizeType = (t: string) => t.toLowerCase().replace(/s$/, "").trim();
+  // Normalize category mapping
+  const normalizeType = (t: string) => {
+    const s = (t || "").toLowerCase().trim();
+    if (s.includes("note")) return "notes";
+    if (s.includes("slide")) return "slides";
+    if (s.includes("assignment")) return "assignments";
+    if (s.includes("lab") || s.includes("manual")) return "labs";
+    if (s.includes("question")) return "questions";
+    return s;
+  };
 
   let materials = rawMaterials;
 
@@ -275,7 +283,7 @@ export default async function SubjectDetailPage(props: PageProps) {
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">
       {/* Header Banner */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800">
             <Layers className="h-3.5 w-3.5 text-blue-600" />
@@ -291,7 +299,7 @@ export default async function SubjectDetailPage(props: PageProps) {
 
         <Link
           href="/student/subjects"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all self-start md:self-auto border border-slate-200 cursor-pointer shadow-xs"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white text-xs sm:text-sm font-semibold transition-all self-start md:self-auto cursor-pointer shadow-sm hover:shadow-md"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>All Subjects</span>
@@ -312,8 +320,8 @@ export default async function SubjectDetailPage(props: PageProps) {
               href={href}
               className={`px-4.5 py-2 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
                 isSelected
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-normal"
+                  ? "bg-primary text-white shadow-xs"
+                  : "bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-normal"
               }`}
             >
               <span>{type}</span>
@@ -323,7 +331,7 @@ export default async function SubjectDetailPage(props: PageProps) {
       </div>
 
       {/* Materials List */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden divide-y divide-slate-100">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden divide-y divide-slate-100">
         {materials && materials.length > 0 ? (
           materials.map((mat: any) => (
             <Link
@@ -341,7 +349,7 @@ export default async function SubjectDetailPage(props: PageProps) {
                   </span>
                 </div>
 
-                <h2 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-blue-600 transition-colors leading-snug">
+                <h2 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-primary transition-colors leading-snug">
                   {mat.title}
                 </h2>
 
@@ -357,7 +365,7 @@ export default async function SubjectDetailPage(props: PageProps) {
               </div>
 
               <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
-                <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-2xs">
+                <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-primary group-hover:text-white transition-all shadow-2xs">
                   <ChevronRight className="h-4 w-4" />
                 </div>
               </div>

@@ -1,8 +1,8 @@
 -- =========================================================================
--- DATA ENGINEERING E-LEARNING PORTAL: SUBJECT TAXONOMY SEED & FACULTY RLS
+-- DATA ENGINEERING E-LEARNING PORTAL: SUBJECT TAXONOMY SEED & ACCESS RLS
 -- =========================================================================
--- Run this in your Supabase Dashboard -> SQL Editor to seed core course subjects
--- and enable faculty permissions.
+-- Run this in your Supabase Dashboard -> SQL Editor to seed subjects
+-- and configure student/faculty access policies.
 
 -- 1. Ensure core academic branches exist
 INSERT INTO public.branches (code, name, active) VALUES
@@ -38,8 +38,11 @@ ON CONFLICT (code) DO UPDATE SET
     semester = EXCLUDED.semester,
     active = true;
 
--- 4. Allow Faculty & Admins to manage subjects if not already allowed
+-- 4. Enable Read Access for all authenticated users to active subjects
+DROP POLICY IF EXISTS "View active subjects" ON public.subjects;
 DROP POLICY IF EXISTS "Faculty and Admins manage subjects" ON public.subjects;
+CREATE POLICY "View active subjects" ON public.subjects 
+    FOR SELECT TO authenticated USING (active = true);
 CREATE POLICY "Faculty and Admins manage subjects" ON public.subjects 
     FOR ALL TO authenticated USING (
         EXISTS (
@@ -47,3 +50,23 @@ CREATE POLICY "Faculty and Admins manage subjects" ON public.subjects
             WHERE u.id = auth.uid() AND u.role IN ('faculty', 'admin')
         )
     );
+
+-- 5. Enable Read Access for all authenticated students/faculty to published materials
+DROP POLICY IF EXISTS "Students view published materials matching scope" ON public.materials;
+CREATE POLICY "Students view published materials matching scope" ON public.materials 
+    FOR SELECT TO authenticated USING (state = 'published');
+
+-- 6. Enable Read Access for all authenticated students/faculty to published material files
+DROP POLICY IF EXISTS "Students view material files matching scope" ON public.material_files;
+CREATE POLICY "Students view material files matching scope" ON public.material_files 
+    FOR SELECT TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.materials m 
+            WHERE m.id = material_files.material_id AND m.state = 'published'
+        )
+    );
+
+-- 7. Ensure Storage Access for published material files
+DROP POLICY IF EXISTS "Students download bucket files matching scope" ON storage.objects;
+CREATE POLICY "Students download bucket files matching scope" ON storage.objects
+    FOR SELECT TO authenticated USING (bucket_id = 'materials');
