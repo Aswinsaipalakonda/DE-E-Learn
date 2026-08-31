@@ -82,31 +82,6 @@ export default function StudentProfileClient({ profile }: StudentProfileClientPr
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">
-      {/* ========================================================================= */}
-      {/* EXECUTIVE HEADER BANNER (HIDDEN ON MOBILE, VISIBLE ON DESKTOP) */}
-      {/* ========================================================================= */}
-      <div className="hidden md:flex p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800">
-            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-            <span>Academic Identity • {profile.branch || "CIC"} Department</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            My Student Profile
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-normal">
-            Manage your verified student credentials, academic scope, and account security.
-          </p>
-        </div>
-
-        <Link
-          href="/student"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md self-start md:self-auto cursor-pointer"
-        >
-          <span>Return to Dashboard</span>
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-      </div>
 
       {/* ========================================================================= */}
       {/* 2-COLUMN MAIN WORKSPACE */}
