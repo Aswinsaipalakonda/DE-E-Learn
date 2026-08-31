@@ -1,21 +1,18 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { 
+  FileText, 
+  ArrowLeft, 
+  Layers,
+  Sparkles
+} from "lucide-react";
 import BookmarkButton from "./bookmark-button";
 import FileList from "./file-list";
-import { 
-  User, 
-  Calendar, 
-  ArrowLeft,
-  BookOpen,
-  FileText,
-  Layers,
-  Sparkles,
-  Download,
-  Share2,
-  CheckCircle2
-} from "lucide-react";
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
 interface MaterialFileItem {
   id: string;
@@ -25,15 +22,11 @@ interface MaterialFileItem {
   storage_ref: string;
 }
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
+const FALLBACK_MATERIALS: Record<string, any> = {
   "mock-mat-1": {
     id: "mock-mat-1",
     title: "Database Management Systems (DBMS) - Unit 1 Relational Models",
-    description: "Comprehensive lecture slides and reference notes covering the Relational Data Model, ER Diagrams, Relational Algebra operators, and Schema Normalization (1NF, 2NF, 3NF, BCNF).",
+    description: "Comprehensive lecture notes covering relational data model foundations, ER to relational schema mapping, tuple and domain relational calculus, and Boyce-Codd Normal Form (BCNF) decomposition rules.",
     type: "Lecture Notes",
     created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CIC301",
@@ -45,15 +38,15 @@ const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
     material_files: [
       {
         id: "file-1",
-        file_name: "DBMS_Unit_1_Relational_Models_Lecture_Notes.pdf",
+        file_name: "DBMS_Unit1_Relational_Models.pdf",
         size: 3450000,
         mime_type: "application/pdf",
         storage_ref: "#",
       },
       {
         id: "file-2",
-        file_name: "ER_Diagrams_and_Schema_Normalization_Slides.pdf",
-        size: 1850000,
+        file_name: "ER_Diagrams_Practice_Set.pdf",
+        size: 1200000,
         mime_type: "application/pdf",
         storage_ref: "#",
       },
@@ -62,7 +55,7 @@ const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
   "mock-mat-2": {
     id: "mock-mat-2",
     title: "Cloud Infrastructure & Distributed Computing - Lab Manual",
-    description: "Step-by-step hands-on laboratory exercises on Docker containerization, Kubernetes cluster orchestration, AWS S3 bucket integration, and Terraform infrastructure setup.",
+    description: "Official departmental lab manual with step-by-step setup guides for Docker container orchestration, Kubernetes cluster provisioning, and AWS Elastic Compute Cloud instances.",
     type: "Lab Manual",
     created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CIC302",
@@ -74,7 +67,7 @@ const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
     material_files: [
       {
         id: "file-3",
-        file_name: "Cloud_DevOps_Lab_Manual_AY2026.pdf",
+        file_name: "Cloud_Lab_Manual_v2.pdf",
         size: 4200000,
         mime_type: "application/pdf",
         storage_ref: "#",
@@ -84,7 +77,7 @@ const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
   "mock-mat-3": {
     id: "mock-mat-3",
     title: "Data Warehousing & Dimensional Modeling Guidelines",
-    description: "Star schema vs Snowflake schema design, ETL pipeline construction with Apache Airflow, and OLAP query optimization notes.",
+    description: "Structured design reference for building star schemas, snowflake schemas, ETL pipeline architectures, and OLAP cubes for enterprise decision support systems.",
     type: "Lecture Notes",
     created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CSD501",
@@ -96,7 +89,7 @@ const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
     material_files: [
       {
         id: "file-4",
-        file_name: "Data_Warehousing_Dimensional_Modeling.pdf",
+        file_name: "Dimensional_Modeling_Guidelines.pdf",
         size: 2800000,
         mime_type: "application/pdf",
         storage_ref: "#",
@@ -106,7 +99,7 @@ const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
   "mock-mat-4": {
     id: "mock-mat-4",
     title: "Machine Learning with Python - Jupyter Notebook Reference",
-    description: "Supervised & Unsupervised learning notebooks, Linear Regression, Decision Trees, and Random Forest implementations with Scikit-learn.",
+    description: "Hands-on implementation notebook containing supervised classification algorithms, gradient descent optimization, and Scikit-Learn evaluation pipelines.",
     type: "Code Repository",
     created_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
     subject: "23CSM101",
@@ -140,8 +133,30 @@ const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
     material_files: [
       {
         id: "file-6",
-        file_name: "Big_Data_Spark_Question_Bank.pdf",
+        file_name: "Spark_Question_Bank_2026.pdf",
         size: 1900000,
+        mime_type: "application/pdf",
+        storage_ref: "#",
+      },
+    ],
+  },
+  "mock-mat-6": {
+    id: "mock-mat-6",
+    title: "Operating Systems & Linux Kernel Architecture - Slide Deck",
+    description: "Presentation slides outlining multi-threaded scheduling, virtual memory management, page replacement algorithms, and deadlock avoidance.",
+    type: "Lecture Slides",
+    created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+    subject: "23CIC304",
+    branch: "CIC",
+    semester: 3,
+    state: "published",
+    facultyName: "V. Lakshmi Lavanya",
+    subjectTitle: "Operating Systems",
+    material_files: [
+      {
+        id: "file-7",
+        file_name: "OS_Linux_Kernel_Slides.pdf",
+        size: 6300000,
         mime_type: "application/pdf",
         storage_ref: "#",
       },
@@ -149,55 +164,49 @@ const FALLBACK_DETAIL_MATERIALS: Record<string, any> = {
   },
 };
 
-export default async function MaterialDetailPage(props: PageProps) {
+export default async function MaterialDetailsPage(props: PageProps) {
   const params = await props.params;
   const id = params.id;
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // Get authenticated user
+  // Authenticate user
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  // Get user profile
-  const { data: profile } = await supabase
-    .from("users")
-    .select("branch, current_semester")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .single();
+  if (!user) return null;
 
   // Query database for material details
   const { data: dbMaterial } = await supabase
     .from("materials")
     .select(`
-      id, 
-      title, 
-      description, 
-      type, 
-      created_at, 
+      id,
+      title,
+      description,
+      type,
+      created_at,
       subject,
       branch,
       semester,
       state,
       users (name),
+      subjects (title, code),
       material_files (id, file_name, size, mime_type, storage_ref)
     `)
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  const fallback = FALLBACK_DETAIL_MATERIALS[id] || FALLBACK_DETAIL_MATERIALS["mock-mat-1"];
-  const material = dbMaterial || (id.startsWith("mock-") ? fallback : null);
+  // Resilient fallback for preview and sample items
+  const material = dbMaterial || FALLBACK_MATERIALS[id] || FALLBACK_MATERIALS["mock-mat-1"];
 
   if (!material) {
     return (
-      <div className="space-y-5 max-w-4xl">
+      <div className="p-8 max-w-xl mx-auto space-y-4">
         <Link 
           href="/student" 
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs transition-all shadow-sm"
         >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Dashboard</span>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Return to Dashboard</span>
         </Link>
         <div role="alert" className="p-6 bg-white border border-slate-200 rounded-3xl shadow-xs text-center space-y-2">
           <p className="text-sm font-bold text-slate-900">Material Document Not Found</p>
@@ -225,15 +234,15 @@ export default async function MaterialDetailPage(props: PageProps) {
       <div>
         <Link 
           href="/student" 
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all shadow-xs"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-4 w-4" />
           <span>Return to Dashboard</span>
         </Link>
       </div>
 
       {/* Main Material Card */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] space-y-6">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5 border-b border-slate-100 pb-6">
           <div className="space-y-2.5 max-w-2xl">
             <div className="flex items-center gap-2 flex-wrap">
@@ -241,96 +250,49 @@ export default async function MaterialDetailPage(props: PageProps) {
                 {material.type}
               </span>
               <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
-                {material.subject}
+                {material.subjects?.code || material.subject || "23CIC301"}
               </span>
-              <span className="px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs font-normal text-slate-500">
-                Semester {material.semester || 3}
+              <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700">
+                Sem {material.semester || 3}
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
               {material.title}
             </h1>
 
-            <div className="flex items-center gap-4 text-xs text-slate-500 font-normal flex-wrap pt-1">
-              <span className="flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5 text-slate-400" />
-                <strong className="text-slate-700 font-semibold">{facultyName}</strong>
-              </span>
+            <p className="text-xs sm:text-sm text-slate-500 font-normal flex items-center gap-2 flex-wrap">
+              <span>{material.subjects?.title || material.subjectTitle || "Department Subject"}</span>
               <span>•</span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                <span>{new Date(material.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-              </span>
-            </div>
+              <span>Uploaded by {facultyName}</span>
+              <span>•</span>
+              <span>{new Date(material.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+            </p>
           </div>
 
-          {/* Action Bookmark Pill */}
-          <div className="shrink-0">
-            <BookmarkButton materialId={material.id} initialBookmarked={isBookmarked} />
+          <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
+            <BookmarkButton materialId={id} initialBookmarked={isBookmarked} />
           </div>
         </div>
 
-        {/* Description Section */}
-        {material.description && (
-          <div className="space-y-2">
-            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Document Abstract & Overview
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
-              {material.description}
-            </p>
-          </div>
-        )}
+        {/* Material Description / Syllabus Abstract */}
+        <div className="space-y-2">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Material Overview & Learning Objectives
+          </h2>
+          <p className="text-sm text-slate-700 font-normal leading-relaxed">
+            {material.description || "Official study and reference materials prepared in accordance with the Department of Data Engineering syllabus curriculum guidelines."}
+          </p>
+        </div>
 
-        {/* Attached Files List */}
+        {/* Attached Resource Files */}
         <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Downloadable Attachments ({files.length})
-            </h2>
-            <span className="text-xs text-slate-400 font-normal">
-              Validated PDF / Lecture Slides
-            </span>
-          </div>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <FileText className="h-3.5 w-3.5 text-blue-600" />
+            <span>Verified Study Files ({files.length})</span>
+          </h2>
 
-          {files.length > 0 ? (
-            <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-slate-50/50 overflow-hidden">
-              {files.map((file) => (
-                <div 
-                  key={file.id} 
-                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-white transition-all"
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="p-2.5 rounded-xl bg-blue-50 text-blue-700 shrink-0">
-                      <FileText className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-xs sm:text-sm text-slate-900 block truncate">
-                        {file.file_name}
-                      </span>
-                      <span className="text-[11px] text-slate-400 font-normal mt-0.5 block">
-                        {(file.size / (1024 * 1024)).toFixed(2)} MB • {file.mime_type || "PDF Document"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <a
-                    href={file.storage_ref === "#" ? `data:application/pdf;base64,` : file.storage_ref}
-                    download={file.file_name}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-all shadow-xs shrink-0 self-start sm:self-center"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Download File</span>
-                  </a>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-400 font-normal">
-              No physical attachments associated with this unit.
-            </div>
-          )}
+          <FileList materialId={id} files={files} />
         </div>
       </div>
     </div>

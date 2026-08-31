@@ -6,7 +6,7 @@
   --secondary: #2F80ED;
   --accent: #E84D8A;
   --supporting: #00B7C7;
-  --bg: #F8FAFC;
+  --bg: #c2d9f0;
   --surface: #FFFFFF;
   --border: #E2E8F0;
   --success: #22C55E;
@@ -43,12 +43,12 @@ html {
   text-rendering: optimizeLegibility;
 }
 
-html, body, input, select, textarea, button, code, pre, kbd, সম্প্র {
+html, body, input, select, textarea, button, code, pre, kbd, samp {
   font-family: 'Satoshi', ui-sans-serif, system-ui, sans-serif !important;
 }
 
 body {
-  background: radial-gradient(130% 120% at 50% 0%, #FFFFFF 0%, #F6F9FC 45%, #EDF3FA 100%);
+  background: radial-gradient(130% 120% at 50% 0%, #FFFFFF 0%, #EEF2F7 45%, #DEE6F2 100%);
   background-attachment: fixed;
   min-height: 100vh;
   color: var(--foreground);
