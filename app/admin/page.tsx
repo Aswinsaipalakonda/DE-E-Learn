@@ -8,7 +8,14 @@ import {
   HardDrive, 
   Activity, 
   ArrowRight,
-  UserCheck
+  UserCheck,
+  Megaphone,
+  ShieldAlert,
+  BarChart3,
+  Layers,
+  Sparkles,
+  ChevronRight,
+  Calendar
 } from "lucide-react";
 
 interface ActivityEvent {
@@ -36,180 +43,238 @@ export default async function AdminDashboardPage() {
     facultyRes,
     materialsRes,
     filesRes,
-    eventsRes
+    eventsRes,
+    branchesRes
   ] = await Promise.all([
     supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "student"),
     supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "faculty"),
     supabase.from("materials").select("id", { count: "exact", head: true }),
     supabase.from("material_files").select("size"),
-    supabase.from("activity_events").select("id, created_at, type, user_email, metadata").order("created_at", { ascending: false }).limit(5)
+    supabase.from("activity_events").select("id, created_at, type, user_email, metadata").order("created_at", { ascending: false }).limit(6),
+    supabase.from("branches").select("code", { count: "exact", head: true })
   ]);
 
   const totalStudents = studentsRes.count || 0;
   const totalFaculty = facultyRes.count || 0;
   const totalMaterials = materialsRes.count || 0;
+  const totalBranches = branchesRes.count || 0;
 
   // Calculate storage consumed
   let totalStorageBytes = 0;
   if (filesRes.data) {
-    filesRes.data.forEach(f => {
+    filesRes.data.forEach((f) => {
       totalStorageBytes += f.size || 0;
     });
   }
 
   const formatStorage = (bytes: number) => {
     const mb = bytes / (1024 * 1024);
-    return mb.toFixed(2) + " MB";
+    if (mb < 1024) return mb.toFixed(2) + " MB";
+    return (mb / 1024).toFixed(2) + " GB";
   };
 
   const events = (eventsRes.data as unknown as ActivityEvent[]) || [];
 
   return (
-    <div className="space-y-8">
-      {/* Header card */}
-      <header className="p-6 bg-surface rounded-2xl border border-border shadow-xs">
-        <h1 className="text-2xl font-bold text-primary">System Administrator</h1>
-        <p className="text-sm text-primary/60 mt-1">
-          Monitor user registrations, course branches, and overall digital repository metrics.
-        </p>
-      </header>
-
-      {/* Stats cards grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="p-6 bg-surface rounded-2xl border border-border shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary/5 text-primary flex items-center justify-center">
-            <Users className="h-6 w-6" />
-          </div>
-          <div>
-            <span className="block text-2xl font-black text-primary">{totalStudents}</span>
-            <span className="text-xs text-primary/50 font-semibold uppercase tracking-wider mt-0.5 block">Active Students</span>
-          </div>
-        </div>
-
-        <div className="p-6 bg-surface rounded-2xl border border-border shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
-            <UserCheck className="h-6 w-6" />
-          </div>
-          <div>
-            <span className="block text-2xl font-black text-primary">{totalFaculty}</span>
-            <span className="text-xs text-primary/50 font-semibold uppercase tracking-wider mt-0.5 block">Registered Faculty</span>
-          </div>
-        </div>
-
-        <div className="p-6 bg-surface rounded-2xl border border-border shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center">
-            <BookOpen className="h-6 w-6" />
-          </div>
-          <div>
-            <span className="block text-2xl font-black text-primary">{totalMaterials}</span>
-            <span className="text-xs text-primary/50 font-semibold uppercase tracking-wider mt-0.5 block">Total Resources</span>
-          </div>
-        </div>
-
-        <div className="p-6 bg-surface rounded-2xl border border-border shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
-            <HardDrive className="h-6 w-6" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <span className="block text-2xl font-black text-primary">{formatStorage(totalStorageBytes)}</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-success/15 text-success">Healthy</span>
+    <div className="space-y-6 sm:space-y-7 w-full pb-6">
+      {/* ========================================================================= */}
+      {/* EXECUTIVE WELCOME HERO CARD */}
+      {/* ========================================================================= */}
+      <div className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_4px_25px_-4px_rgba(11,31,59,0.05)]">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800 mb-1">
+              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+              <span>Department Administration Hub</span>
             </div>
-            <span className="text-xs text-primary/50 font-semibold uppercase tracking-wider mt-0.5 block">Repository Storage</span>
-            <div className="w-full bg-border h-1.5 rounded-full mt-2 overflow-hidden">
-              <div 
-                className="bg-secondary h-full rounded-full transition-all" 
-                style={{ width: `${Math.min(Math.max((totalStorageBytes / (50 * 1024 * 1024 * 1024)) * 100, 2), 100)}%` }} 
-              />
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              Academic Operations Command
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
+              Real-time monitoring of student cohorts, faculty syllabus repositories, and departmental cloud infrastructure.
+            </p>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Link
+              href="/admin/users"
+              className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium transition-all shadow-xs"
+            >
+              <Users className="h-4 w-4" />
+              <span>Manage Users</span>
+            </Link>
+            <Link
+              href="/admin/taxonomy"
+              className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all"
+            >
+              <Layers className="h-4 w-4 text-slate-600" />
+              <span>Taxonomy</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* METRICS TILES: 2-COLUMNS ON MOBILE / 4-COLUMNS ON DESKTOP */}
+      {/* ========================================================================= */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+        {/* Card 1: Active Students */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Students</span>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
+              <Users className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
             </div>
+          </div>
+          <div>
+            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{totalStudents}</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Active Learners</span>
+          </div>
+        </div>
+
+        {/* Card 2: Registered Faculty */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Faculty</span>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <UserCheck className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+            </div>
+          </div>
+          <div>
+            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{totalFaculty}</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Educators & Ranks</span>
+          </div>
+        </div>
+
+        {/* Card 3: Curriculum Resources */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Materials</span>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
+              <BookOpen className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+            </div>
+          </div>
+          <div>
+            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{totalMaterials}</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Learning Units</span>
+          </div>
+        </div>
+
+        {/* Card 4: Cloud Storage */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Storage</span>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center">
+              <HardDrive className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{formatStorage(totalStorageBytes)}</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700">Healthy</span>
+            </div>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Storage Bucket</span>
           </div>
         </div>
       </section>
 
-      {/* Main split */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Activity Stream */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-bold text-primary tracking-tight flex items-center gap-2">
-            <Activity className="h-5 w-5 text-secondary" /> System Access Logs
-          </h2>
-          <div className="bg-surface rounded-2xl border border-border overflow-hidden">
-            {events && events.length > 0 ? (
-              <div className="divide-y divide-border">
-                {events.map((ev) => (
-                  <div key={ev.id} className="p-4 flex items-start gap-4 hover:bg-bg/20 transition-all text-xs">
-                    <div className="mt-0.5 p-1.5 rounded-md bg-secondary/10 text-secondary shrink-0 font-bold uppercase text-[9px] tracking-wide">
-                      {ev.type}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-bold text-primary block truncate">{ev.user_email}</span>
-                      <span className="text-primary/50 mt-1 block leading-relaxed font-medium">
-                        {ev.type === "download" 
-                          ? `Downloaded: ${ev.metadata.title || "File"}`
-                          : ev.type === "view"
-                          ? `Viewed: ${ev.metadata.title || "Material"}`
-                          : `Performed system event: ${ev.type}`}
+      {/* ========================================================================= */}
+      {/* 2-COLUMN PANELS: RECENT SYSTEM ACTIVITY & QUICK ACCESS DIRECTORY */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Live Activity Audit */}
+        <section className="lg:col-span-8 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-50 text-blue-700">
+                <Activity className="h-4 w-4" />
+              </div>
+              <h2 className="text-base font-bold text-slate-900">Recent Activity Logs</h2>
+            </div>
+            <Link
+              href="/admin/logs"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+            >
+              <span>View All Logs</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          {events.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {events.map((ev) => (
+                <div key={ev.id} className="py-3.5 flex items-start justify-between gap-3 group">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 uppercase">
+                        {ev.type.replace(/_/g, " ")}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-900 truncate">
+                        {ev.metadata?.title || ev.user_email || "System Operation"}
                       </span>
                     </div>
-                    <span className="text-[10px] text-primary/40 shrink-0 font-semibold">
-                      {new Date(ev.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    <span className="text-[11px] text-slate-500 font-normal block truncate">
+                      Triggered by {ev.user_email}
                     </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-16 text-center text-primary/45 font-semibold text-sm">
-                No recent database activities logged.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Shortcuts */}
-        <div className="space-y-6">
-          <div className="p-6 bg-surface rounded-2xl border border-border shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-primary/40 uppercase tracking-widest">Quick Operations</h2>
-            <div className="flex flex-col gap-2.5 font-semibold text-xs sm:text-sm">
-              <Link
-                href="/admin/users"
-                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
-              >
-                <span>User Management</span>
-                <ArrowRight className="h-4 w-4 text-primary/40" />
-              </Link>
-              <Link
-                href="/admin/announcements"
-                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
-              >
-                <span>Announcements Manager</span>
-                <ArrowRight className="h-4 w-4 text-primary/40" />
-              </Link>
-              <Link
-                href="/admin/taxonomy"
-                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
-              >
-                <span>Courses & Branches</span>
-                <ArrowRight className="h-4 w-4 text-primary/40" />
-              </Link>
-              <Link
-                href="/admin/analytics"
-                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
-              >
-                <span>Usage Metrics & CSV Export</span>
-                <ArrowRight className="h-4 w-4 text-primary/40" />
-              </Link>
-              <Link
-                href="/admin/logs"
-                className="flex items-center justify-between p-3 bg-bg hover:bg-border rounded-xl border border-border text-primary transition-all"
-              >
-                <span>System Security Logs</span>
-                <ArrowRight className="h-4 w-4 text-primary/40" />
-              </Link>
+                  <span className="text-[11px] text-slate-400 font-normal shrink-0">
+                    {new Date(ev.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              ))}
             </div>
+          ) : (
+            <div className="py-12 text-center space-y-2">
+              <div className="w-10 h-10 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                <Activity className="h-5 w-5" />
+              </div>
+              <p className="text-xs text-slate-500 font-normal">No recent administrative events logged.</p>
+            </div>
+          )}
+        </section>
+
+        {/* Right Column: Quick Operations Navigation */}
+        <section className="lg:col-span-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
+          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            Quick Operations
+          </h2>
+
+          <div className="space-y-2">
+            {[
+              { title: "User Management & Roster", href: "/admin/users", desc: "Manage students, faculty & sections", icon: Users },
+              { title: "Curriculum Taxonomy", href: "/admin/taxonomy", desc: "Subjects & branch specializations", icon: Layers },
+              { title: "Announcements & Broadcast", href: "/admin/announcements", desc: "Push departmental notices", icon: Megaphone },
+              { title: "System Audit Logs", href: "/admin/logs", desc: "Inspect security events", icon: ShieldAlert },
+              { title: "Usage & Storage Analytics", href: "/admin/analytics", desc: "Monitor repository downloads", icon: BarChart3 },
+            ].map((op) => {
+              const Icon = op.icon;
+              return (
+                <Link
+                  key={op.href}
+                  href={op.href}
+                  className="p-3.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-100/80 transition-all flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 group-hover:text-slate-900 shrink-0">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                        {op.title}
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-normal truncate mt-0.5">
+                        {op.desc}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                </Link>
+              );
+            })}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
 }
-

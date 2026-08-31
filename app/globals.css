@@ -49,11 +49,14 @@ html, body, input, select, textarea, button, code, pre, kbd, samp {
 
 
 body {
-  background: var(--background);
+  background: radial-gradient(130% 130% at 50% 0%, #FFFFFF 0%, #F4F7FC 45%, #EAF0F8 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
   color: var(--foreground);
   font-size: 0.9375rem; /* 15px default body */
   line-height: 1.6;
 }
+
 
 
 /* Lenis Smooth Scroll Rules */
