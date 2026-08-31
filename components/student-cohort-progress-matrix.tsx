@@ -242,7 +242,6 @@ export default function StudentCohortProgressMatrix({
   }, [branch, semester, activityLogs, normalizedFiles, selectedFileFilter]);
 
   const totalCount = cohortRecords.length;
-  // Accurate Counts: Anyone who downloaded is counted in Downloaded; Anyone who viewed is counted in Viewed
   const downloadedCount = cohortRecords.filter((r) => r.hasDownloaded).length;
   const viewedCount = cohortRecords.filter((r) => r.hasViewed).length;
   const pendingCount = cohortRecords.filter((r) => r.isPending).length;
@@ -318,7 +317,7 @@ export default function StudentCohortProgressMatrix({
   };
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full pb-6">
       {/* ========================================================================= */}
       {/* 1. HERO COHORT ANALYTICS CARD */}
       {/* ========================================================================= */}
@@ -708,8 +707,8 @@ export default function StudentCohortProgressMatrix({
       {/* ========================================================================= */}
       {inspectingStudent && (
         <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden space-y-5 p-6 sm:p-7 my-auto animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden p-6 sm:p-7 my-auto animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4 shrink-0">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold">
@@ -745,13 +744,13 @@ export default function StudentCohortProgressMatrix({
               </button>
             </div>
 
-            {/* Per-File Access Audit */}
-            <div className="space-y-3">
+            {/* Per-File Access Audit Scrollable */}
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-4 space-y-3 pr-1">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
                 Per-File Access & Download Breakdown:
               </span>
 
-              <div className="space-y-2.5 max-h-[50vh] overflow-y-auto overscroll-contain pr-1">
+              <div className="space-y-2.5">
                 {inspectingStudent.files.map((file) => (
                   <div
                     key={file.fileId}
@@ -809,7 +808,7 @@ export default function StudentCohortProgressMatrix({
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setInspectingStudent(null)}

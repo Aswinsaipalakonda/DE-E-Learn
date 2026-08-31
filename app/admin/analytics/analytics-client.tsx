@@ -504,7 +504,7 @@ export default function AnalyticsClient({
       {/* ========================================================================= */}
       {isModalOpen && inspectingMaterial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 md:p-8 bg-slate-900/70 backdrop-blur-md">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full h-[90vh] max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/90 shrink-0">
               <div className="flex items-center gap-3">
@@ -531,8 +531,8 @@ export default function AnalyticsClient({
               </button>
             </div>
 
-            {/* Dedicated Scrollable Viewport */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-8 space-y-6">
+            {/* Dedicated Scrollable Viewport with min-h-0 */}
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 sm:p-8 space-y-6">
               <StudentCohortProgressMatrix
                 materialId={inspectingMaterial.id}
                 materialTitle={inspectingMaterial.title}
