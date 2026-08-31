@@ -128,7 +128,7 @@ export default async function StudentLayout({
             {/* Student Roll Number Badge (Using Primary Theme) */}
             <Link
               href="/student/profile"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-2xs hover:bg-primary/95 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-primary text-white shadow-2xs hover:bg-primary/95 transition-all cursor-pointer"
               title="Student Profile"
             >
               <GraduationCap className="h-3.5 w-3.5 text-slate-300 shrink-0" />

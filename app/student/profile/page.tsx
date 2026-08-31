@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import ProfileClient from "@/app/profile/profile-client";
+import StudentProfileClient from "./student-profile-client";
 
 export default async function StudentProfilePage() {
   const cookieStore = await cookies();
@@ -23,19 +23,10 @@ export default async function StudentProfilePage() {
       role: "student",
       branch: "CIC",
       current_semester: 3,
-      roll_number: user.email?.split("@")[0].toUpperCase() || "23331A4745",
+      roll_number: user.email?.split("@")[0].toUpperCase() || "23331A4701",
       section: "A",
     };
   }
 
-  return (
-    <div className="space-y-6 max-w-4xl">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Student Profile</h1>
-        <p className="text-sm text-slate-500">Manage your student credentials, branch allocation, and account details.</p>
-      </header>
-
-      <ProfileClient profile={profile} />
-    </div>
-  );
+  return <StudentProfileClient profile={profile} />;
 }
