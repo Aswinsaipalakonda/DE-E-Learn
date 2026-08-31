@@ -223,7 +223,7 @@ export default async function StudentDashboard({
       {/* ========================================================================= */}
       {/* EXECUTIVE WELCOME HERO CARD */}
       {/* ========================================================================= */}
-      <div className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-xs">
+      <div className="relative overflow-hidden p-5 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-xs">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div className="space-y-1.5 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800 mb-1">
@@ -238,13 +238,13 @@ export default async function StudentDashboard({
             </p>
           </div>
 
-          {/* Quick Shortcuts */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {/* Quick Shortcuts - Always Side by Side */}
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
             <Link
               href="/student/subjects"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium transition-all shadow-xs cursor-pointer"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium transition-all shadow-xs cursor-pointer shrink-0 whitespace-nowrap"
             >
-              <BookOpen className="h-4 w-4" />
+              <BookOpen className="h-4 w-4 shrink-0" />
               <span>Browse Subjects</span>
             </Link>
             <StudentBookmarkHeroPill initialCount={displayBookmarksCount} />

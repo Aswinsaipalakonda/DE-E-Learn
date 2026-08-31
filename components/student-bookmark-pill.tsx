@@ -14,11 +14,9 @@ export function StudentBookmarkHeroPill({ initialCount }: StudentBookmarkPillPro
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("de_user_bookmarks") || "{}");
-      // Default fallback mock IDs: "mock-mat-1", "mock-mat-2", "mock-mat-5"
       const defaultMockIds = ["mock-mat-1", "mock-mat-2", "mock-mat-5"];
       const activeIds = defaultMockIds.filter((id) => stored[id] !== false);
       
-      // Also check any added custom bookmarks
       Object.keys(stored).forEach((id) => {
         if (stored[id] === true && !activeIds.includes(id)) {
           activeIds.push(id);
@@ -34,9 +32,9 @@ export function StudentBookmarkHeroPill({ initialCount }: StudentBookmarkPillPro
   return (
     <Link
       href="/student/bookmarks"
-      className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-900 text-xs sm:text-sm font-medium transition-all cursor-pointer shadow-xs"
+      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4.5 py-2.5 rounded-full bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-900 text-xs sm:text-sm font-medium transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap"
     >
-      <Bookmark className="h-4 w-4 text-amber-600 fill-amber-500" />
+      <Bookmark className="h-4 w-4 text-amber-600 fill-amber-500 shrink-0" />
       <span>Bookmarks ({count})</span>
     </Link>
   );
