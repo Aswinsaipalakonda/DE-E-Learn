@@ -93,7 +93,7 @@ export async function uploadMaterialAction(formData: FormData) {
   }
 
   // =========================================================================
-  // GUARANTEE FOREIGN KEY CONSTRAINTS EXIST IN DATABASE
+  // ATTEMPT TO AUTO-PREPARE FOREIGN KEY DEPENDENCIES
   // =========================================================================
   try {
     // 1. Ensure user profile exists in public.users
@@ -153,6 +153,11 @@ export async function uploadMaterialAction(formData: FormData) {
     .single();
 
   if (insertError || !material) {
+    if (insertError?.message?.includes("materials_subject_fkey")) {
+      return { 
+        error: `Subject "${subject}" is not yet registered in your Supabase "subjects" table. Please run the SQL seed script in your Supabase SQL Editor to populate the curriculum subjects.` 
+      };
+    }
     return { error: insertError?.message || "Failed to create material record." };
   }
 
