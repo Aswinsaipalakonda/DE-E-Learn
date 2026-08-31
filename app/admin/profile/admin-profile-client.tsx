@@ -194,7 +194,7 @@ export default function AdminProfileClient({ profile }: AdminProfileClientProps)
 
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Security Policy</span>
-                <span className="font-semibold text-slate-900 block">Immutable RLS Audit Enforced</span>
+                <span className="font-semibold text-slate-900 block">Continuous Audit Security Enabled</span>
               </div>
             </div>
 
@@ -206,7 +206,7 @@ export default function AdminProfileClient({ profile }: AdminProfileClientProps)
                 href="/admin/users"
                 className="p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-between text-xs font-semibold text-slate-800 transition-all group"
               >
-                <span>Manage Users Database</span>
+                <span>Manage Users Directory</span>
                 <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-primary transition-colors" />
               </Link>
 
@@ -222,7 +222,7 @@ export default function AdminProfileClient({ profile }: AdminProfileClientProps)
                 href="/admin/logs"
                 className="p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-between text-xs font-semibold text-slate-800 transition-all group"
               >
-                <span>System Audit Logs</span>
+                <span>Activity & Governance Logs</span>
                 <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-primary transition-colors" />
               </Link>
             </div>
@@ -415,8 +415,8 @@ export default function AdminProfileClient({ profile }: AdminProfileClientProps)
 
                 <div className="flex items-center justify-between pt-3">
                   <div className="space-y-0.5">
-                    <span className="text-xs font-bold text-slate-900 block">System Maintenance Hooks</span>
-                    <span className="text-[11px] text-slate-500 font-normal">Database schema migration and storage capacity notifications.</span>
+                    <span className="text-xs font-bold text-slate-900 block">Platform Maintenance Notices</span>
+                    <span className="text-[11px] text-slate-500 font-normal">Storage capacity and portal maintenance updates.</span>
                   </div>
                   <input
                     type="checkbox"
@@ -456,12 +456,12 @@ export default function AdminProfileClient({ profile }: AdminProfileClientProps)
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Authentication Protocol</span>
-                  <span className="text-xs font-bold text-slate-900 block">Supabase JWT + Secure HTTP Cookies</span>
+                  <span className="text-xs font-bold text-slate-900 block">Secure Institutional Session Token</span>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Transport Security</span>
-                  <span className="text-xs font-bold text-slate-900 block">TLS 1.3 End-to-End Encrypted</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Connection Security</span>
+                  <span className="text-xs font-bold text-slate-900 block">Encrypted SSL Connection</span>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
@@ -474,7 +474,7 @@ export default function AdminProfileClient({ profile }: AdminProfileClientProps)
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Governance Tier</span>
-                  <span className="text-xs font-bold text-blue-700">Super Administrator Level 1</span>
+                  <span className="text-xs font-bold text-blue-700">Institutional Super Administrator</span>
                 </div>
               </div>
             </div>

@@ -8,17 +8,15 @@ import {
   ShieldCheck, 
   UserCheck, 
   FileText, 
-  Lock, 
+  KeyRound, 
   Clock, 
   ChevronRight, 
   ChevronLeft, 
-  Layers, 
-  ArrowRight,
-  Database,
-  KeyRound,
-  Eye,
-  Copy,
-  Check
+  Eye, 
+  Info,
+  CheckCircle2,
+  Sparkles,
+  ArrowRight
 } from "lucide-react";
 import { ToastContainer, ToastMessage } from "@/components/toast";
 
@@ -40,22 +38,81 @@ interface LogsClientProps {
   initialLogs: AuditLogItem[];
 }
 
+// Convert technical action names to human-readable titles
+function formatActionTitle(action: string): string {
+  const clean = (action || "")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  
+  if (clean.toLowerCase().includes("reset")) return "Password Reset";
+  if (clean.toLowerCase().includes("create")) return "Account Created";
+  if (clean.toLowerCase().includes("delete")) return "Item Removed";
+  if (clean.toLowerCase().includes("publish")) return "Material Published";
+  if (clean.toLowerCase().includes("seed") || clean.toLowerCase().includes("subject")) return "Subject Added";
+  return clean;
+}
+
 // Action badge style mapping
 function getActionBadgeStyle(action: string): { bg: string; text: string; border: string; label: string } {
   const act = (action || "").toLowerCase();
   if (act.includes("create") || act.includes("register") || act.includes("seed")) {
-    return { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "CREATE" };
+    return { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "Created" };
   }
   if (act.includes("delete") || act.includes("remove") || act.includes("archive")) {
-    return { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200", label: "DELETE" };
+    return { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200", label: "Removed" };
   }
-  if (act.includes("pass") || act.includes("auth") || act.includes("login")) {
-    return { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "AUTH" };
+  if (act.includes("pass") || act.includes("auth") || act.includes("login") || act.includes("reset")) {
+    return { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "Security" };
   }
   if (act.includes("publish") || act.includes("material")) {
-    return { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "CONTENT" };
+    return { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "Curriculum" };
   }
-  return { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "UPDATE" };
+  return { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "Updated" };
+}
+
+// Helper to convert arbitrary object payload into human-friendly key-value pairs
+function renderPayloadDetails(data: unknown): { label: string; value: string }[] {
+  if (!data || typeof data !== "object") return [];
+  const entries: { label: string; value: string }[] = [];
+
+  const keyLabels: Record<string, string> = {
+    name: "Full Name",
+    email: "Email Address",
+    role: "Assigned Role",
+    branch: "Academic Branch",
+    semester: "Semester",
+    section: "Section",
+    status: "Account Status",
+    state: "Publish State",
+    version: "Document Version",
+    filesCount: "Total Attached Files",
+    code: "Subject Code",
+    title: "Subject Title",
+    reset_by: "Authorized By",
+    timestamp: "Completed At",
+    password_updated: "Password Status",
+    new_default_password: "Password Action",
+    userId: "Target User ID",
+  };
+
+  Object.entries(data as Record<string, unknown>).forEach(([key, val]) => {
+    if (val === null || val === undefined) return;
+    const label = keyLabels[key] || key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    
+    let displayValue = String(val);
+    if (key === "new_default_password") {
+      displayValue = "Reset to College Default Credentials";
+    } else if (typeof val === "boolean") {
+      displayValue = val ? "Completed / Active" : "Pending";
+    } else if (typeof val === "object") {
+      displayValue = JSON.stringify(val);
+    }
+    
+    entries.push({ label, value: displayValue });
+  });
+
+  return entries;
 }
 
 export default function LogsClient({ initialLogs }: LogsClientProps) {
@@ -74,7 +131,6 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
 
   // Toast State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   // Scroll Container Ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -132,18 +188,11 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
     }, 500);
   };
 
-  const copyToClipboard = (text: string, sectionKey: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedSection(sectionKey);
-    setTimeout(() => setCopiedSection(null), 2000);
-    addToast("success", "JSON Copied", "State payload copied to clipboard.");
-  };
-
   // KPI Metrics Calculation
   const totalLogsCount = logs.length;
   const userActionsCount = logs.filter((l) => l.action.toLowerCase().includes("user") || l.action.toLowerCase().includes("pass")).length;
   const contentActionsCount = logs.filter((l) => l.action.toLowerCase().includes("material") || l.action.toLowerCase().includes("subject")).length;
-  const authActionsCount = logs.filter((l) => l.action.toLowerCase().includes("pass") || l.action.toLowerCase().includes("auth")).length;
+  const authActionsCount = logs.filter((l) => l.action.toLowerCase().includes("pass") || l.action.toLowerCase().includes("auth") || l.action.toLowerCase().includes("reset")).length;
 
   // Extract unique actions for filter options
   const uniqueActions = useMemo(() => {
@@ -153,7 +202,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
   // Filtered Logs
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
-      const actorEmail = log.users?.email || "system";
+      const actorEmail = log.users?.email || "Administrator";
       const actorName = log.users?.name || "";
       const q = searchQuery.toLowerCase();
       
@@ -162,7 +211,8 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
         actorEmail.toLowerCase().includes(q) ||
         actorName.toLowerCase().includes(q) ||
         log.object_id.toLowerCase().includes(q) ||
-        log.action.toLowerCase().includes(q);
+        log.action.toLowerCase().includes(q) ||
+        formatActionTitle(log.action).toLowerCase().includes(q);
 
       const matchesAction = actionFilter === "ALL" || log.action === actionFilter;
 
@@ -179,21 +229,18 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
 
   const handleExportCSV = () => {
     if (filteredLogs.length === 0) {
-      addToast("info", "Nothing to Export", "No audit records match your current filters.");
+      addToast("info", "Nothing to Export", "No activity logs match your current filters.");
       return;
     }
 
     try {
-      const headers = ["Audit ID", "Timestamp", "Action Initiated", "Actor Name", "Actor Email", "Target Object ID", "Before State Payload", "After State Payload"];
+      const headers = ["Activity Timestamp", "Activity Type", "Initiated By", "Actor Email", "Target Account / Reference"];
       const rows = filteredLogs.map((l) => [
-        `"${l.id}"`,
-        `"${new Date(l.created_at).toISOString()}"`,
-        `"${l.action}"`,
+        `"${new Date(l.created_at).toLocaleString()}"`,
+        `"${formatActionTitle(l.action)}"`,
         `"${l.users?.name || "System Administrator"}"`,
-        `"${l.users?.email || "system@mvgrce.edu.in"}"`,
+        `"${l.users?.email || "admin@mvgrce.edu.in"}"`,
         `"${l.object_id}"`,
-        `"${JSON.stringify(l.before_summary || {}).replace(/"/g, '""')}"`,
-        `"${JSON.stringify(l.after_summary || {}).replace(/"/g, '""')}"`,
       ]);
 
       const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
@@ -201,12 +248,12 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `mvgr_de_system_audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute("download", `mvgr_de_activity_logs_${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      addToast("success", "Export Successful", `Downloaded audit trail report with ${filteredLogs.length} events.`);
+      addToast("success", "Export Successful", `Downloaded activity report for ${filteredLogs.length} entries.`);
     } catch {
       addToast("error", "Export Failed", "Could not generate CSV file.");
     }
@@ -220,65 +267,65 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
       {/* 1. OVERVIEW KPI METRICS GRID */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {/* Metric 1: Total Audit Events */}
+        {/* Metric 1: Total Activity Records */}
         <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Audit Records</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Activity Entries</span>
             <div className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
               <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <span className="text-2xl sm:text-3xl font-bold text-slate-900">{totalLogsCount}</span>
-            <span className="text-xs text-slate-400 block font-normal">Immutable logged entries</span>
+            <span className="text-xs text-slate-400 block font-normal">Recorded system events</span>
           </div>
         </div>
 
-        {/* Metric 2: User Governance Actions */}
+        {/* Metric 2: User Account Actions */}
         <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">User Governance</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">User Management</span>
             <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
               <UserCheck className="h-4 w-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <span className="text-2xl sm:text-3xl font-bold text-slate-900">{userActionsCount}</span>
-            <span className="text-xs text-slate-400 block font-normal">Account creations & updates</span>
+            <span className="text-xs text-slate-400 block font-normal">Account registrations & edits</span>
           </div>
         </div>
 
         {/* Metric 3: Syllabus & Material Alterations */}
         <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Content & Taxonomy</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Course Materials</span>
             <div className="p-2 rounded-xl bg-purple-50 text-purple-700 border border-purple-200">
               <FileText className="h-4 w-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <span className="text-2xl sm:text-3xl font-bold text-slate-900">{contentActionsCount}</span>
-            <span className="text-xs text-slate-400 block font-normal">Syllabus notes & subjects</span>
+            <span className="text-xs text-slate-400 block font-normal">Published syllabus notes</span>
           </div>
         </div>
 
-        {/* Metric 4: Credential Resets */}
+        {/* Metric 4: Security Events */}
         <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Security & Auth</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Security & Access</span>
             <div className="p-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
               <KeyRound className="h-4 w-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <span className="text-2xl sm:text-3xl font-bold text-slate-900">{authActionsCount}</span>
-            <span className="text-xs text-slate-400 block font-normal">Password resets & auth keys</span>
+            <span className="text-xs text-slate-400 block font-normal">Password resets & logins</span>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. MAIN LOGS AUDIT TABLE CONTAINER */}
+      {/* 2. MAIN LOGS TABLE CONTAINER */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden space-y-4">
         {/* Filters Bar */}
@@ -286,7 +333,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
             <input
-              placeholder="Search by actor email, action, or target ID..."
+              placeholder="Search by name, email, or activity type..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -305,10 +352,10 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
               }}
               className="px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-primary cursor-pointer"
             >
-              <option value="ALL">All System Actions ({totalLogsCount})</option>
+              <option value="ALL">All Activities ({totalLogsCount})</option>
               {uniqueActions.map((act) => (
                 <option key={act} value={act}>
-                  {act}
+                  {formatActionTitle(act)}
                 </option>
               ))}
             </select>
@@ -318,7 +365,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
               className="inline-flex items-center justify-center gap-2 px-4.5 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-2xs cursor-pointer"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
-              <span>Export CSV</span>
+              <span>Export Activity CSV</span>
             </button>
           </div>
         </div>
@@ -330,10 +377,10 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 pl-6 pr-4">Timestamp</th>
-                  <th className="py-3.5 px-4">Action Type</th>
-                  <th className="py-3.5 px-4">Actor Profile</th>
-                  <th className="py-3.5 px-4">Target Entity</th>
-                  <th className="py-3.5 pl-4 pr-6 text-right">Audit Details</th>
+                  <th className="py-3.5 px-4">Activity</th>
+                  <th className="py-3.5 px-4">Performed By</th>
+                  <th className="py-3.5 px-4">Target / Account</th>
+                  <th className="py-3.5 pl-4 pr-6 text-right">View Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-normal text-slate-700">
@@ -354,33 +401,33 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                         </div>
                       </td>
 
-                      {/* Action Type Badge */}
+                      {/* Activity Title Badge */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${badge.bg} ${badge.text} ${badge.border}`}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}>
                             {badge.label}
                           </span>
-                          <span className="font-mono text-xs font-bold text-slate-900">
-                            {log.action}
+                          <span className="text-xs font-bold text-slate-900">
+                            {formatActionTitle(log.action)}
                           </span>
                         </div>
                       </td>
 
-                      {/* Actor Profile */}
+                      {/* Performed By */}
                       <td className="py-3.5 px-4">
                         <div className="space-y-0.5">
                           <span className="font-semibold text-slate-800 block">
-                            {log.users?.name || "Administrator"}
+                            {log.users?.name || "System Administrator"}
                           </span>
                           <span className="text-[11px] text-slate-400 block truncate max-w-[180px]">
-                            {log.users?.email || "system@mvgrce.edu.in"}
+                            {log.users?.email || "admin@mvgrce.edu.in"}
                           </span>
                         </div>
                       </td>
 
-                      {/* Target Entity */}
+                      {/* Target Account / Reference */}
                       <td className="py-3.5 px-4">
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 font-mono text-[11px] font-semibold truncate max-w-[160px] inline-block">
+                        <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold truncate max-w-[180px] inline-block">
                           {log.object_id}
                         </span>
                       </td>
@@ -392,7 +439,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-primary hover:text-white text-slate-700 text-xs font-semibold transition-all border border-slate-200 shadow-2xs cursor-pointer group-hover:border-primary/40"
                         >
                           <Eye className="h-3 w-3" />
-                          <span>Inspect Payload</span>
+                          <span>View Details</span>
                         </button>
                       </td>
                     </tr>
@@ -407,9 +454,9 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
               <ShieldCheck className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-900 text-sm">No Audit Logs Found</h3>
+              <h3 className="font-semibold text-slate-900 text-sm">No Activity Records Found</h3>
               <p className="text-xs text-slate-500 font-normal mt-0.5 max-w-sm mx-auto">
-                No system governance entries match your active query or action filter.
+                No events match your current search query or filter selection.
               </p>
             </div>
           </div>
@@ -428,7 +475,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                 <span className="text-slate-900 font-semibold">
                   {Math.min(currentPage * pageSize, filteredLogs.length)}
                 </span>{" "}
-                of <span className="text-slate-900 font-semibold">{filteredLogs.length}</span> records
+                of <span className="text-slate-900 font-semibold">{filteredLogs.length}</span> entries
               </span>
 
               <div className="flex items-center gap-1.5">
@@ -477,7 +524,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. LUXURIOUS SMOOTH SLIDE-OVER INSPECTION DRAWER */}
+      {/* 3. CLEAN, HUMAN-READABLE ACTIVITY DETAILS DRAWER (NO BACKEND CODE) */}
       {/* ========================================================================= */}
       {isDrawerMounted && selectedLog && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -504,10 +551,10 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                   </div>
                   <div>
                     <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                      Audit Event Details
+                      Activity Summary
                     </h2>
-                    <p className="text-xs text-slate-500 font-mono">
-                      Event ID: {selectedLog.id}
+                    <p className="text-xs text-slate-500 font-normal">
+                      Verified record details and update summary.
                     </p>
                   </div>
                 </div>
@@ -516,7 +563,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                   type="button"
                   onClick={closeDrawer}
                   className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
-                  title="Close Drawer"
+                  title="Close Window"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -534,24 +581,32 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Action Executed
+                      Activity Performed
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${getActionBadgeStyle(selectedLog.action).bg} ${getActionBadgeStyle(selectedLog.action).text} ${getActionBadgeStyle(selectedLog.action).border}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getActionBadgeStyle(selectedLog.action).bg} ${getActionBadgeStyle(selectedLog.action).text} ${getActionBadgeStyle(selectedLog.action).border}`}>
                         {getActionBadgeStyle(selectedLog.action).label}
                       </span>
-                      <span className="font-mono text-xs font-bold text-slate-900">
-                        {selectedLog.action}
+                      <span className="text-sm font-bold text-slate-900">
+                        {formatActionTitle(selectedLog.action)}
                       </span>
                     </div>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Timestamp
+                      Activity Timestamp
                     </span>
                     <span className="text-xs font-bold text-slate-900 block">
-                      {new Date(selectedLog.created_at).toLocaleString()}
+                      {new Date(selectedLog.created_at).toLocaleString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      })}
                     </span>
                   </div>
                 </div>
@@ -560,82 +615,85 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Actor Identity
+                      Performed By
                     </span>
                     <span className="text-xs font-bold text-slate-900 block">
-                      {selectedLog.users?.name || "System Admin"}
+                      {selectedLog.users?.name || "System Administrator"}
                     </span>
                     <span className="text-[11px] text-slate-500 block truncate">
-                      {selectedLog.users?.email || "system@mvgrce.edu.in"}
+                      {selectedLog.users?.email || "admin@mvgrce.edu.in"}
                     </span>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Target Entity Identifier
+                      Target Account / Reference
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-800 font-mono text-xs font-bold block truncate">
+                    <span className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-800 text-xs font-bold block truncate">
                       {selectedLog.object_id}
                     </span>
                   </div>
                 </div>
 
-                {/* State Transformation Diffs */}
+                {/* Human-Readable Summary of Changes Card (NO JSON CODE) */}
                 <div className="space-y-4 pt-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Database className="h-3.5 w-3.5 text-blue-600" />
-                      <span>State Payload Transformations</span>
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Details & Change Summary
                     </h3>
                   </div>
 
-                  {/* Previous State (Before) */}
-                  {Boolean(selectedLog.before_summary) && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-rose-500" />
-                          <span>Previous State (Before)</span>
+                  {/* Clean Formatted Information Cards */}
+                  {Boolean(selectedLog.after_summary) && (
+                    <div className="p-5 rounded-3xl bg-slate-50 border border-slate-200 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <span className="text-xs font-bold text-slate-900">
+                          Updated Details & Information
                         </span>
-                        <button
-                          onClick={() => copyToClipboard(JSON.stringify(selectedLog.before_summary, null, 2), "before")}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-semibold rounded-full transition-colors cursor-pointer"
-                        >
-                          {copiedSection === "before" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                          <span>Copy JSON</span>
-                        </button>
                       </div>
-                      <pre className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-xs font-mono overflow-x-auto border border-slate-800 leading-relaxed shadow-inner">
-                        {JSON.stringify(selectedLog.before_summary, null, 2)}
-                      </pre>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {renderPayloadDetails(selectedLog.after_summary).map((item, idx) => (
+                          <div key={idx} className="p-3 bg-white rounded-2xl border border-slate-200/80 space-y-0.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                              {item.label}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-900 block truncate">
+                              {item.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                  {/* Updated State (After) */}
-                  {Boolean(selectedLog.after_summary) && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                          <span>Updated State (After)</span>
-                        </span>
-                        <button
-                          onClick={() => copyToClipboard(JSON.stringify(selectedLog.after_summary, null, 2), "after")}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-semibold rounded-full transition-colors cursor-pointer"
-                        >
-                          {copiedSection === "after" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                          <span>Copy JSON</span>
-                        </button>
+                  {/* Previous State (If Available) */}
+                  {Boolean(selectedLog.before_summary) && (
+                    <div className="p-5 rounded-3xl bg-slate-50/70 border border-slate-200/80 space-y-3">
+                      <span className="text-xs font-bold text-slate-700 block">
+                        Previous Settings (Before Update)
+                      </span>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {renderPayloadDetails(selectedLog.before_summary).map((item, idx) => (
+                          <div key={idx} className="p-3 bg-white rounded-2xl border border-slate-200/70 space-y-0.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                              {item.label}
+                            </span>
+                            <span className="text-xs font-medium text-slate-600 block truncate">
+                              {item.value}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                      <pre className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-xs font-mono overflow-x-auto border border-slate-800 leading-relaxed shadow-inner">
-                        {JSON.stringify(selectedLog.after_summary, null, 2)}
-                      </pre>
                     </div>
                   )}
 
                   {!selectedLog.before_summary && !selectedLog.after_summary && (
                     <div className="p-6 text-center bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-500">
-                      No structural diff payloads attached to this action record.
+                      Standard system activity completed with verified status.
                     </div>
                   )}
                 </div>
@@ -650,7 +708,7 @@ export default function LogsClient({ initialLogs }: LogsClientProps) {
                   onClick={closeDrawer}
                   className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-full shadow-xs cursor-pointer"
                 >
-                  Close Inspection
+                  Close Details
                 </button>
               </div>
             </div>
