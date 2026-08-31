@@ -5,11 +5,15 @@ import { cn } from "@/lib/utils";
 
 export interface KineticTextLoaderProps extends React.HTMLAttributes<HTMLDivElement> {
   text?: string;
+  dotColorClass?: string;
+  textColorClass?: string;
 }
 
 export function KineticTextLoader({ 
   className, 
   text = "Loading", 
+  dotColorClass = "bg-primary",
+  textColorClass = "text-slate-900",
   ...props 
 }: KineticTextLoaderProps) {
   const letters = text.split("");
@@ -44,14 +48,14 @@ export function KineticTextLoader({
         }
       `}</style>
       
-      <div className="relative scale-75 md:scale-90 lg:scale-100">
+      <div className="relative scale-80 md:scale-95 lg:scale-100">
         {/* The moving dot */}
         <div 
-          className="absolute z-10 top-[40px] left-[85px] w-[6px] h-[6px] bg-slate-900 dark:bg-white rounded-full"
+          className={cn("absolute z-10 top-[40px] left-[85px] w-[7px] h-[7px] rounded-full shadow-xs", dotColorClass)}
           style={{ animation: "ktl-dotMove 1800ms cubic-bezier(0.25,0.25,0.75,0.75) infinite" }}
         />
         
-        <p className="relative m-0 whitespace-nowrap text-[3.25rem] sm:text-[3.75rem] text-slate-900 dark:text-white font-light tracking-wide" aria-label={text}>
+        <p className={cn("relative m-0 whitespace-nowrap text-[3.25rem] sm:text-[3.75rem] font-light tracking-wide", textColorClass)} aria-label={text}>
           {letters.map((char, index) => {
             if (index === 0 && char.toUpperCase() === 'L') {
               return (
