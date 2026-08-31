@@ -56,20 +56,12 @@ export default async function AdminUsersPage() {
   const semesters = (semestersRes.data as unknown as SemesterItem[]) || [];
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-primary tracking-tight">Student & Faculty Roster</h1>
-        <p className="text-sm text-primary/60">
-          Provision student/faculty accounts, upload batch CSV files, or toggle access locks.
-        </p>
-      </header>
-
-      <UsersClient 
-        initialUsers={users} 
-        branches={branches} 
-        semesters={semesters} 
-      />
-    </div>
+    <UsersClient 
+      initialUsers={users} 
+      branches={branches} 
+      semesters={semesters} 
+    />
   );
 }
+
 
