@@ -345,10 +345,10 @@ export default async function FacultyDashboardPage() {
 
                   <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
                     <Link
-                      href={`/student/materials/${mat.id}`}
-                      className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-primary hover:text-white text-slate-700 text-xs font-semibold transition-all border border-slate-200 shadow-2xs"
+                      href="/faculty/materials"
+                      className="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-2xs"
                     >
-                      Preview
+                      Manage
                     </Link>
                   </div>
                 </div>
