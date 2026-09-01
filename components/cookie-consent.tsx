@@ -46,9 +46,6 @@ export function CookieConsent() {
             <div className="space-y-0.5">
               <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                 Cookie &amp; Session Preferences
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.2 rounded-full">
-                  Essential Only
-                </span>
               </h4>
               <p className="text-xs text-slate-600 leading-relaxed font-normal">
                 We use strictly essential session cookies to authenticate student/faculty roles and preserve study vault bookmarks.
