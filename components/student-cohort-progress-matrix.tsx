@@ -38,6 +38,17 @@ export interface ActivityLogItem {
   timestamp: string;
 }
 
+export interface RegisteredStudent {
+  id?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  branch?: string | null;
+  current_semester?: number | null;
+  section?: string | null;
+  roll_number?: string | null;
+}
+
 export interface StudentCohortProgressMatrixProps {
   materialId: string;
   materialTitle: string;
@@ -46,6 +57,7 @@ export interface StudentCohortProgressMatrixProps {
   files: FileInfo[];
   activityLogs: ActivityLogItem[];
   uploaderName?: string;
+  students?: RegisteredStudent[];
 }
 
 interface StudentFileStatus {
@@ -108,9 +120,9 @@ function formatTimestamp(isoString?: string): string {
   }
 }
 
-// Generate complete cohort of 71 roll numbers for CIC Semester 3
-function generateCohortRolls(branch: string, semester: number): { roll: string; name: string; section: string }[] {
-  const cohort: { roll: string; name: string; section: string }[] = [];
+// Generate complete cohort of roll numbers fallback when no students are registered yet in DB
+function generateCohortRolls(branch: string, semester: number): { roll: string; name: string; section: string; email?: string }[] {
+  const cohort: { roll: string; name: string; section: string; email?: string }[] = [];
   const b = (branch || "CIC").toUpperCase();
 
   const knownStudents: Record<string, string> = {
@@ -165,6 +177,7 @@ export default function StudentCohortProgressMatrix({
   files,
   activityLogs,
   uploaderName,
+  students,
 }: StudentCohortProgressMatrixProps) {
   const [selectedFileFilter, setSelectedFileFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "downloaded" | "viewed" | "pending">("ALL");
@@ -179,18 +192,78 @@ export default function StudentCohortProgressMatrix({
     ];
   }, [files]);
 
-  // Compute Full Cohort Records with per-file status & accurate latest timestamps
+  // Compute Full Cohort Records using actual registered students from User Management matching this class
   const cohortRecords: StudentProgressRecord[] = useMemo(() => {
-    const rawCohort = generateCohortRolls(branch, semester);
+    const targetBranch = (branch || "CIC").toUpperCase().trim();
+    const targetSem = Number(semester || 3);
+
+    let rawCohort: { roll: string; name: string; section: string; email?: string }[] = [];
+
+    if (students && students.length > 0) {
+      // 1. Filter students from User Management for this specific branch and semester
+      const relevantStudents = students.filter((s) => {
+        if (s.role === "admin" || s.role === "faculty") return false;
+
+        const sBranch = (s.branch || "").toUpperCase().trim();
+        const sSem = Number(s.current_semester);
+
+        const branchMatch = !sBranch || sBranch === "ALL" || sBranch === targetBranch;
+        const semMatch = !sSem || isNaN(sSem) || sSem === targetSem;
+
+        return branchMatch && semMatch;
+      });
+
+      if (relevantStudents.length > 0) {
+        rawCohort = relevantStudents.map((s) => {
+          const roll = (s.roll_number || (s.email?.includes("@") ? s.email.split("@")[0] : "") || "STUDENT").trim().toUpperCase();
+          const name = s.name?.trim() || `Student ${roll.slice(-4)}`;
+          const section = (s.section || (parseInt(roll.slice(-2), 10) <= 36 ? "A" : "B")).toUpperCase();
+          return {
+            roll,
+            name,
+            section,
+            email: s.email,
+          };
+        });
+      }
+    }
+
+    // 2. Also append any students who have active activity logs for this material
+    const seenRolls = new Set(rawCohort.map((c) => c.roll.toUpperCase()));
+    activityLogs.forEach((log) => {
+      const logRoll = (log.rollNumber || (log.email?.includes("@") ? log.email.split("@")[0] : "")).trim().toUpperCase();
+      if (logRoll && !seenRolls.has(logRoll) && !logRoll.startsWith("ADMIN") && !logRoll.startsWith("FACULTY")) {
+        seenRolls.add(logRoll);
+        rawCohort.push({
+          roll: logRoll,
+          name: log.studentName || `Student ${logRoll.slice(-4)}`,
+          section: log.section || (parseInt(logRoll.slice(-2), 10) <= 36 ? "A" : "B"),
+          email: log.email,
+        });
+      }
+    });
+
+    // 3. Fallback if no students are registered yet in User Management for this class
+    if (rawCohort.length === 0) {
+      rawCohort = generateCohortRolls(branch, semester);
+    }
+
+    // Sort cohort consistently by roll number (e.g., 23331A4701, 23331A4702, ...)
+    rawCohort.sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: "base" }));
 
     return rawCohort.map((c) => {
       // Find all activity events matching this student
       const studentEvents = activityLogs.filter((log) => {
         const r1 = (log.rollNumber || "").toUpperCase();
         const r2 = c.roll.toUpperCase();
-        const emailMatch = (log.email || "").toLowerCase().includes(c.roll.toLowerCase());
-        const nameMatch = (log.studentName || "").toLowerCase().includes(c.roll.toLowerCase());
-        return r1 === r2 || emailMatch || nameMatch;
+        const logEmail = (log.email || "").toLowerCase();
+        const cEmail = (c.email || "").toLowerCase();
+
+        const rollMatch = r1 === r2;
+        const emailMatch = (cEmail && logEmail === cEmail) || (c.roll && logEmail.includes(c.roll.toLowerCase()));
+        const nameMatch = log.studentName && c.name && log.studentName.toLowerCase() === c.name.toLowerCase();
+
+        return rollMatch || emailMatch || nameMatch;
       });
 
       // Sort student events by timestamp descending (newest first)
@@ -251,7 +324,7 @@ export default function StudentCohortProgressMatrix({
       return {
         rollNumber: c.roll,
         studentName: c.name,
-        email: `${c.roll.toLowerCase()}@mvgrce.edu.in`,
+        email: c.email || `${c.roll.toLowerCase()}@mvgrce.edu.in`,
         branch: branch || "CIC",
         semester: semester || 3,
         section: c.section,
@@ -264,16 +337,16 @@ export default function StudentCohortProgressMatrix({
         lastActivityAt,
       };
     });
-  }, [branch, semester, activityLogs, normalizedFiles, selectedFileFilter]);
+  }, [branch, semester, activityLogs, normalizedFiles, selectedFileFilter, students]);
 
   const totalCount = cohortRecords.length;
   const downloadedCount = cohortRecords.filter((r) => r.hasDownloaded).length;
   const viewedCount = cohortRecords.filter((r) => r.hasViewed).length;
   const pendingCount = cohortRecords.filter((r) => r.isPending).length;
 
-  const downloadPct = Math.round((downloadedCount / totalCount) * 100) || 0;
-  const viewPct = Math.round((viewedCount / totalCount) * 100) || 0;
-  const pendingPct = Math.max(0, 100 - downloadPct);
+  const downloadPct = totalCount > 0 ? Math.round((downloadedCount / totalCount) * 100) : 0;
+  const viewPct = totalCount > 0 ? Math.round((viewedCount / totalCount) * 100) : 0;
+  const pendingPct = totalCount > 0 ? Math.round((pendingCount / totalCount) * 100) : 0;
 
   const filteredCohort = useMemo(() => {
     return cohortRecords.filter((r) => {

@@ -6,7 +6,7 @@ import { toggleMaterialState, deleteMaterial, getFacultyFilePreviewUrl } from ".
 import ReplaceDialog from "./replace-dialog";
 import FilePreviewModal from "@/components/file-preview-modal";
 import { StudentEngagementLog } from "./page";
-import StudentCohortProgressMatrix from "@/components/student-cohort-progress-matrix";
+import StudentCohortProgressMatrix, { RegisteredStudent } from "@/components/student-cohort-progress-matrix";
 import { 
   FileText, 
   Archive, 
@@ -66,9 +66,10 @@ interface MaterialItem {
 interface MaterialsListProps {
   initialMaterials: MaterialItem[];
   subjects: SubjectItem[];
+  students?: RegisteredStudent[];
 }
 
-export default function MaterialsList({ initialMaterials, subjects }: MaterialsListProps) {
+export default function MaterialsList({ initialMaterials, subjects, students }: MaterialsListProps) {
   const [materials, setMaterials] = useState<MaterialItem[]>(initialMaterials);
   const [activeTab, setActiveTab] = useState<"all" | "published" | "draft" | "archived">("all");
   
@@ -807,6 +808,7 @@ export default function MaterialsList({ initialMaterials, subjects }: MaterialsL
                   files={inspectingMaterial.material_files || []}
                   activityLogs={inspectingMaterial.engagementLogs || []}
                   uploaderName="You (Faculty)"
+                  students={students}
                 />
                 <div className="h-20" />
               </div>

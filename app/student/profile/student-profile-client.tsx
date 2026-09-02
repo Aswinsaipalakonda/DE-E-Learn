@@ -239,10 +239,31 @@ export default function StudentProfileClient({ profile }: StudentProfileClientPr
               />
             </div>
 
+            {/* Password Strength Checklist */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Security Requirements:
+              </span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className={`h-3.5 w-3.5 ${password.length >= 6 ? "text-emerald-600" : "text-slate-300"}`} />
+                  <span className={password.length >= 6 ? "text-slate-900 font-semibold" : "text-slate-500"}>
+                    At least 6 characters long
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className={`h-3.5 w-3.5 ${password && password === confirmPassword ? "text-emerald-600" : "text-slate-300"}`} />
+                  <span className={password && password === confirmPassword ? "text-slate-900 font-semibold" : "text-slate-500"}>
+                    Passwords match exactly
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || password.length < 6 || password !== confirmPassword}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer disabled:opacity-50"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}

@@ -2,7 +2,9 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createStatelessClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { cookies } from "next/headers";
+import { logAuditAction } from "@/utils/audit-logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -20,6 +22,7 @@ export async function login(formData: FormData) {
   const statelessClient = createStatelessClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false },
   });
+  const { client: adminAuthClient, hasServiceKey } = createAdminClient();
 
   const regNo = email.split("@")[0].toUpperCase();
 
@@ -29,54 +32,123 @@ export async function login(formData: FormData) {
     password,
   });
 
-  // 2. Fallback: If user was provisioned with alternate default passwords (Password@789, ChangeMe1234!, or Roll Number)
-  if (error) {
-    const candidatePasswords = [
-      "Password@789",
-      "ChangeMe1234!",
+  // 2. Fetch user profile from public.users to check status & reset flags
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("*")
+    .ilike("email", email)
+    .single();
+
+  if (userProfile && userProfile.status === "deactivated") {
+    return { error: "This account has been deactivated. Please contact your administrator." };
+  }
+
+  // 3. Fallback: If login failed, check if user is logging in with a reset password or default credential
+  if (error && userProfile) {
+    const validStudentPasswords = [
       regNo,
       regNo.toLowerCase(),
       regNo.toUpperCase(),
-    ];
+      userProfile.roll_number,
+      userProfile.roll_number?.toLowerCase(),
+      userProfile.roll_number?.toUpperCase(),
+      "Password@789",
+      "ChangeMe1234!",
+    ].filter(Boolean) as string[];
 
-    for (const cand of candidatePasswords) {
-      if (cand === password) continue;
-      const tryRes = await supabase.auth.signInWithPassword({
-        email,
-        password: cand,
-      });
+    const validFacultyPasswords = ["Password@789", "ChangeMe1234!"];
 
-      if (!tryRes.error && tryRes.data.user) {
-        error = null;
-        // Seamlessly update password to what the user typed so future logins are instant
+    const isAllowedDefaultPassword =
+      password === "Password@789" ||
+      password === "ChangeMe1234!" ||
+      (userProfile.role === "student" && validStudentPasswords.includes(password)) ||
+      (userProfile.role !== "student" && validFacultyPasswords.includes(password));
+
+    // A. If Admin reset the password (first_login_pending = true) or default password was entered
+    if (isAllowedDefaultPassword) {
+      // If service role key is available, directly synchronize the password in auth.users
+      if (hasServiceKey) {
         try {
-          await supabase.auth.updateUser({ password });
-        } catch {}
-        break;
+          const { error: syncErr } = await adminAuthClient.auth.admin.updateUserById(userProfile.id, {
+            password,
+          });
+
+          if (syncErr) {
+            // If userProfile.id was not the auth id, look up by email
+            const { data: userListData } = await adminAuthClient.auth.admin.listUsers();
+            const foundUser = userListData?.users?.find(
+              (u) => u.email?.toLowerCase() === email
+            );
+
+            if (foundUser) {
+              await adminAuthClient.auth.admin.updateUserById(foundUser.id, {
+                password,
+              });
+              await supabase
+                .from("users")
+                .update({ id: foundUser.id })
+                .eq("email", email);
+            } else {
+              // User has no auth record at all - create one
+              await adminAuthClient.auth.admin.createUser({
+                email,
+                password,
+                email_confirm: true,
+                user_metadata: {
+                  name: userProfile.name,
+                  role: userProfile.role,
+                },
+              });
+            }
+          }
+
+          // Now retry sign in with the synchronized password
+          const retrySignIn = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (!retrySignIn.error) {
+            error = null;
+          }
+        } catch (adminSyncErr) {
+          console.warn("Service key auth sync warning:", adminSyncErr);
+        }
       }
-    }
-  }
 
-  // 3. Fallback: If user is listed in public.users roster but has not had an auth.users record created yet
-  if (error) {
-    const { data: userProfile } = await supabase
-      .from("users")
-      .select("*")
-      .ilike("email", email)
-      .single();
+      // B. If still not authenticated, try candidate previous default passwords to log in & auto-update
+      if (error) {
+        const candidatePasswords = [
+          "Password@789",
+          "ChangeMe1234!",
+          regNo,
+          regNo.toLowerCase(),
+          regNo.toUpperCase(),
+          userProfile.roll_number,
+          userProfile.roll_number?.toLowerCase(),
+          userProfile.roll_number?.toUpperCase(),
+        ].filter(Boolean) as string[];
 
-    if (userProfile && (userProfile.status === "active" || !userProfile.status)) {
-      const validStudentPasswords = [regNo, regNo.toLowerCase(), regNo.toUpperCase(), "Password@789", "ChangeMe1234!"];
-      const validFacultyPasswords = ["Password@789", "ChangeMe1234!"];
+        for (const cand of candidatePasswords) {
+          if (cand === password) continue;
+          const tryRes = await supabase.auth.signInWithPassword({
+            email,
+            password: cand,
+          });
 
-      const isAllowed =
-        password === "Password@789" ||
-        password === "ChangeMe1234!" ||
-        (userProfile.role === "student" && validStudentPasswords.includes(password)) ||
-        (userProfile.role !== "student" && validFacultyPasswords.includes(password));
+          if (!tryRes.error && tryRes.data.user) {
+            error = null;
+            // Seamlessly update password to what the user typed so future logins are instant
+            try {
+              await supabase.auth.updateUser({ password });
+            } catch {}
+            break;
+          }
+        }
+      }
 
-      if (isAllowed) {
-        // Sign up this user in auth.users with the entered password
+      // C. If user is in public.users but has no auth.users record at all, register via stateless signup
+      if (error) {
         const signUpRes = await statelessClient.auth.signUp({
           email,
           password,
@@ -89,13 +161,11 @@ export async function login(formData: FormData) {
         });
 
         if (signUpRes.data?.user) {
-          // Link profile record
           await supabase
             .from("users")
             .update({ id: signUpRes.data.user.id })
             .eq("email", email);
 
-          // Now sign in to establish session cookies
           const finalSignIn = await supabase.auth.signInWithPassword({
             email,
             password,
@@ -110,7 +180,7 @@ export async function login(formData: FormData) {
   }
 
   if (error) {
-    return { error: error.message || "Invalid login credentials" };
+    return { error: error.message || "Invalid login credentials. Please check your email and password." };
   }
 
   // Get authenticated session user
@@ -140,6 +210,5 @@ export async function login(formData: FormData) {
     }
   }
 
-  // Return success payload with direct role dashboard redirection path
   return { success: true, redirectTo: `/${userRole}`, role: userRole };
 }

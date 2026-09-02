@@ -243,12 +243,24 @@ export default async function AdminAnalyticsPage() {
   const totalViews = materialsWithMetrics.reduce((acc, curr) => acc + curr.views, 0);
   const totalDownloads = materialsWithMetrics.reduce((acc, curr) => acc + curr.downloads, 0);
 
+  const students = dbUsers.map((u) => ({
+    id: u.id as string,
+    name: u.name as string,
+    email: u.email as string,
+    role: u.role as string,
+    branch: u.branch as string,
+    current_semester: u.current_semester as number,
+    section: u.section as string,
+    roll_number: u.roll_number as string,
+  }));
+
   return (
     <AnalyticsClient
       materials={materialsWithMetrics}
       branches={branches}
       totalViews={totalViews}
       totalDownloads={totalDownloads}
+      students={students}
     />
   );
 }

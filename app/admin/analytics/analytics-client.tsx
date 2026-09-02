@@ -18,7 +18,7 @@ import {
 import { logExportEvent } from "./actions";
 import { ToastContainer, ToastMessage } from "@/components/toast";
 import { StudentEngagementLog } from "./page";
-import StudentCohortProgressMatrix, { FileInfo } from "@/components/student-cohort-progress-matrix";
+import StudentCohortProgressMatrix, { FileInfo, RegisteredStudent } from "@/components/student-cohort-progress-matrix";
 
 interface MaterialWithMetrics {
   id: string;
@@ -42,6 +42,7 @@ interface AnalyticsClientProps {
   branches: { code: string; name: string }[];
   totalViews: number;
   totalDownloads: number;
+  students?: RegisteredStudent[];
 }
 
 export default function AnalyticsClient({
@@ -49,6 +50,7 @@ export default function AnalyticsClient({
   branches,
   totalViews,
   totalDownloads,
+  students,
 }: AnalyticsClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("ALL");
@@ -583,6 +585,7 @@ export default function AnalyticsClient({
                   files={inspectingMaterial.material_files || []}
                   activityLogs={inspectingMaterial.engagementLogs || []}
                   uploaderName={inspectingMaterial.users?.name || "Faculty Member"}
+                  students={students}
                 />
                 <div className="h-20" />
               </div>

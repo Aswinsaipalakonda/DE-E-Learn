@@ -16,7 +16,10 @@ import {
   ChevronLeft,
   Layers,
   Pencil,
-  Trash2
+  Trash2,
+  Check,
+  ChevronDown,
+  CheckSquare
 } from "lucide-react";
 
 interface Branch {
@@ -45,10 +48,18 @@ interface TaxonomyClientProps {
   subjects: Subject[];
 }
 
-export default function TaxonomyClient({ branches: initialBranches, semesters, subjects: initialSubjects }: TaxonomyClientProps) {
+export default function TaxonomyClient({
+  branches: initialBranches,
+  semesters: initialSemesters,
+  subjects: initialSubjects,
+}: TaxonomyClientProps) {
+  // Navigation Tabs: "subjects" | "branches" | "semesters"
   const [activeTab, setActiveTab] = useState<"subjects" | "branches" | "semesters">("subjects");
+
+  // Master Data
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
+  const [semesters] = useState<Semester[]>(initialSemesters);
 
   // Filter States for Subjects
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,10 +88,11 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
   const [deletingBranch, setDeletingBranch] = useState<Branch | null>(null);
   const [isDeletingBranch, setIsDeletingBranch] = useState(false);
 
-  // Subject Form State
+  // Subject Form State (Supports Multiple Branches)
   const [subCode, setSubCode] = useState("");
   const [subTitle, setSubTitle] = useState("");
-  const [subBranch, setSubBranch] = useState(initialBranches[0]?.code || "CIC");
+  const [subBranches, setSubBranches] = useState<string[]>([initialBranches[0]?.code || "CIC"]);
+  const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
   const [subSemester, setSubSemester] = useState("1");
   const [subActive, setSubActive] = useState(true);
   const [subjectLoading, setSubjectLoading] = useState(false);
@@ -105,14 +117,36 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  // Branch selection toggle helper
+  const toggleBranchSelection = (bCode: string) => {
+    setSubBranches((prev) => {
+      if (prev.includes(bCode)) {
+        if (prev.length === 1) return prev; // Keep at least one branch selected
+        return prev.filter((b) => b !== bCode);
+      } else {
+        return [...prev, bCode];
+      }
+    });
+  };
+
+  // Toggle select all branches
+  const toggleSelectAllBranches = () => {
+    if (subBranches.length === branches.length) {
+      setSubBranches([branches[0]?.code || "CIC"]);
+    } else {
+      setSubBranches(branches.map((b) => b.code));
+    }
+  };
+
   // Open Drawer in Create Mode
   const openSubjectDrawer = () => {
     setEditingSubject(null);
     setSubCode("");
     setSubTitle("");
-    setSubBranch(branches[0]?.code || "CIC");
+    setSubBranches(branches.map((b) => b.code)); // Default to all branches for convenience
     setSubSemester("1");
     setSubActive(true);
+    setIsBranchDropdownOpen(false);
     setIsSubjectDrawerMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -126,9 +160,10 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
     setEditingSubject({ originalCode: subject.code, originalBranch: subject.branch });
     setSubCode(subject.code);
     setSubTitle(subject.title);
-    setSubBranch(subject.branch);
+    setSubBranches([subject.branch]);
     setSubSemester(subject.semester.toString());
     setSubActive(subject.active);
+    setIsBranchDropdownOpen(false);
     setIsSubjectDrawerMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -139,6 +174,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
 
   const closeSubjectDrawer = () => {
     setIsSubjectDrawerVisible(false);
+    setIsBranchDropdownOpen(false);
     setTimeout(() => {
       setIsSubjectDrawerMounted(false);
       setEditingSubject(null);
@@ -166,9 +202,9 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
     const totalSubjects = subjects.length;
     const activeSubjects = subjects.filter((s) => s.active).length;
     const totalBranches = branches.length;
-    const totalSemesters = semesters.length;
+    const totalSemesters = initialSemesters.length;
     return { totalSubjects, activeSubjects, totalBranches, totalSemesters };
-  }, [subjects, branches, semesters]);
+  }, [subjects, branches, initialSemesters]);
 
   // Filtered Subjects
   const filteredSubjects = useMemo(() => {
@@ -199,6 +235,10 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
   // Submit Handler for Subject (Create OR Update)
   const handleSubjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (subBranches.length === 0) {
+      addToast("error", "Branch Selection Required", "Please select at least one branch for this subject.");
+      return;
+    }
     setSubjectLoading(true);
 
     const semNum = parseInt(subSemester, 10);
@@ -214,7 +254,7 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
           {
             code: formattedCode,
             title: formattedTitle,
-            branch: subBranch,
+            branches: subBranches,
             semester: semNum,
             active: subActive,
           }
@@ -223,28 +263,33 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
         if (result.error) {
           addToast("error", "Subject Update Failed", result.error);
         } else {
-          addToast("success", "Subject Updated", `${formattedCode} - ${formattedTitle} details updated.`);
-          setSubjects((prev) =>
-            prev.map((s) =>
-              s.code === editingSubject.originalCode && s.branch === editingSubject.originalBranch
-                ? {
-                    code: formattedCode,
-                    title: formattedTitle,
-                    branch: subBranch,
-                    semester: semNum,
-                    active: subActive,
-                  }
-                : s
-            )
+          addToast(
+            "success", 
+            "Subject Updated", 
+            `${formattedCode} - ${formattedTitle} updated across ${subBranches.join(", ")}.`
           );
+          const updatedRecords = subBranches.map((b) => ({
+            code: formattedCode,
+            title: formattedTitle,
+            branch: b,
+            semester: semNum,
+            active: subActive,
+          }));
+          setSubjects((prev) => [
+            ...updatedRecords,
+            ...prev.filter((s) => !(
+              (s.code === editingSubject.originalCode && s.branch === editingSubject.originalBranch) ||
+              (s.code === formattedCode && subBranches.includes(s.branch))
+            )),
+          ]);
           closeSubjectDrawer();
         }
       } else {
-        // CREATE Subject
+        // CREATE Subject across selected branches
         const result = await createSubjectAction(
           formattedCode,
           formattedTitle,
-          subBranch,
+          subBranches,
           semNum
         );
 
@@ -254,17 +299,18 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
           addToast(
             "success",
             "Subject Created Successfully",
-            `${formattedCode} - ${formattedTitle} added to ${subBranch}.`
+            `${formattedCode} - ${formattedTitle} registered for ${subBranches.join(", ")}.`
           );
+          const createdRecords = subBranches.map((b) => ({
+            code: formattedCode,
+            title: formattedTitle,
+            branch: b,
+            semester: semNum,
+            active: true,
+          }));
           setSubjects((prev) => [
-            {
-              code: formattedCode,
-              title: formattedTitle,
-              branch: subBranch,
-              semester: semNum,
-              active: true,
-            },
-            ...prev,
+            ...createdRecords,
+            ...prev.filter((s) => !(s.code === formattedCode && subBranches.includes(s.branch))),
           ]);
           setSubCode("");
           setSubTitle("");
@@ -953,40 +999,152 @@ export default function TaxonomyClient({ branches: initialBranches, semesters, s
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
-                      Branch *
+                {/* Multi-Select Branches Checkbox Dropdown */}
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
+                      Branches (Multi-Select) *
                     </label>
-                    <select
-                      value={subBranch}
-                      onChange={(e) => setSubBranch(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllBranches}
+                      className="text-[11px] font-bold text-secondary hover:underline cursor-pointer"
                     >
-                      {branches.map((b) => (
-                        <option key={b.code} value={b.code}>
-                          {b.code}
-                        </option>
-                      ))}
-                    </select>
+                      {subBranches.length === branches.length ? "Deselect All" : "Select All Branches"}
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
-                      Semester *
-                    </label>
-                    <select
-                      value={subSemester}
-                      onChange={(e) => setSubSemester(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
-                    >
-                      {semesters.map((s) => (
-                        <option key={s.number} value={s.number.toString()}>
-                          Sem {s.number}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Multi-Select Trigger Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsBranchDropdownOpen((prev) => !prev)}
+                    className="w-full min-h-[44px] px-3.5 py-2 text-left bg-bg border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary flex items-center justify-between gap-2 cursor-pointer transition-all hover:border-primary/30"
+                  >
+                    <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                      {subBranches.length === branches.length ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200">
+                          <Check className="h-3 w-3" /> All Branches ({branches.length})
+                        </span>
+                      ) : subBranches.length > 0 ? (
+                        subBranches.map((bCode) => (
+                          <span
+                            key={bCode}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200 shadow-2xs"
+                          >
+                            {bCode}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-sm text-primary/40">Select one or more branches...</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-primary/50 shrink-0">
+                      <span className="text-[11px] font-medium hidden sm:inline">
+                        {subBranches.length} selected
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          isBranchDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
+                  </button>
+
+                  {/* Multi-Select Dropdown Menu */}
+                  {isBranchDropdownOpen && (
+                    <>
+                      {/* Backdrop to close on click outside */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsBranchDropdownOpen(false)}
+                      />
+                      <div className="absolute left-0 right-0 top-full mt-1.5 p-2 bg-surface border border-border rounded-2xl shadow-xl z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                        {/* Select All Option */}
+                        <button
+                          type="button"
+                          onClick={toggleSelectAllBranches}
+                          className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold hover:bg-bg flex items-center justify-between cursor-pointer transition-colors text-primary"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <input
+                              type="checkbox"
+                              checked={subBranches.length === branches.length}
+                              onChange={() => {}}
+                              className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer pointer-events-none"
+                            />
+                            <span>All Branches (Common Course)</span>
+                          </div>
+                          <span className="text-[10px] text-primary/50 uppercase font-semibold">
+                            {branches.length} Branches
+                          </span>
+                        </button>
+
+                        <div className="border-t border-border my-1" />
+
+                        {/* Individual Branches List */}
+                        <div className="max-h-48 overflow-y-auto space-y-0.5 pr-1">
+                          {branches.map((b) => {
+                            const isSelected = subBranches.includes(b.code);
+                            return (
+                              <button
+                                key={b.code}
+                                type="button"
+                                onClick={() => toggleBranchSelection(b.code)}
+                                className={`w-full px-3 py-2 rounded-xl text-left text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                                  isSelected
+                                    ? "bg-primary/5 text-primary font-bold"
+                                    : "hover:bg-bg text-primary/80 font-normal"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => {}}
+                                    className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer pointer-events-none shrink-0"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-extrabold text-xs">{b.code}</span>
+                                      {!b.active && (
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                          Inactive
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-[11px] text-primary/55 block truncate font-normal">
+                                      {b.name}
+                                    </span>
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Semester Selector */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                    Semester *
+                  </label>
+                  <select
+                    value={subSemester}
+                    onChange={(e) => setSubSemester(e.target.value)}
+                    className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
+                  >
+                    {semesters.map((s) => (
+                      <option key={s.number} value={s.number.toString()}>
+                        Semester {s.number} ({s.name})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {editingSubject && (

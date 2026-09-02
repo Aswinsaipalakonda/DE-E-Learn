@@ -268,6 +268,17 @@ export default async function FacultyMaterialsPage() {
 
   const subjects = Array.from(subjectsMap.values());
 
+  const students = dbUsers.map((u) => ({
+    id: u.id as string,
+    name: u.name as string,
+    email: u.email as string,
+    role: u.role as string,
+    branch: u.branch as string,
+    current_semester: u.current_semester as number,
+    section: u.section as string,
+    roll_number: u.roll_number as string,
+  }));
+
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-6xl pb-10">
       {/* Top Header Actions */}
@@ -298,7 +309,7 @@ export default async function FacultyMaterialsPage() {
         </p>
       </header>
 
-      <MaterialsList initialMaterials={materials} subjects={subjects} />
+      <MaterialsList initialMaterials={materials} subjects={subjects} students={students} />
     </div>
   );
 }

@@ -180,6 +180,8 @@ export async function updateUserAction(
   return { success: true, user: profileData };
 }
 
+import { createAdminClient } from "@/utils/supabase/admin";
+
 // Reset User Password by Admin Action
 export async function adminResetUserPassword(userId: string, email: string) {
   const cookieStore = await cookies();
@@ -199,17 +201,75 @@ export async function adminResetUserPassword(userId: string, email: string) {
   }
 
   const defaultPassword = "Password@789";
+  const normalizedEmail = email.trim().toLowerCase();
 
-  // 1. Mark first_login_pending = true in public.users table
+  // 1. Try resetting password via Supabase Auth Admin API (if service role key is available)
+  const { client: adminAuthClient, hasServiceKey } = createAdminClient();
+  let authUpdated = false;
+
+  if (hasServiceKey) {
+    try {
+      const { error: updateAuthErr } = await adminAuthClient.auth.admin.updateUserById(userId, {
+        password: defaultPassword,
+      });
+
+      if (!updateAuthErr) {
+        authUpdated = true;
+      } else {
+        // If ID mismatched, try finding user by email
+        const { data: userListData } = await adminAuthClient.auth.admin.listUsers();
+        const found = userListData?.users?.find(
+          (u) => u.email?.toLowerCase() === normalizedEmail
+        );
+        if (found) {
+          const { error: retryAuthErr } = await adminAuthClient.auth.admin.updateUserById(found.id, {
+            password: defaultPassword,
+          });
+          if (!retryAuthErr) {
+            authUpdated = true;
+            // Sync user ID in public.users
+            await adminClient
+              .from("users")
+              .update({ id: found.id })
+              .eq("email", normalizedEmail);
+          }
+        }
+      }
+    } catch (adminErr) {
+      console.warn("Admin Auth API reset attempt failed:", adminErr);
+    }
+  }
+
+  // 2. Try resetting password via PostgreSQL RPC if available
+  if (!authUpdated) {
+    try {
+      const { data: rpcRes, error: rpcErr } = await adminClient.rpc("reset_user_password_admin", {
+        target_user_id: userId,
+        target_email: normalizedEmail,
+        new_password: defaultPassword,
+      });
+      if (!rpcErr && rpcRes?.success) {
+        authUpdated = true;
+      }
+    } catch {
+      // RPC may not be installed yet, graceful fallback
+    }
+  }
+
+  // 3. Update public.users record
   await adminClient
     .from("users")
-    .update({ first_login_pending: true })
-    .eq("id", userId);
+    .update({ 
+      first_login_pending: true,
+      status: "active"
+    })
+    .or(`id.eq.${userId},email.eq.${normalizedEmail}`);
 
-  // 2. Log security audit action
-  await logAuditAction("RESET_USER_PASSWORD", email, { userId }, {
+  // 4. Record Security Audit Log
+  await logAuditAction("ADMIN_RESET_PASSWORD", email, { userId }, {
     new_default_password: defaultPassword,
     reset_by: adminUser.email,
+    auth_credentials_synced: authUpdated,
     timestamp: new Date().toISOString()
   });
 
@@ -250,6 +310,16 @@ export async function deleteUserAction(userId: string, email: string) {
 
   if (deleteError) {
     return { error: `Delete failed: ${deleteError.message}` };
+  }
+
+  // Also remove from auth.users if service key is present
+  const { client: adminAuthClient, hasServiceKey } = createAdminClient();
+  if (hasServiceKey) {
+    try {
+      await adminAuthClient.auth.admin.deleteUser(userId);
+    } catch (authDelErr) {
+      console.warn("Auth user deletion warning:", authDelErr);
+    }
   }
 
   await logAuditAction("DELETE_USER", email, { id: userId }, null);
