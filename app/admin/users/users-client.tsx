@@ -1950,8 +1950,14 @@ V. Lakshmi Lavanya,faculty,,faculty.vll@mvgrce.edu.in,,,Assistant Professor`;
                     {matchingPromoteStudents.slice(0, 15).map((s) => (
                       <div key={s.id} className="flex items-center justify-between text-[11px] pt-1 first:pt-0">
                         <span className="font-bold text-slate-900">{s.roll_number || s.name}</span>
-                        <span className="text-slate-500 font-normal">
-                          {s.branch} • Sec {s.section || "A"} • Sem {s.current_semester} $\rightarrow$ Sem {promoteToSem}
+                        <span className="text-slate-500 font-normal inline-flex items-center gap-1">
+                          <span>{s.branch}</span>
+                          <span>•</span>
+                          <span>Sec {s.section || "A"}</span>
+                          <span>•</span>
+                          <span>Sem {s.current_semester}</span>
+                          <ArrowRight className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                          <span className="font-semibold text-blue-700">Sem {promoteToSem}</span>
                         </span>
                       </div>
                     ))}
