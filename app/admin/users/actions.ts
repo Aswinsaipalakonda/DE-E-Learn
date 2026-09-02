@@ -481,3 +481,51 @@ export async function toggleUserStatus(userId: string, currentStatus: string) {
   revalidatePath("/admin/users");
   return { success: true };
 }
+
+// Bulk promote students to next semester (e.g., promote all Sem 3 in CIC -> Sem 4)
+export async function bulkPromoteStudentsSemesterAction(
+  fromSemester: number,
+  toSemester: number,
+  branchFilter?: string
+) {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  let query = supabase
+    .from("users")
+    .update({ current_semester: toSemester })
+    .eq("role", "student")
+    .eq("current_semester", fromSemester);
+
+  if (branchFilter && branchFilter !== "ALL") {
+    query = query.eq("branch", branchFilter);
+  }
+
+  const { error } = await query;
+  if (error) return { error: error.message };
+
+  await logAuditAction("BULK_PROMOTE_SEMESTER", `Sem ${fromSemester} -> Sem ${toSemester}`, null, {
+    fromSemester,
+    toSemester,
+    branchFilter: branchFilter || "ALL",
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath("/admin/analytics");
+  revalidatePath("/student");
+  revalidatePath("/student/subjects");
+  return { success: true };
+}

@@ -261,14 +261,18 @@ export default async function StudentDashboard({
         {/* Card 2: Current Term */}
         <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Semester</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enrolled Term</span>
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
               <Layers className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
             </div>
           </div>
           <div>
-            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Sem {selectedSemester}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Current Semester {maxAllowedSemester}</span>
+            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Sem {maxAllowedSemester}</span>
+            <span className="text-[11px] sm:text-xs text-emerald-700 font-medium mt-0.5 block">
+              {selectedSemester === maxAllowedSemester
+                ? "Active Enrolled Semester"
+                : `Active Term (Browsing Sem ${selectedSemester})`}
+            </span>
           </div>
         </div>
 
@@ -282,7 +286,7 @@ export default async function StudentDashboard({
           </div>
           <div>
             <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{latestUploads.length} Units</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Verified Study Notes</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Sem {selectedSemester} Study Notes</span>
           </div>
         </div>
 
