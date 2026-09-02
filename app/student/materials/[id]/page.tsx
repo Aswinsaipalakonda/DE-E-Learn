@@ -5,10 +5,12 @@ import {
   FileText, 
   ArrowLeft, 
   Layers,
-  Sparkles
+  Sparkles,
+  Clock
 } from "lucide-react";
 import BookmarkButton from "./bookmark-button";
 import FileList from "./file-list";
+import { getActiveExamLockout } from "@/utils/exam-lockout";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -155,6 +157,38 @@ export default async function MaterialDetailsPage(props: PageProps) {
         </div>
       </div>
     );
+  }
+
+  // Check if material is locked for student under active Exam Mode
+  if (userRole === "student" && material.semester) {
+    const examLockout = await getActiveExamLockout(material.semester, material.branch);
+    if (examLockout.isLocked) {
+      return (
+        <div className="p-8 max-w-xl mx-auto space-y-4">
+          <Link 
+            href={returnUrl} 
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs transition-all shadow-sm"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>{returnLabel}</span>
+          </Link>
+          <div role="alert" className="p-7 bg-amber-50 border border-amber-200 rounded-3xl shadow-xs text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
+              <Clock className="h-6 w-6" />
+            </div>
+            <h2 className="text-base font-bold text-amber-950">
+              {examLockout.examTitle || "Examination Lockout Active"}
+            </h2>
+            <p className="text-xs text-amber-900/90 leading-relaxed font-normal">
+              {examLockout.message || "This study document is temporarily locked during the scheduled examination period. Access will resume automatically after the exam session concludes."}
+            </p>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-xs font-semibold text-amber-800">
+              Session Hours: {examLockout.startTimeText} – {examLockout.endTimeText}
+            </span>
+          </div>
+        </div>
+      );
+    }
   }
 
   // Check if bookmarked

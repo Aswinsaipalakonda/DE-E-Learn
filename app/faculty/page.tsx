@@ -162,15 +162,29 @@ export default async function FacultyDashboardPage() {
   });
   const events = Array.from(eventsMap.values());
 
-  // Attach dynamic real-time metrics to each material
+  // Attach dynamic real-time metrics to each material (Counting distinct student viewers and downloaders)
   const materialsWithMetrics = rawMaterials.map((m) => {
     const matEvents = events.filter((e) => (e.target_id || e.targetId) === m.id);
-    const views = matEvents.filter((e) => e.type === "view").length;
-    const downloads = matEvents.filter((e) => e.type === "download").length;
+
+    const uniqueStudentViewers = new Set(
+      matEvents
+        .filter((e) => e.type === "view")
+        .map((e) => e.actor_id || e.actor_roll || e.actor_email || e.metadata?.roll_number)
+        .filter(Boolean)
+    );
+
+    const uniqueStudentDownloaders = new Set(
+      matEvents
+        .filter((e) => e.type === "download")
+        .map((e) => e.actor_id || e.actor_roll || e.actor_email || e.metadata?.roll_number)
+        .filter(Boolean)
+    );
+
     return {
       ...m,
-      views,
-      downloads,
+      views: uniqueStudentViewers.size,
+      downloads: uniqueStudentDownloaders.size,
+      rawViewCount: matEvents.filter((e) => e.type === "view").length,
     };
   });
 
@@ -184,13 +198,23 @@ export default async function FacultyDashboardPage() {
   });
   const totalSubjectsCount = distinctSubjects.size;
 
-  const totalViews = rawMaterials.length > 0
-    ? materialsWithMetrics.reduce((acc, m) => acc + (m.views || 0), 0)
-    : 0;
+  // Total unique students across all faculty materials
+  const allStudentViewers = new Set(
+    events
+      .filter((e) => e.type === "view" && rawMaterials.some((m) => m.id === (e.target_id || e.targetId)))
+      .map((e) => e.actor_id || e.actor_roll || e.actor_email || e.metadata?.roll_number)
+      .filter(Boolean)
+  );
 
-  const totalDownloads = rawMaterials.length > 0
-    ? materialsWithMetrics.reduce((acc, m) => acc + (m.downloads || 0), 0)
-    : 0;
+  const allStudentDownloaders = new Set(
+    events
+      .filter((e) => e.type === "download" && rawMaterials.some((m) => m.id === (e.target_id || e.targetId)))
+      .map((e) => e.actor_id || e.actor_roll || e.actor_email || e.metadata?.roll_number)
+      .filter(Boolean)
+  );
+
+  const totalViews = rawMaterials.length > 0 ? allStudentViewers.size : 0;
+  const totalDownloads = rawMaterials.length > 0 ? allStudentDownloaders.size : 0;
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-7xl pb-8">
@@ -257,7 +281,7 @@ export default async function FacultyDashboardPage() {
           </div>
           <div>
             <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{totalViews}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Total Document Reads</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Unique Student Readers</span>
           </div>
         </div>
 
@@ -271,7 +295,7 @@ export default async function FacultyDashboardPage() {
           </div>
           <div>
             <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{totalDownloads}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Offline Student Copies</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Unique Student Downloads</span>
           </div>
         </div>
 

@@ -62,6 +62,8 @@ const FALLBACK_ANNOUNCEMENTS: AnnouncementItem[] = [
   }
 ];
 
+import { readLocalExamSchedules, ExamSchedule } from "@/utils/exam-lockout";
+
 export default async function AdminAnnouncementsPage() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -70,8 +72,8 @@ export default async function AdminAnnouncementsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch announcements, branches, and semesters
-  const [announcementsRes, branchesRes, semestersRes] = await Promise.all([
+  // Fetch announcements, branches, semesters, and exam schedules
+  const [announcementsRes, branchesRes, semestersRes, examSchedulesRes] = await Promise.all([
     supabase
       .from("announcements")
       .select("*")
@@ -84,11 +86,23 @@ export default async function AdminAnnouncementsPage() {
       .from("semesters")
       .select("number, name")
       .eq("active", true)
-      .order("number", { ascending: true })
+      .order("number", { ascending: true }),
+    supabase
+      .from("exam_schedules")
+      .select("*")
+      .order("created_at", { ascending: false }),
   ]);
 
   const dbAnnouncements = (announcementsRes.data as unknown as AnnouncementItem[]) || [];
   const allAnnouncements = dbAnnouncements.length > 0 ? dbAnnouncements : FALLBACK_ANNOUNCEMENTS;
+
+  const localExamSchedules = readLocalExamSchedules();
+  const dbExamSchedules = (examSchedulesRes.data as unknown as ExamSchedule[]) || [];
+  const scheduleMap = new Map<string, ExamSchedule>();
+  [...localExamSchedules, ...dbExamSchedules].forEach((s) => {
+    if (!scheduleMap.has(s.id)) scheduleMap.set(s.id, s);
+  });
+  const allExamSchedules = Array.from(scheduleMap.values());
 
   const branches = (branchesRes.data as unknown as { code: string; name: string }[]) || [
     { code: "CIC", name: "Computer Science & Information Technology" },
@@ -110,6 +124,7 @@ export default async function AdminAnnouncementsPage() {
   return (
     <AnnouncementsClient
       initialAnnouncements={allAnnouncements}
+      initialExamSchedules={allExamSchedules}
       branches={branches}
       semesters={semesters}
     />

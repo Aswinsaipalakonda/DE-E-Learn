@@ -12,6 +12,9 @@ import {
   Sparkles
 } from "lucide-react";
 
+import { getActiveExamLockout } from "@/utils/exam-lockout";
+import { Clock, Lock } from "lucide-react";
+
 interface PageProps {
   params: Promise<{ code: string }>;
   searchParams: Promise<{ q?: string; type?: string }>;
@@ -225,6 +228,9 @@ export default async function SubjectDetailPage(props: PageProps) {
     semester: fallbackData.semester,
   };
 
+  // Check if subject's semester is in active Exam Lockout
+  const examLockout = await getActiveExamLockout(subject.semester || 3, subject.branch);
+
   // Build Materials query from DB
   const { data: dbMaterials } = await supabase
     .from("materials")
@@ -330,54 +336,81 @@ export default async function SubjectDetailPage(props: PageProps) {
         })}
       </div>
 
-      {/* Materials List */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden divide-y divide-slate-100">
-        {materials && materials.length > 0 ? (
-          materials.map((mat: any) => (
-            <Link
-              key={mat.id}
-              href={`/student/materials/${mat.id}`}
-              className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-slate-50/80 transition-all group cursor-pointer"
-            >
-              <div className="space-y-1.5 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
-                    {mat.type}
-                  </span>
-                  <span className="text-xs text-slate-400 font-normal">
-                    {new Date(mat.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </span>
-                </div>
-
-                <h2 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-primary transition-colors leading-snug">
-                  {mat.title}
-                </h2>
-
-                {mat.tags && mat.tags.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    {mat.tags.map((t: string) => (
-                      <span key={t} className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] text-slate-500 font-normal">
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
-                <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-primary group-hover:text-white transition-all shadow-2xs">
-                  <ChevronRight className="h-4 w-4" />
-                </div>
-              </div>
-            </Link>
-          ))
-        ) : (
-          <div className="p-12 text-center text-xs text-slate-400 font-normal space-y-2">
-            <p className="font-semibold text-slate-700 text-sm">No materials found for &quot;{selectedType || query}&quot;</p>
-            <p>Try selecting another category pill or clear the search query.</p>
+      {/* Materials List / Exam Lockout */}
+      {examLockout.isLocked ? (
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-amber-200/90 shadow-xs space-y-3 bg-amber-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-800 border border-amber-300">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-amber-950">
+                {examLockout.examTitle || "Examination Lockout Active"}
+              </h3>
+              <p className="text-xs text-amber-800 font-medium mt-0.5">
+                Session Hours: {examLockout.startTimeText} – {examLockout.endTimeText} (IST)
+              </p>
+            </div>
           </div>
-        )}
-      </div>
+          <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed font-normal">
+            {examLockout.message || `Course materials for Semester ${subject.semester || 3} are temporarily locked during the scheduled evaluation window. Materials will automatically unlock when the session concludes.`}
+          </p>
+          <div className="pt-2 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-xs font-semibold text-amber-800">
+              <span className="h-2 w-2 rounded-full bg-amber-600 animate-ping" />
+              Locked for Examination Mode
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden divide-y divide-slate-100">
+          {materials && materials.length > 0 ? (
+            materials.map((mat: any) => (
+              <Link
+                key={mat.id}
+                href={`/student/materials/${mat.id}`}
+                className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-slate-50/80 transition-all group cursor-pointer"
+              >
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
+                      {mat.type}
+                    </span>
+                    <span className="text-xs text-slate-400 font-normal">
+                      {new Date(mat.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                  </div>
+
+                  <h2 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-primary transition-colors leading-snug">
+                    {mat.title}
+                  </h2>
+
+                  {mat.tags && mat.tags.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                      {mat.tags.map((t: string) => (
+                        <span key={t} className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] text-slate-500 font-normal">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                  <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-primary group-hover:text-white transition-all shadow-2xs">
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className="p-12 text-center text-xs text-slate-400 font-normal space-y-2">
+              <p className="font-semibold text-slate-700 text-sm">No materials found for &quot;{selectedType || query}&quot;</p>
+              <p>Try selecting another category pill or clear the search query.</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { StudentBookmarkHeroPill, StudentBookmarkShortcutCard } from "@/components/student-bookmark-pill";
 import { getStudentBookmarks } from "@/utils/bookmarks";
+import { getActiveExamLockout } from "@/utils/exam-lockout";
 
 interface SubjectInfo {
   title: string;
@@ -70,7 +71,7 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
       created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
       subjectTitle: "Operating Systems",
       subjectCode: "23CIC304",
-      facultyName: "V. Lakshmi Lavanya",
+      facultyName: "Dr. B. Anitha",
     },
   ],
   2: [
@@ -117,16 +118,16 @@ const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
 
 const FALLBACK_ANNOUNCEMENTS = [
   {
-    id: "ann-1",
-    title: "Mid-Term Examination Schedule & Syllabus Guidelines (AY 2026-27)",
-    content: "All B.Tech Data Engineering and CS students are required to review the published Mid-Term 1 timetable. Exam halls and seating allotments are posted on the departmental notice board.",
+    id: "mock-ann-1",
+    title: "Mid-Term Examination Schedule & Hall Allotments",
+    content: "Evaluation sessions are scheduled. Please review seating plans posted outside the department office.",
     priority: "important",
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "ann-2",
-    title: "Guest Lecture: Scalable Distributed Systems by Industry Lead",
-    content: "Department of Data Engineering is hosting a specialized session on Big Data Architectures and Real-time Stream Analytics by Google Cloud engineers.",
+    id: "mock-ann-2",
+    title: "Special Workshop: Big Data Technologies with Google Cloud",
+    content: "Interactive workshop for 3rd and 5th semester students in the main auditorium.",
     priority: "normal",
     created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -161,7 +162,10 @@ export default async function StudentDashboard({
   const requestedSem = resolvedParams.sem ? parseInt(resolvedParams.sem, 10) : maxAllowedSemester;
   const selectedSemester = Math.min(Math.max(1, requestedSem), maxAllowedSemester);
 
-  // 1. Fetch announcements active today matching scope
+  // 1. Check if the selected semester is currently under Exam Mode Lockout
+  const examLockout = await getActiveExamLockout(selectedSemester, branch);
+
+  // 2. Fetch announcements active today matching scope
   const nowStr = new Date().toISOString();
   const { data: dbAnnouncements } = await supabase
     .from("announcements")
@@ -176,31 +180,34 @@ export default async function StudentDashboard({
 
   const announcements = (dbAnnouncements && dbAnnouncements.length > 0) ? dbAnnouncements : FALLBACK_ANNOUNCEMENTS;
 
-  // 2. Fetch latest uploads in student scope matching selected semester
-  const { data: dbLatestUploads } = await supabase
-    .from("materials")
-    .select("id, title, type, created_at, subjects(title, code)")
-    .eq("branch", branch)
-    .eq("semester", selectedSemester)
-    .eq("state", "published")
-    .order("created_at", { ascending: false })
-    .limit(6);
+  // 3. Fetch latest uploads in student scope matching selected semester (if not in Exam Lockout)
+  let latestUploads: MaterialItem[] = [];
+  if (!examLockout.isLocked) {
+    const { data: dbLatestUploads } = await supabase
+      .from("materials")
+      .select("id, title, type, created_at, subjects(title, code)")
+      .eq("branch", branch)
+      .eq("semester", selectedSemester)
+      .eq("state", "published")
+      .order("created_at", { ascending: false })
+      .limit(6);
 
-  const rawUploads = (dbLatestUploads || []).map((m) => ({
-    id: m.id,
-    title: m.title,
-    type: m.type,
-    created_at: m.created_at,
-    subjectTitle: (m.subjects as unknown as SubjectInfo | null)?.title || "Curriculum Subject",
-    subjectCode: (m.subjects as unknown as SubjectInfo | null)?.code || "",
-    facultyName: "Faculty Contributor",
-  }));
+    const rawUploads = (dbLatestUploads || []).map((m) => ({
+      id: m.id,
+      title: m.title,
+      type: m.type,
+      created_at: m.created_at,
+      subjectTitle: (m.subjects as unknown as SubjectInfo | null)?.title || "Curriculum Subject",
+      subjectCode: (m.subjects as unknown as SubjectInfo | null)?.code || "",
+      facultyName: "Faculty Contributor",
+    }));
 
-  const latestUploads: MaterialItem[] = rawUploads.length > 0 
-    ? rawUploads 
-    : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3] || []);
+    latestUploads = rawUploads.length > 0 
+      ? rawUploads 
+      : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3] || []);
+  }
 
-  // 3. Read dynamic bookmarks from unified source
+  // 4. Read dynamic bookmarks from unified source
   const { count: displayBookmarksCount } = await getStudentBookmarks(supabase, user.id, cookieStore);
 
   // Generate semester tab numbers constrained up to the student's current semester
@@ -362,42 +369,73 @@ export default async function StudentDashboard({
             </Link>
           </div>
 
-          <div className="divide-y divide-slate-100">
-            {latestUploads.map((mat) => (
-              <Link
-                key={mat.id}
-                href={`/student/materials/${mat.id}`}
-                className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group hover:bg-slate-50/80 p-3 rounded-2xl transition-all cursor-pointer"
-              >
-                <div className="space-y-1.5 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
-                      {mat.type}
-                    </span>
-                    {mat.subjectCode && (
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-medium text-slate-600">
-                        {mat.subjectCode}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
-                    {mat.title}
+          {examLockout.isLocked ? (
+            <div className="p-6 sm:p-7 rounded-2xl bg-amber-50/80 border border-amber-200/90 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-800 border border-amber-300">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-amber-950">
+                    {examLockout.examTitle || "Examination Lockout Session Active"}
                   </h3>
-                  <p className="text-xs text-slate-500 font-normal flex items-center gap-2">
-                    <span>{mat.subjectTitle}</span>
-                    <span>•</span>
-                    <span>{mat.facultyName}</span>
+                  <p className="text-xs text-amber-800 font-medium mt-0.5">
+                    Timed Session Window: {examLockout.startTimeText} – {examLockout.endTimeText} (IST)
                   </p>
                 </div>
-
-                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
-                  <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-2xs">
-                    <ChevronRight className="h-4 w-4" />
+              </div>
+              <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed font-normal">
+                {examLockout.message || `Study materials for Semester ${selectedSemester} are temporarily locked during the scheduled examination period. Materials will automatically unlock when the timer concludes.`}
+              </p>
+              <div className="pt-1 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-xs font-semibold text-amber-800">
+                  <span className="h-2 w-2 rounded-full bg-amber-600 animate-ping" />
+                  Locked for Examination Mode
+                </span>
+              </div>
+            </div>
+          ) : latestUploads.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {latestUploads.map((mat) => (
+                <Link
+                  key={mat.id}
+                  href={`/student/materials/${mat.id}`}
+                  className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group hover:bg-slate-50/80 p-3 rounded-2xl transition-all cursor-pointer"
+                >
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
+                        {mat.type}
+                      </span>
+                      {mat.subjectCode && (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-medium text-slate-600">
+                          {mat.subjectCode}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
+                      {mat.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-normal flex items-center gap-2">
+                      <span>{mat.subjectTitle}</span>
+                      <span>•</span>
+                      <span>{mat.facultyName}</span>
+                    </p>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+
+                  <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                    <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-2xs">
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl border border-slate-100">
+              No published course materials found for Semester {selectedSemester}.
+            </div>
+          )}
         </section>
 
         {/* Right Column (4 cols): Announcements & Bookmarks */}
