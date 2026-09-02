@@ -14,6 +14,8 @@ import {
   AlertCircle
 } from "lucide-react";
 
+import { getServerActivityEvents } from "@/utils/activity-store";
+
 interface MaterialFileItem {
   size: number;
 }
@@ -134,40 +136,61 @@ export default async function FacultyDashboardPage() {
     .order("created_at", { ascending: false });
 
   const rawMaterials = (materialsData as unknown as MaterialWithFiles[]) || [];
-  const materials = rawMaterials.length > 0 ? rawMaterials : FALLBACK_FACULTY_MATERIALS;
-  const totalUploads = materials.length;
 
-  // Derive distinct subjects taught/handled
+  // Fetch all activity events across persistent server-store, cookies, and Supabase database
+  const serverEvents = getServerActivityEvents();
+  let cookieEvents: any[] = [];
+  try {
+    const rawCookie = cookieStore.get("de_live_activity_events")?.value;
+    if (rawCookie) cookieEvents = JSON.parse(rawCookie);
+  } catch {}
+
+  const { data: dbEventsData } = await supabase
+    .from("activity_events")
+    .select("id, type, target_id, actor_id, metadata, created_at");
+
+  const dbEvents = (dbEventsData as unknown as any[]) || [];
+  const allEvents = [...serverEvents, ...cookieEvents, ...dbEvents];
+
+  // Map events to deduplicate
+  const eventsMap = new Map<string, any>();
+  allEvents.forEach((ev) => {
+    const key = ev.id || `${ev.type}-${ev.target_id || ev.targetId}-${ev.actor_roll || ev.actor_id}-${ev.file_name || "page"}-${ev.created_at}`;
+    if (!eventsMap.has(key)) {
+      eventsMap.set(key, ev);
+    }
+  });
+  const events = Array.from(eventsMap.values());
+
+  // Attach dynamic real-time metrics to each material
+  const materialsWithMetrics = rawMaterials.map((m) => {
+    const matEvents = events.filter((e) => (e.target_id || e.targetId) === m.id);
+    const views = matEvents.filter((e) => e.type === "view").length;
+    const downloads = matEvents.filter((e) => e.type === "download").length;
+    return {
+      ...m,
+      views,
+      downloads,
+    };
+  });
+
+  const materials = rawMaterials.length > 0 ? materialsWithMetrics : FALLBACK_FACULTY_MATERIALS;
+  const totalUploads = rawMaterials.length > 0 ? rawMaterials.length : 0;
+
+  // Derive distinct subjects handled
   const distinctSubjects = new Set<string>();
-  materials.forEach((m) => {
+  rawMaterials.forEach((m) => {
     if (m.subject) distinctSubjects.add(m.subject);
   });
-  const totalSubjectsCount = distinctSubjects.size > 0 ? distinctSubjects.size : 3;
+  const totalSubjectsCount = distinctSubjects.size;
 
-  // Fetch views and downloads from activity events
-  let totalViews = 0;
-  let totalDownloads = 0;
-  const materialIds = materials.map((m) => m.id);
+  const totalViews = rawMaterials.length > 0
+    ? materialsWithMetrics.reduce((acc, m) => acc + (m.views || 0), 0)
+    : 0;
 
-  if (rawMaterials.length > 0 && materialIds.length > 0) {
-    const { data: events } = await supabase
-      .from("activity_events")
-      .select("type")
-      .in("target_id", materialIds);
-
-    if (events) {
-      events.forEach((ev) => {
-        if (ev.type === "view") totalViews++;
-        if (ev.type === "download") totalDownloads++;
-      });
-    }
-  } else {
-    // Sum fallback metrics
-    materials.forEach((m) => {
-      totalViews += m.views || 0;
-      totalDownloads += m.downloads || 0;
-    });
-  }
+  const totalDownloads = rawMaterials.length > 0
+    ? materialsWithMetrics.reduce((acc, m) => acc + (m.downloads || 0), 0)
+    : 0;
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-7xl pb-8">
