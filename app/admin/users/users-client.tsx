@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { createUserAction, updateUserAction, deleteUserAction, batchCreateUsersAction, toggleUserStatus, adminResetUserPassword } from "./actions";
+import { createUserAction, updateUserAction, deleteUserAction, batchCreateUsersAction, toggleUserStatus, adminResetUserPassword, bulkPromoteStudentsSemesterAction } from "./actions";
 import { ToastContainer, ToastMessage } from "@/components/toast";
 import { 
   Users as UsersIcon, 
@@ -24,7 +24,9 @@ import {
   KeyRound,
   RotateCcw,
   Copy,
-  Check
+  Check,
+  ArrowRight,
+  Sparkles
 } from "lucide-react";
 
 interface BranchOption {
@@ -96,6 +98,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   // CSV Modal Animation State
   const [isCsvMounted, setIsCsvMounted] = useState(false);
   const [isCsvVisible, setIsCsvVisible] = useState(false);
+
+  // Batch Semester Promotion Modal State
+  const [isPromoteModalMounted, setIsPromoteModalMounted] = useState(false);
+  const [isPromoteModalVisible, setIsPromoteModalVisible] = useState(false);
+  const [promoteFromSem, setPromoteFromSem] = useState(3);
+  const [promoteToSem, setPromoteToSem] = useState(4);
+  const [promoteBranch, setPromoteBranch] = useState("ALL");
+  const [isPromoting, setIsPromoting] = useState(false);
 
   // Form State
   const [email, setEmail] = useState("");
@@ -566,6 +576,69 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }
   };
 
+  // Batch Promotion Handlers
+  const matchingPromoteStudents = useMemo(() => {
+    return users.filter((u) => {
+      if (u.role !== "student") return false;
+      if (u.current_semester !== promoteFromSem) return false;
+      if (promoteBranch !== "ALL" && u.branch !== promoteBranch) return false;
+      return true;
+    });
+  }, [users, promoteFromSem, promoteBranch]);
+
+  const openPromoteModal = () => {
+    setIsPromoteModalMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsPromoteModalVisible(true);
+      });
+    });
+  };
+
+  const closePromoteModal = () => {
+    setIsPromoteModalVisible(false);
+    setTimeout(() => {
+      setIsPromoteModalMounted(false);
+    }, 400);
+  };
+
+  const handlePromoteConfirm = async () => {
+    if (matchingPromoteStudents.length === 0) {
+      addToast("error", "No Students Found", "There are no students matching the selected branch and semester criteria.");
+      return;
+    }
+    setIsPromoting(true);
+    try {
+      const res = await bulkPromoteStudentsSemesterAction(promoteFromSem, promoteToSem, promoteBranch);
+      if (res.error) {
+        addToast("error", "Promotion Failed", res.error);
+      } else {
+        addToast(
+          "success",
+          "Cohort Promoted Successfully",
+          `${matchingPromoteStudents.length} students advanced from Semester ${promoteFromSem} to Semester ${promoteToSem}.`
+        );
+        setUsers((prev) =>
+          prev.map((u) => {
+            if (
+              u.role === "student" &&
+              u.current_semester === promoteFromSem &&
+              (promoteBranch === "ALL" || u.branch === promoteBranch)
+            ) {
+              return { ...u, current_semester: promoteToSem };
+            }
+            return u;
+          })
+        );
+        closePromoteModal();
+      }
+    } catch {
+      addToast("error", "Error", "An unexpected error occurred during cohort promotion.");
+    } finally {
+      setIsPromoting(false);
+    }
+  };
+
   const handleStatusToggle = async (userId: string, currentStatus: string, userName: string) => {
     setTogglingId(userId);
     const newStatus = currentStatus === "active" ? "deactivated" : "active";
@@ -674,10 +747,18 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         </div>
 
         {/* Header Action Buttons */}
-        <div className="flex items-center gap-3 self-start lg:self-center shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center shrink-0">
+          <button
+            onClick={openPromoteModal}
+            className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full border border-blue-200 bg-blue-50/90 hover:bg-blue-100 text-blue-800 font-medium text-xs sm:text-sm transition-all shadow-2xs hover:shadow-xs cursor-pointer"
+          >
+            <GraduationCap className="h-4 w-4 text-blue-700" />
+            <span>Promote Cohort</span>
+          </button>
+
           <button
             onClick={openCsvModal}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-bg hover:bg-surface text-primary font-medium text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full border border-border bg-bg hover:bg-surface text-primary font-medium text-xs sm:text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
           >
             <Upload className="h-4 w-4 text-primary/70" />
             <span>Batch Import</span>
@@ -685,7 +766,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
           <button
             onClick={openCreateDrawer}
-            className="inline-flex items-center gap-2 px-5.5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-medium text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
             <span>Add User</span>
@@ -1736,6 +1817,181 @@ V. Lakshmi Lavanya,faculty,,faculty.vll@mvgrce.edu.in,,,Assistant Professor`;
                   </>
                 ) : (
                   "Execute Import"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* BATCH SEMESTER PROMOTION MODAL */}
+      {/* ========================================================================= */}
+      {isPromoteModalMounted && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isPromoteModalVisible ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={() => !isPromoting && closePromoteModal()}
+          />
+          <div
+            data-lenis-prevent
+            className={`bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-xl p-6 sm:p-7 space-y-5 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+              isPromoteModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+                    Batch Semester Promotion
+                  </h3>
+                  <p className="text-xs text-slate-500 font-normal mt-0.5">
+                    Advance enrolled students to their next curriculum term
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={closePromoteModal}
+                disabled={isPromoting}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-full cursor-pointer hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Form Content */}
+            <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+              {/* Branch Scope */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Academic Branch Scope
+                </label>
+                <select
+                  value={promoteBranch}
+                  onChange={(e) => setPromoteBranch(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer font-medium"
+                >
+                  <option value="ALL">All Branches (CIC, CSD, CSM)</option>
+                  {branches.map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.code} ({b.name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Semester Transition Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-center">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Current Semester (From)
+                  </label>
+                  <select
+                    value={promoteFromSem}
+                    onChange={(e) => {
+                      const from = parseInt(e.target.value, 10);
+                      setPromoteFromSem(from);
+                      setPromoteToSem(Math.min(8, from + 1));
+                    }}
+                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer font-medium"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                      <option key={num} value={num}>
+                        Semester {num}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Target Semester (To)
+                  </label>
+                  <select
+                    value={promoteToSem}
+                    onChange={(e) => setPromoteToSem(parseInt(e.target.value, 10))}
+                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer font-medium"
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8].map((num) => (
+                      <option key={num} value={num}>
+                        Semester {num}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Live Preview Box */}
+              <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wide flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                    Target Cohort Preview
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-200/60 text-blue-900 font-bold text-xs">
+                    {matchingPromoteStudents.length} Students Found
+                  </span>
+                </div>
+
+                <p className="text-xs text-blue-800/80 leading-relaxed font-normal">
+                  Advancing students from <strong>Semester {promoteFromSem}</strong> to <strong>Semester {promoteToSem}</strong> in{" "}
+                  <strong>{promoteBranch === "ALL" ? "All Departments" : `${promoteBranch} Department`}</strong>.
+                </p>
+
+                {matchingPromoteStudents.length > 0 ? (
+                  <div className="max-h-32 overflow-y-auto border border-blue-200/60 rounded-xl bg-white p-2 space-y-1 divide-y divide-slate-100">
+                    {matchingPromoteStudents.slice(0, 15).map((s) => (
+                      <div key={s.id} className="flex items-center justify-between text-[11px] pt-1 first:pt-0">
+                        <span className="font-bold text-slate-900">{s.roll_number || s.name}</span>
+                        <span className="text-slate-500 font-normal">
+                          {s.branch} • Sec {s.section || "A"} • Sem {s.current_semester} $\rightarrow$ Sem {promoteToSem}
+                        </span>
+                      </div>
+                    ))}
+                    {matchingPromoteStudents.length > 15 && (
+                      <div className="text-[10px] text-blue-600 text-center pt-1 font-semibold">
+                        + {matchingPromoteStudents.length - 15} more enrolled students
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                    No active students currently enrolled in <strong>Semester {promoteFromSem}</strong> for {promoteBranch === "ALL" ? "any branch" : promoteBranch}.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={closePromoteModal}
+                disabled={isPromoting}
+                className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePromoteConfirm}
+                disabled={isPromoting || matchingPromoteStudents.length === 0}
+                className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+              >
+                {isPromoting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Promoting Cohort...
+                  </>
+                ) : (
+                  `Promote ${matchingPromoteStudents.length} Students to Sem ${promoteToSem}`
                 )}
               </button>
             </div>
