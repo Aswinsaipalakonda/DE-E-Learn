@@ -1,39 +1,44 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, GraduationCap, BookOpen, ShieldCheck, ExternalLink } from "lucide-react";
+import { ArrowUpRight, GraduationCap, BookOpen, ShieldCheck, ExternalLink, HelpCircle } from "lucide-react";
 
 export function LandingFooter() {
   return (
     <footer className="bg-white border-t border-slate-200/90 pt-16 pb-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         
-        {/* Top 4-Column Grid */}
+        {/* Top 5-Column Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
           
           {/* Column 1 & 2: Institutional Brand */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-white p-1 border border-slate-200 shadow-xs flex items-center justify-center shrink-0">
+            <Link href="/" className="flex items-center gap-3.5 group">
+              <div className="w-11 h-11 rounded-2xl bg-white p-1 border border-slate-200 shadow-xs flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
                 <Image 
                   src="/De_logo.jpg" 
-                  alt="Department Logo" 
+                  alt="DataDock Logo" 
                   width={42} 
                   height={42} 
                   className="object-contain w-full h-full rounded-xl"
                 />
               </div>
               <div>
-                <span className="text-base font-extrabold text-slate-900 tracking-tight block leading-tight">
-                  Department of Data Engineering
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base font-black text-slate-900 tracking-tight block leading-tight">
+                    DataDock
+                  </span>
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                    DE Portal
+                  </span>
+                </div>
                 <span className="text-xs text-slate-500 font-medium block">
-                  MVGR College of Engineering (Autonomous)
+                  Department of Data Engineering • MVGRCE (A)
                 </span>
               </div>
-            </div>
+            </Link>
 
             <p className="text-xs text-slate-600 leading-relaxed font-normal max-w-sm">
-              The official centralized academic learning and verified materials repository for Cyber Security &amp; IoT (CIC), Data Science (CSD), and AI &amp; Machine Learning (CSM).
+              The centralized academic learning repository and verified materials cloud for Cyber Security &amp; IoT (CIC), Data Science (CSD), and AI &amp; Machine Learning (CSM).
             </p>
 
             {/* Accreditation Badges */}
@@ -57,24 +62,29 @@ export function LandingFooter() {
             </h4>
             <ul className="space-y-2 text-xs text-slate-600 font-medium">
               <li>
-                <a href="#specializations" className="hover:text-blue-600 transition-colors">
+                <Link href="/#specializations" className="hover:text-blue-600 transition-colors">
                   Cyber Security &amp; IoT (CIC)
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#specializations" className="hover:text-blue-600 transition-colors">
+                <Link href="/#specializations" className="hover:text-blue-600 transition-colors">
                   Data Science (CSD)
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#specializations" className="hover:text-blue-600 transition-colors">
+                <Link href="/#specializations" className="hover:text-blue-600 transition-colors">
                   AI &amp; Machine Learning (CSM)
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#about" className="hover:text-blue-600 transition-colors">
+                <Link href="/#about" className="hover:text-blue-600 transition-colors">
                   Autonomous Syllabi Sem 1–8
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/login" className="hover:text-blue-600 transition-colors">
+                  Lab Manuals &amp; Papers
+                </Link>
               </li>
             </ul>
           </div>
@@ -108,12 +118,32 @@ export function LandingFooter() {
             </ul>
           </div>
 
-          {/* Column 5: Institutional Links */}
+          {/* Column 5: Legal & Institutional Links */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Institution
+              Company &amp; Legal
             </h4>
             <ul className="space-y-2 text-xs text-slate-600 font-medium">
+              <li>
+                <Link href="/about" className="hover:text-blue-600 transition-colors">
+                  About DataDock
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-blue-600 transition-colors">
+                  Academic Help &amp; Support
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-blue-600 transition-colors">
+                  Terms &amp; Academic Code
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-blue-600 transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
               <li>
                 <a 
                   href="https://www.mvgrce.edu.in" 
@@ -123,19 +153,6 @@ export function LandingFooter() {
                 >
                   MVGR Official Site <ExternalLink className="h-3 w-3 text-slate-400" />
                 </a>
-              </li>
-              <li>
-                <a href="#faq" className="hover:text-blue-600 transition-colors">
-                  Help &amp; FAQ
-                </a>
-              </li>
-              <li>
-                <a href="#about" className="hover:text-blue-600 transition-colors">
-                  Department Standards
-                </a>
-              </li>
-              <li>
-                <span className="text-slate-400">Vizianagaram, AP, India</span>
               </li>
             </ul>
           </div>
@@ -149,8 +166,25 @@ export function LandingFooter() {
             <span className="font-medium text-slate-600">All Academic Cloud Systems Operational</span>
           </div>
 
-          <div className="font-normal">
-            © {new Date().getFullYear()} MVGR College of Engineering. Department of Data Engineering. All rights reserved.
+          <div className="font-normal flex items-center gap-3.5 flex-wrap justify-center sm:justify-end">
+            <Link href="/terms" className="hover:underline">Terms</Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:underline">Privacy</Link>
+            <span>•</span>
+            <Link href="/about" className="hover:underline">About</Link>
+            <span>•</span>
+            <Link href="/contact" className="hover:underline">Contact</Link>
+            <span>•</span>
+            <a 
+              href="https://aswinsai.tech/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-slate-600 hover:text-blue-600 font-semibold transition-colors"
+            >
+              Aswinsai
+            </a>
+            <span>•</span>
+            <span>© {new Date().getFullYear()} DataDock • MVGR Department of Data Engineering</span>
           </div>
         </div>
 

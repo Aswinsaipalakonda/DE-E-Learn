@@ -1,0 +1,37 @@
+# DataDock — MVGR Data Engineering Academic Portal
+
+> The centralized, official academic repository and e-learning cloud for the Department of Data Engineering at Maharaj Vijayaram Gajapathi Raj (MVGR) College of Engineering (Autonomous), Vizianagaram, Andhra Pradesh, India.
+
+## Primary Canonical URL
+- Website: https://datadock.aswinsai.tech
+- Alias Mirror: https://de-mvgrce.vercel.app
+
+## Overview & Purpose
+DataDock provides students and faculty with verified, peer-reviewed academic learning materials, autonomous regulation course syllabi (Semesters 1 to 8), previous year question papers, lab manuals, and mid-examination question banks for undergraduate B.Tech programs.
+
+## Department Specializations & Academic Tracks
+- **Cyber Security & IoT (CIC)**: Comprehensive coverage of network defense, ethical hacking, cryptography, embedded IoT hardware, sensor networks, cloud security, and digital forensics.
+- **Data Science (CSD)**: Deep coverage of big data architectures (Hadoop, Spark), data mining, predictive modeling, statistical learning, business analytics, and data warehousing.
+- **Artificial Intelligence & Machine Learning (CSM)**: In-depth materials for neural networks, deep learning architectures, computer vision, natural language processing (NLP), reinforcement learning, and generative AI systems.
+
+## Key Features & Available Resources
+- **Verified Lecture Notes**: Semester-by-semester unit-wise notes authored and verified by MVGR faculty coordinators.
+- **Autonomous Regulation Syllabi**: Full credit structure, course objectives, and outcomes for Semesters 1 through 8 under UGC Autonomous regulations.
+- **Lab Manuals & Practical Codes**: Step-by-step experiment procedures, sample outputs, viva questions, and source code repositories.
+- **Question Banks & Previous Papers**: Mid-semester question papers, semester-end university examination papers, and model solution sets.
+- **Personal Student Vault & Bookmarks**: Custom bookmarking and study tracking system for enrolled students.
+- **Faculty Curriculum Hub**: Content publishing, cohort management, and content versioning.
+
+## Key Navigation Links
+- [Home Page](https://datadock.aswinsai.tech)
+- [About DataDock & Department](https://datadock.aswinsai.tech/about)
+- [Student Portal & Study Materials](https://datadock.aswinsai.tech/login)
+- [Contact & Academic Support](https://datadock.aswinsai.tech/contact)
+- [Terms & Academic Honor Code](https://datadock.aswinsai.tech/terms)
+- [Privacy Policy](https://datadock.aswinsai.tech/privacy)
+
+## Institutional Details
+- **Institution**: MVGR College of Engineering (Autonomous)
+- **Department**: Department of Data Engineering
+- **Accreditations**: UGC Autonomous, NAAC 'A' Grade, NBA Accredited
+- **Location**: Chintalavalasa, Vizianagaram, Andhra Pradesh 535005, India

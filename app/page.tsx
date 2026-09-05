@@ -15,8 +15,9 @@ import { LandingFooter } from "@/components/landing-footer";
 import { CookieConsent } from "@/components/cookie-consent";
 
 export const metadata = {
-  title: "Data Engineering Portal | MVGR College of Engineering",
-  description: "Official E-Learning and Academic Materials Portal for the Department of Data Engineering, MVGR College of Engineering (Autonomous).",
+  title: "DataDock • Data Engineering | Academic Learning Cloud",
+  description:
+    "Official centralized study repository and learning cloud for the Department of Data Engineering, MVGR College of Engineering (Autonomous). Access verified notes, lab manuals, and question banks.",
 };
 
 export default async function LandingPage() {

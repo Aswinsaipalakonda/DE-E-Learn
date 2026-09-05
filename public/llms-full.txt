@@ -1,0 +1,31 @@
+# DataDock — Complete Institutional & Academic Knowledge Base
+
+## Institution Summary
+DataDock (https://datadock.aswinsai.tech) is the digital academic infrastructure for the Department of Data Engineering at MVGR College of Engineering (Autonomous), located in Vizianagaram, Andhra Pradesh, India. It centralizes educational resources, autonomous curriculum blueprints, syllabi from Semester 1 through 8, verified lecture notes, lab guides, and academic records.
+
+## Academic Programs Offered
+1. **B.Tech Cyber Security & IoT (Branch Code: CIC)**
+   - Core Areas: Applied Cryptography, Network Protocols, Penetration Testing, IoT Sensors & Actuators, Wireless Sensor Networks, Cloud & Edge Security, Incident Response.
+   - Resource Types: Unit-wise Lecture PPTs, C/Python/ARM lab codes, Wireshark lab manuals, End-sem question papers.
+
+2. **B.Tech Data Science (Branch Code: CSD)**
+   - Core Areas: Exploratory Data Analysis, Probability & Applied Statistics, Big Data Ecosystem (Hadoop, MapReduce, Apache Spark, Kafka), Data Warehousing, Data Mining, Predictive Modeling, Power BI & Tableau.
+   - Resource Types: Python/R notebooks, SQL lab manuals, statistical worksheets, model question papers.
+
+3. **B.Tech Artificial Intelligence & Machine Learning (Branch Code: CSM)**
+   - Core Areas: Linear Algebra, Supervised & Unsupervised Learning, Deep Neural Networks (CNNs, RNNs, Transformers), Natural Language Processing, Computer Vision, Reinforcement Learning, MLOps.
+   - Resource Types: PyTorch & TensorFlow notebooks, GPU lab guides, benchmark datasets, revision summaries.
+
+## Core Platform Functionality
+- **Student Portal**: Secure authentication, cohort-filtered study materials, bookmarking vault, semester navigation, search and filter by subject/unit/type.
+- **Faculty Portal**: Upload study material PDFs, question banks, manage subject allocations, view cohort analytics, system audit logs.
+- **Admin Control Center**: Role-based access control (RBAC), user directory management, department announcements, system configuration.
+
+## Direct URLs
+- Primary: https://datadock.aswinsai.tech
+- Alias: https://de-mvgrce.vercel.app
+- About: https://datadock.aswinsai.tech/about
+- Support: https://datadock.aswinsai.tech/contact
+- Terms of Use: https://datadock.aswinsai.tech/terms
+- Privacy Policy: https://datadock.aswinsai.tech/privacy
+- Login / Portal Access: https://datadock.aswinsai.tech/login

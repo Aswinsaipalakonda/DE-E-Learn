@@ -13,23 +13,24 @@ export interface NavigationLink {
 }
 
 const navigationData: NavigationLink[] = [
-  { title: "About", href: "#about" },
-  { title: "Features", href: "#features" },
-  { title: "Specializations", href: "#specializations" },
-  { title: "Testimonials", href: "#testimonials" },
-  { title: "FAQ", href: "#faq" },
+  { title: "About", href: "/about" },
+  { title: "Tracks", href: "/#specializations" },
+  { title: "Features", href: "/#features" },
+  { title: "FAQ", href: "/#faq" },
+  { title: "Support", href: "/contact" },
 ];
 
 export function LandingHeader() {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (href.startsWith("#")) {
-      e.preventDefault();
-      const targetElement = document.querySelector(href);
+    if (href.startsWith("/#") || href.startsWith("#")) {
+      const hash = href.includes("#") ? `#${href.split("#")[1]}` : href;
+      const targetElement = document.querySelector(hash);
       if (targetElement) {
+        e.preventDefault();
         targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
-        window.history.pushState(null, "", href);
+        window.history.pushState(null, "", hash);
       }
       setIsOpen(false);
     }
@@ -44,19 +45,24 @@ export function LandingHeader() {
           <div className="w-10 h-10 rounded-2xl bg-white p-1 shadow-xs border border-slate-200 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
             <Image
               src="/De_logo.jpg"
-              alt="Department of Data Engineering Logo"
+              alt="DataDock - Department of Data Engineering Logo"
               width={38}
               height={38}
               priority
               className="object-contain w-full h-full rounded-xl"
             />
           </div>
-          <div className="hidden sm:block">
-            <span className="font-extrabold text-sm text-slate-900 tracking-tight block leading-tight group-hover:text-blue-600 transition-colors">
-              Data Engineering
-            </span>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-black text-sm text-slate-900 tracking-tight block leading-tight group-hover:text-blue-600 transition-colors">
+                DataDock
+              </span>
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                DE
+              </span>
+            </div>
             <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase block">
-              MVGR College (A)
+              Data Engineering • MVGR (A)
             </span>
           </div>
         </Link>
