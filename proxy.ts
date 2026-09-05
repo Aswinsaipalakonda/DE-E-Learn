@@ -4,10 +4,33 @@ import { type NextRequest, NextResponse } from "next/server";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
+// Explicit public routes that never require authentication
+const PUBLIC_ROUTES = [
+  "/",
+  "/about",
+  "/terms",
+  "/privacy",
+  "/contact",
+  "/sitemap.xml",
+  "/robots.txt",
+  "/manifest.webmanifest",
+  "/llms.txt",
+  "/llms-full.txt",
+];
+
+// Protected route prefixes that strictly require an active session
+const PROTECTED_PREFIXES = [
+  "/student",
+  "/faculty",
+  "/admin",
+  "/profile",
+  "/change-password",
+];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Define assets and public paths to skip proxy execution
+  // 1. Skip assets, static files, and API endpoints
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -46,17 +69,28 @@ export async function proxy(request: NextRequest) {
   );
 
   // Retrieve user session safely
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // 1. If not logged in and not on login or landing page -> redirect to /login
+  const isProtectedPath = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+  const isAuthPath = pathname === "/login";
+
+  // Case A: Unauthenticated Visitor
   if (!user) {
-    if (pathname !== "/login" && pathname !== "/") {
-      return NextResponse.redirect(new URL("/login", request.url));
+    // If attempting to access a protected dashboard route, redirect to /login
+    if (isProtectedPath) {
+      const redirectUrl = new URL("/login", request.url);
+      redirectUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(redirectUrl);
     }
+    // Allow public pages (/about, /terms, /privacy, /contact, /, 404s, etc.)
     return supabaseResponse;
   }
 
-  // 2. If logged in, resolve role safely
+  // Case B: Authenticated User
   let role = user.user_metadata?.role;
   const { data: profile } = await supabase
     .from("users")
@@ -74,12 +108,12 @@ export async function proxy(request: NextRequest) {
     else role = "student";
   }
 
-  // 3. Redirect logged-in users visiting landing page or login page directly to their role dashboard
-  if (pathname === "/" || pathname === "/login" || pathname === "/change-password") {
+  // If logged in and visiting login page or root landing page, redirect to role dashboard
+  if (isAuthPath || pathname === "/") {
     return NextResponse.redirect(new URL(`/${role}`, request.url));
   }
 
-  // 4. Role-based Route Protection
+  // Role-based Route Protection
   if (pathname.startsWith("/admin") && role !== "admin") {
     return NextResponse.redirect(new URL(`/${role}`, request.url));
   }
@@ -87,8 +121,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/student", request.url));
   }
 
+  // Allow logged-in user to access their dashboard AND view informational pages (/about, /terms, /privacy, /contact)
   return supabaseResponse;
 }
+
+export const middleware = proxy;
+export default proxy;
 
 export const config = {
   matcher: [
