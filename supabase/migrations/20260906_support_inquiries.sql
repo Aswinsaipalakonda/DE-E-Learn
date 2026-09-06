@@ -36,10 +36,5 @@ CREATE POLICY "Allow admin full access on support_inquiries"
 ON public.support_inquiries 
 FOR ALL 
 TO authenticated 
-USING (
-    EXISTS (
-        SELECT 1 FROM public.users 
-        WHERE (public.users.id = auth.uid() OR public.users.email = auth.jwt() ->> 'email')
-          AND public.users.role = 'admin'
-    )
-);
+USING (public.is_admin());
+
