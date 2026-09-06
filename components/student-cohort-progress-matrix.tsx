@@ -120,14 +120,25 @@ function formatTimestamp(isoString?: string): string {
   }
 }
 
+// Resolve standard branch code from branch string or roll number
+function resolveBranchCode(rawBranch?: string | null, rawRoll?: string | null): "CIC" | "CSD" | "CSM" {
+  const b = (rawBranch || "").toUpperCase();
+  const r = (rawRoll || "").toUpperCase();
+  if (b.includes("CIC") || b.includes("CYBER") || b.includes("IOT") || b.startsWith("23CIC") || r.includes("A47") || r.includes("47")) return "CIC";
+  if (b.includes("CSD") || b.includes("DATA SCIENCE") || b.includes("DESIGN") || b.startsWith("23CSD") || r.includes("A05") || r.includes("05")) return "CSD";
+  if (b.includes("CSM") || b.includes("AI") || b.includes("MACHINE") || b.startsWith("23CSM") || r.includes("A42") || r.includes("42")) return "CSM";
+  return "CIC";
+}
+
 // Generate complete cohort of roll numbers fallback when no students are registered yet in DB
 function generateCohortRolls(branch: string, semester: number): { roll: string; name: string; section: string; email?: string }[] {
   const cohort: { roll: string; name: string; section: string; email?: string }[] = [];
-  const b = (branch || "CIC").toUpperCase();
+  const b = resolveBranchCode(branch);
 
   const knownStudents: Record<string, string> = {
     "23331A4701": "Rahul Varma Datla",
     "23331A4745": "Aswin Sai Palakonda",
+    "23331A4746": "Aswinnn",
     "23331A4718": "Sneha Reddy K.",
     "23331A4722": "Sai Kiran V.",
     "23331A4715": "B. Bhavana",
@@ -194,59 +205,60 @@ export default function StudentCohortProgressMatrix({
 
   // Compute Full Cohort Records using actual registered students from User Management matching this class
   const cohortRecords: StudentProgressRecord[] = useMemo(() => {
-    const targetBranch = (branch || "CIC").toUpperCase().trim();
-    const targetSem = Number(semester || 3);
+    const targetBranch = resolveBranchCode(branch);
+    const targetSem = Number(semester) || 3;
 
-    let rawCohort: { roll: string; name: string; section: string; email?: string }[] = [];
+    // 1. Generate full baseline class roster for this branch
+    const baseCohort = generateCohortRolls(targetBranch, targetSem);
 
+    // 2. Build deduplicated Map by normalized uppercase roll number
+    const cohortMap = new Map<string, { roll: string; name: string; section: string; email?: string }>();
+    baseCohort.forEach((c) => cohortMap.set(c.roll.toUpperCase(), c));
+
+    // 3. Overlay all actual registered students from User Management & Roster
     if (students && students.length > 0) {
-      // 1. Filter students from User Management for this specific branch and semester
-      const relevantStudents = students.filter((s) => {
-        if (s.role === "admin" || s.role === "faculty") return false;
+      students.forEach((s) => {
+        if (s.role === "admin" || s.role === "faculty") return;
+        const roll = (s.roll_number || (s.email?.includes("@") ? s.email.split("@")[0] : "") || "").trim().toUpperCase();
+        if (!roll) return;
 
-        const sBranch = (s.branch || "").toUpperCase().trim();
+        const sBranch = resolveBranchCode(s.branch, roll);
         const sSem = Number(s.current_semester);
 
-        const branchMatch = !sBranch || sBranch === "ALL" || sBranch === targetBranch;
-        const semMatch = !sSem || isNaN(sSem) || sSem === targetSem;
-
-        return branchMatch && semMatch;
-      });
-
-      if (relevantStudents.length > 0) {
-        rawCohort = relevantStudents.map((s) => {
-          const roll = (s.roll_number || (s.email?.includes("@") ? s.email.split("@")[0] : "") || "STUDENT").trim().toUpperCase();
-          const name = s.name?.trim() || `Student ${roll.slice(-4)}`;
+        // Check if student belongs to this branch cohort
+        if (sBranch === targetBranch && (sSem === targetSem || isNaN(sSem) || !s.current_semester)) {
           const section = (s.section || (parseInt(roll.slice(-2), 10) <= 36 ? "A" : "B")).toUpperCase();
-          return {
+          cohortMap.set(roll, {
             roll,
-            name,
+            name: s.name?.trim() || `Student ${roll.slice(-4)}`,
             section,
             email: s.email,
-          };
-        });
-      }
+          });
+        }
+      });
     }
 
-    // 2. Also append any students who have active activity logs for this material
-    const seenRolls = new Set(rawCohort.map((c) => c.roll.toUpperCase()));
-    activityLogs.forEach((log) => {
-      const logRoll = (log.rollNumber || (log.email?.includes("@") ? log.email.split("@")[0] : "")).trim().toUpperCase();
-      if (logRoll && !seenRolls.has(logRoll) && !logRoll.startsWith("ADMIN") && !logRoll.startsWith("FACULTY")) {
-        seenRolls.add(logRoll);
-        rawCohort.push({
-          roll: logRoll,
-          name: log.studentName || `Student ${logRoll.slice(-4)}`,
-          section: log.section || (parseInt(logRoll.slice(-2), 10) <= 36 ? "A" : "B"),
-          email: log.email,
-        });
-      }
-    });
-
-    // 3. Fallback if no students are registered yet in User Management for this class
-    if (rawCohort.length === 0) {
-      rawCohort = generateCohortRolls(branch, semester);
+    // 4. Overlay students from engagement activity logs
+    if (activityLogs && activityLogs.length > 0) {
+      activityLogs.forEach((log) => {
+        const logRoll = (log.rollNumber || (log.email?.includes("@") ? log.email.split("@")[0] : "")).trim().toUpperCase();
+        if (logRoll && !logRoll.startsWith("ADMIN") && !logRoll.startsWith("FACULTY")) {
+          const logBranch = resolveBranchCode(log.branch, logRoll);
+          if (logBranch === targetBranch) {
+            const existing = cohortMap.get(logRoll);
+            const section = (log.section || existing?.section || (parseInt(logRoll.slice(-2), 10) <= 36 ? "A" : "B")).toUpperCase();
+            cohortMap.set(logRoll, {
+              roll: logRoll,
+              name: (existing && existing.name && !existing.name.startsWith("Student ")) ? existing.name : (log.studentName || `Student ${logRoll.slice(-4)}`),
+              section,
+              email: log.email || existing?.email,
+            });
+          }
+        }
+      });
     }
+
+    const rawCohort = Array.from(cohortMap.values());
 
     // Sort cohort consistently by roll number (e.g., 23331A4701, 23331A4702, ...)
     rawCohort.sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: "base" }));

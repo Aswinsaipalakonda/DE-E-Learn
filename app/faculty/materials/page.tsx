@@ -268,16 +268,25 @@ export default async function FacultyMaterialsPage() {
 
   const subjects = Array.from(subjectsMap.values());
 
-  const students = dbUsers.map((u) => ({
-    id: u.id as string,
-    name: u.name as string,
-    email: u.email as string,
-    role: u.role as string,
-    branch: u.branch as string,
-    current_semester: u.current_semester as number,
-    section: u.section as string,
-    roll_number: u.roll_number as string,
-  }));
+  const students = dbUsers.map((u) => {
+    const email = String(u.email || "");
+    const rawRoll = (u.roll_number as string) || (email.includes("@") ? email.split("@")[0].toUpperCase() : "");
+    const roll = rawRoll.toUpperCase();
+    const branch = (u.branch as string) || (roll.includes("47") ? "CIC" : roll.includes("05") ? "CSD" : roll.includes("42") ? "CSM" : "CIC");
+    const current_semester = typeof u.current_semester === "number" ? u.current_semester : 3;
+    const section = (u.section as string) || (parseInt(roll.slice(-2), 10) <= 36 ? "A" : "B");
+
+    return {
+      id: String(u.id || roll),
+      name: String(u.name || (roll === "23331A4701" ? "Rahul Varma Datla" : roll === "23331A4745" ? "Aswin Sai Palakonda" : roll === "23331A4746" ? "Aswinnn" : `Student ${roll.slice(-4)}`)),
+      email: email || `${roll.toLowerCase()}@mvgrce.edu.in`,
+      role: (u.role as string) || "student",
+      branch,
+      current_semester,
+      section,
+      roll_number: roll,
+    };
+  });
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-6xl pb-10">
