@@ -16,7 +16,8 @@ import {
   History, 
   User, 
   Megaphone,
-  Sparkles
+  Sparkles,
+  Inbox
 } from "lucide-react";
 
 interface SidebarProps {
@@ -47,6 +48,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
     admin: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "User Management", href: "/admin/users", icon: Users },
+      { name: "Support Inquiries", href: "/admin/inquiries", icon: Inbox },
       { name: "Courses & Branches", href: "/admin/taxonomy", icon: Settings },
       { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
       { name: "Usage Metrics", href: "/admin/analytics", icon: BarChart },

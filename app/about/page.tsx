@@ -28,19 +28,42 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
+  const aboutJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    name: "About DataDock • Department of Data Engineering",
+    description:
+      "Learn about DataDock, the centralized academic learning repository for the Department of Data Engineering at MVGR College of Engineering (Autonomous).",
+    url: "https://datadock.aswinsai.tech/about",
+    mainEntity: {
+      "@type": "EducationalOrganization",
+      name: "Department of Data Engineering, MVGR College of Engineering (Autonomous)",
+      url: "https://datadock.aswinsai.tech",
+      parentOrganization: {
+        "@type": "CollegeOrUniversity",
+        name: "MVGR College of Engineering (Autonomous)",
+        url: "https://www.mvgrce.edu.in",
+      },
+    },
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-900 font-sans antialiased">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }}
+      />
       <LandingHeader />
 
-      <main className="flex-1 pt-32 pb-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full">
+      <main className="flex-1 pt-36 sm:pt-40 lg:pt-44 pb-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full">
         {/* Navigation Breadcrumb */}
-        <div className="mb-8">
+        <div className="mb-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white/80 border border-slate-200/90 px-3.5 py-1.5 rounded-full shadow-2xs"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Home
+            Back to DataDock Home
           </Link>
         </div>
 

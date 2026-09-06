@@ -15,7 +15,8 @@ import {
   Layers,
   Sparkles,
   ChevronRight,
-  Calendar
+  Calendar,
+  Inbox
 } from "lucide-react";
 
 interface ActivityEvent {
@@ -82,7 +83,8 @@ export default async function AdminDashboardPage() {
     materialsRes,
     filesRes,
     eventsRes,
-    branchesRes
+    branchesRes,
+    inquiriesRes
   ] = await Promise.all([
     supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "student"),
     supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "faculty"),
@@ -98,12 +100,15 @@ export default async function AdminDashboardPage() {
         name
       )
     `).order("created_at", { ascending: false }).limit(6),
-    supabase.from("branches").select("code", { count: "exact", head: true })
+    supabase.from("branches").select("code", { count: "exact", head: true }),
+    supabase.from("support_inquiries").select("id, status")
   ]);
 
   const rawStudents = studentsRes.count || 0;
   const rawFaculty = facultyRes.count || 0;
   const rawMaterials = materialsRes.count || 0;
+  const totalInquiries = inquiriesRes.data?.length || 0;
+  const pendingInquiries = inquiriesRes.data?.filter((i) => i.status === "pending").length || 0;
 
   const totalStudents = rawStudents > 0 ? rawStudents : 6;
   const totalFaculty = rawFaculty > 0 ? rawFaculty : 4;
@@ -307,6 +312,12 @@ export default async function AdminDashboardPage() {
           <div className="space-y-2">
             {[
               { title: "User Management & Roster", href: "/admin/users", desc: "Manage students, faculty & sections", icon: Users },
+              { 
+                title: "Helpdesk Inquiries", 
+                href: "/admin/inquiries", 
+                desc: pendingInquiries > 0 ? `${pendingInquiries} pending message${pendingInquiries > 1 ? "s" : ""}` : "All contact queries resolved", 
+                icon: Inbox 
+              },
               { title: "Curriculum Taxonomy", href: "/admin/taxonomy", desc: "Subjects & branch specializations", icon: Layers },
               { title: "Announcements & Broadcast", href: "/admin/announcements", desc: "Push departmental notices", icon: Megaphone },
               { title: "System Audit Logs", href: "/admin/logs", desc: "Inspect security events", icon: ShieldAlert },
