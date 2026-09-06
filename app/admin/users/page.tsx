@@ -222,10 +222,8 @@ export default async function AdminUsersPage() {
     created_at: String(u.created_at || ""),
   }));
 
-  // Combine DB users with fallback mocks if DB has only 1-2 accounts
-  const existingEmails = new Set(dbUsers.map((u) => u.email.toLowerCase()));
-  const extraMockUsers = FALLBACK_USERS.filter((u) => !existingEmails.has(u.email.toLowerCase()));
-  const allUsers = dbUsers.length > 5 ? dbUsers : [...dbUsers, ...extraMockUsers];
+  // Use real DB users directly
+  const allUsers = dbUsers;
 
   const branches = (branchesRes.data as unknown as BranchItem[]) || [
     { code: "CIC", name: "Computer Science & Information Technology" },

@@ -418,7 +418,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }
 
     if (isDuplicateRollNumber) {
-      addToast("error", "Duplicate Roll Number", `A student account with roll number ${rollNumber} already exists.`);
+      addToast("error", "the number already exists", `A student with roll number ${rollNumber} already exists in the roster.`);
       return;
     }
 
@@ -1279,7 +1279,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       {isDuplicateRollNumber && (
                         <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
                           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                          <span>A student with this roll number already exists in the roster.</span>
+                          <span>the number already exists</span>
                         </div>
                       )}
 

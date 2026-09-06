@@ -37,20 +37,47 @@ export async function createUserAction(
     return { error: "Permission denied." };
   }
 
-  // 2. Register user using stateless client (keeps admin logged in)
+  const normalizedEmail = email.trim().toLowerCase();
+  const formattedRollNumber = rollNumber ? rollNumber.toUpperCase().trim() : null;
+
+  // 2. Check for duplicate roll number or email before creating
+  if (role === "student" && formattedRollNumber) {
+    const { data: existingRoll } = await adminClient
+      .from("users")
+      .select("id, name, roll_number, email")
+      .or(`roll_number.eq.${formattedRollNumber},email.ilike.${formattedRollNumber}@%`)
+      .limit(1);
+
+    if (existingRoll && existingRoll.length > 0) {
+      return { error: `the number already exists` };
+    }
+  }
+
+  const { data: existingEmail } = await adminClient
+    .from("users")
+    .select("id, name, email")
+    .eq("email", normalizedEmail)
+    .limit(1);
+
+  if (existingEmail && existingEmail.length > 0) {
+    return { error: `An account with email ${normalizedEmail} already exists.` };
+  }
+
+  // 3. Register user using stateless client (keeps admin logged in)
   const statelessClient = createStatelessClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false }
   });
 
-  const defaultPassword = role === "student" && rollNumber ? rollNumber.toUpperCase().trim() : "Password@789";
+  const defaultPassword = role === "student" && formattedRollNumber ? formattedRollNumber : "Password@789";
 
   const { data: authData, error: authError } = await statelessClient.auth.signUp({
-    email,
+    email: normalizedEmail,
     password: defaultPassword,
     options: {
       data: {
-        name,
+        name: name.trim(),
         role,
+        roll_number: formattedRollNumber,
       }
     }
   });
@@ -59,26 +86,20 @@ export async function createUserAction(
     return { error: `Auth registration failed: ${authError?.message}` };
   }
 
-  // 3. Create/Update Profile in public.users
+  // 4. Create Profile in public.users
   const profilePayload: Record<string, unknown> = {
     id: authData.user.id,
-    email,
-    name,
+    email: normalizedEmail,
+    name: name.trim(),
     role,
     status: "active",
-    branch: branch || null,
-    current_semester: semester || null,
+    branch: branch || (formattedRollNumber?.includes("47") ? "CIC" : formattedRollNumber?.includes("05") ? "CSD" : formattedRollNumber?.includes("42") ? "CSM" : null),
+    current_semester: semester || (role === "student" ? 3 : null),
+    section: section ? section.toUpperCase().trim() : "A",
+    designation: designation ? designation.trim() : null,
+    roll_number: formattedRollNumber,
     first_login_pending: true,
   };
-  if (section) {
-    profilePayload.section = section.toUpperCase().trim();
-  }
-  if (designation) {
-    profilePayload.designation = designation.trim();
-  }
-  if (rollNumber) {
-    profilePayload.roll_number = rollNumber.toUpperCase().trim();
-  }
 
   let { data: profileData, error: profileError } = await adminClient
     .from("users")
@@ -100,9 +121,11 @@ export async function createUserAction(
     return { error: `Profile creation failed: ${profileError.message}` };
   }
 
-  await logAuditAction("CREATE_USER", email, null, { name, role, branch, semester, section, designation, rollNumber });
+  await logAuditAction("CREATE_USER", normalizedEmail, null, { name, role, branch, semester, section, designation, rollNumber: formattedRollNumber });
 
   revalidatePath("/admin/users");
+  revalidatePath("/admin/analytics");
+  revalidatePath("/faculty/materials");
   return { success: true, user: profileData };
 }
 

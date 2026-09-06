@@ -130,56 +130,6 @@ function resolveBranchCode(rawBranch?: string | null, rawRoll?: string | null): 
   return "CIC";
 }
 
-// Generate complete cohort of roll numbers fallback when no students are registered yet in DB
-function generateCohortRolls(branch: string, semester: number): { roll: string; name: string; section: string; email?: string }[] {
-  const cohort: { roll: string; name: string; section: string; email?: string }[] = [];
-  const b = resolveBranchCode(branch);
-
-  const knownStudents: Record<string, string> = {
-    "23331A4701": "Rahul Varma Datla",
-    "23331A4745": "Aswin Sai Palakonda",
-    "23331A4746": "Aswinnn",
-    "23331A4718": "Sneha Reddy K.",
-    "23331A4722": "Sai Kiran V.",
-    "23331A4715": "B. Bhavana",
-    "23331A0502": "Divya Sri Madhuri",
-    "23331A0544": "K. Karthik Subhash",
-    "23331A0589": "T. Tarun Teja",
-    "23331A4201": "M. Naveen Kumar",
-    "23331A4233": "P. Harika",
-  };
-
-  if (b === "CIC") {
-    for (let i = 1; i <= 71; i++) {
-      const rollNum = `23331A47${i < 10 ? "0" + i : i}`;
-      const name = knownStudents[rollNum] || `Student ${rollNum.slice(-4)}`;
-      const section = i <= 36 ? "A" : "B";
-      cohort.push({ roll: rollNum, name, section });
-    }
-  } else if (b === "CSD") {
-    for (let i = 1; i <= 68; i++) {
-      const rollNum = `23331A05${i < 10 ? "0" + i : i}`;
-      const name = knownStudents[rollNum] || `Student ${rollNum.slice(-4)}`;
-      const section = i <= 34 ? "A" : "B";
-      cohort.push({ roll: rollNum, name, section });
-    }
-  } else if (b === "CSM") {
-    for (let i = 1; i <= 65; i++) {
-      const rollNum = `23331A42${i < 10 ? "0" + i : i}`;
-      const name = knownStudents[rollNum] || `Student ${rollNum.slice(-4)}`;
-      const section = i <= 33 ? "A" : "B";
-      cohort.push({ roll: rollNum, name, section });
-    }
-  } else {
-    for (let i = 1; i <= 60; i++) {
-      const rollNum = `23331A00${i < 10 ? "0" + i : i}`;
-      cohort.push({ roll: rollNum, name: `Student ${rollNum.slice(-4)}`, section: "A" });
-    }
-  }
-
-  return cohort;
-}
-
 export default function StudentCohortProgressMatrix({
   materialId,
   materialTitle,
@@ -192,7 +142,7 @@ export default function StudentCohortProgressMatrix({
 }: StudentCohortProgressMatrixProps) {
   const [selectedFileFilter, setSelectedFileFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "downloaded" | "viewed" | "pending">("ALL");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("" );
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [inspectingStudent, setInspectingStudent] = useState<StudentProgressRecord | null>(null);
 
@@ -208,14 +158,10 @@ export default function StudentCohortProgressMatrix({
     const targetBranch = resolveBranchCode(branch);
     const targetSem = Number(semester) || 3;
 
-    // 1. Generate full baseline class roster for this branch
-    const baseCohort = generateCohortRolls(targetBranch, targetSem);
-
-    // 2. Build deduplicated Map by normalized uppercase roll number
+    // 1. Build deduplicated Map by normalized uppercase roll number
     const cohortMap = new Map<string, { roll: string; name: string; section: string; email?: string }>();
-    baseCohort.forEach((c) => cohortMap.set(c.roll.toUpperCase(), c));
 
-    // 3. Overlay all actual registered students from User Management & Roster
+    // 2. Overlay all actual registered students from User Management & Roster
     if (students && students.length > 0) {
       students.forEach((s) => {
         if (s.role === "admin" || s.role === "faculty") return;
@@ -238,7 +184,7 @@ export default function StudentCohortProgressMatrix({
       });
     }
 
-    // 4. Overlay students from engagement activity logs
+    // 3. Overlay students from engagement activity logs
     if (activityLogs && activityLogs.length > 0) {
       activityLogs.forEach((log) => {
         const logRoll = (log.rollNumber || (log.email?.includes("@") ? log.email.split("@")[0] : "")).trim().toUpperCase();
@@ -497,7 +443,7 @@ export default function StudentCohortProgressMatrix({
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl sm:text-2xl font-bold text-white">{pendingCount}</span>
-              <span className="text-[10px] text-rose-300 font-medium">({Math.round((pendingCount/totalCount)*100)}%)</span>
+              <span className="text-[10px] text-rose-300 font-medium">({totalCount > 0 ? Math.round((pendingCount/totalCount)*100) : 0}%)</span>
             </div>
           </div>
         </div>
@@ -621,7 +567,7 @@ export default function StudentCohortProgressMatrix({
           <div className="relative flex-1 sm:w-56">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
-              placeholder="Search 4701 or name..."
+              placeholder="Search roll number or name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:border-primary text-slate-900 placeholder:text-slate-400 font-normal transition-all"
@@ -729,8 +675,11 @@ export default function StudentCohortProgressMatrix({
               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                 <Users className="h-5 w-5" />
               </div>
-              <p className="text-xs text-slate-500">
-                No students match &quot;{statusFilter}&quot; in the cohort.
+              <p className="text-xs text-slate-500 font-medium">
+                {totalCount === 0 
+                  ? `No students are registered for ${branch} • Semester ${semester} in User Management yet.`
+                  : `No students match "${statusFilter}" in the cohort.`
+                }
               </p>
             </div>
           )}
