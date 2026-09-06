@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -15,46 +16,8 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Fetch session user
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    redirect("/login");
-  }
-
-  // Fetch user profile by ID or Email
-  let { data: profile } = await supabase
-    .from("users")
-    .select("id, name, email, role")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .single();
-
-  if (!profile) {
-    const adminRole = user.user_metadata?.role || "admin";
-    const adminName = user.user_metadata?.name || "System Administrator";
-
-    const { data: newProfile } = await supabase
-      .from("users")
-      .upsert({
-        id: user.id,
-        email: user.email!,
-        name: adminName,
-        role: adminRole,
-        status: "active",
-        first_login_pending: false,
-      })
-      .select()
-      .single();
-
-    profile = newProfile;
-  } else if (profile.id !== user.id) {
-    await supabase.from("users").update({ id: user.id }).eq("email", user.email!);
-  }
-
-  const userRole = profile?.role || user.user_metadata?.role || "admin";
-  if (userRole !== "admin") {
+  const { user, profile } = await getCachedUserProfile();
+  if (!user || profile?.role !== "admin") {
     redirect("/login");
   }
 

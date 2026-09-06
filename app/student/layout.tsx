@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -15,49 +16,9 @@ export default async function StudentLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Fetch session
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
+  const { user, profile } = await getCachedUserProfile();
+  if (!user) {
     redirect("/login");
-  }
-
-  // Fetch user profile by ID or Email
-  let { data: profile } = await supabase
-    .from("users")
-    .select("id, name, role, branch, current_semester, section, roll_number")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .single();
-
-  // If not found in public.users, create one from auth session metadata
-  if (!profile) {
-    const studentRole = user.user_metadata?.role || "student";
-    const studentName = user.user_metadata?.name || user.email?.split("@")[0].toUpperCase() || "Student";
-    const rollNumber = user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : "23331A4701";
-
-    const { data: newProfile } = await supabase
-      .from("users")
-      .upsert({
-        id: user.id,
-        email: user.email!,
-        name: studentName,
-        role: studentRole,
-        status: "active",
-        branch: "CIC",
-        current_semester: 3,
-        section: "A",
-        roll_number: rollNumber,
-        first_login_pending: false,
-      })
-      .select()
-      .single();
-
-    profile = newProfile;
-  } else if (profile.id !== user.id) {
-    // Synchronize ID if email matched an existing record with different UUID
-    await supabase.from("users").update({ id: user.id }).eq("email", user.email!);
   }
 
   const userRole = profile?.role || user.user_metadata?.role || "student";
