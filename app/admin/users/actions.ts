@@ -93,11 +93,11 @@ export async function createUserAction(
     name: name.trim(),
     role,
     status: "active",
-    branch: branch || (formattedRollNumber?.includes("47") ? "CIC" : formattedRollNumber?.includes("05") ? "CSD" : formattedRollNumber?.includes("42") ? "CSM" : null),
-    current_semester: semester || (role === "student" ? 3 : null),
-    section: section ? section.toUpperCase().trim() : "A",
-    designation: designation ? designation.trim() : null,
-    roll_number: formattedRollNumber,
+    branch: role === "student" ? (branch || (formattedRollNumber?.includes("47") ? "CIC" : formattedRollNumber?.includes("05") ? "CSD" : formattedRollNumber?.includes("42") ? "CSM" : null)) : null,
+    current_semester: role === "student" ? (semester || 3) : null,
+    section: role === "student" ? (section ? section.toUpperCase().trim() : "A") : null,
+    designation: role === "faculty" ? (designation ? designation.trim() : "Assistant Professor") : null,
+    roll_number: role === "student" ? formattedRollNumber : null,
     first_login_pending: true,
   };
 
@@ -121,7 +121,7 @@ export async function createUserAction(
     return { error: `Profile creation failed: ${profileError.message}` };
   }
 
-  await logAuditAction("CREATE_USER", normalizedEmail, null, { name, role, branch, semester, section, designation, rollNumber: formattedRollNumber });
+  await logAuditAction("CREATE_USER", normalizedEmail, null, { name, role, branch: profilePayload.branch, semester: profilePayload.current_semester, section: profilePayload.section, designation: profilePayload.designation, rollNumber: formattedRollNumber });
 
   revalidatePath("/admin/users");
   revalidatePath("/admin/analytics");
@@ -159,23 +159,19 @@ export async function updateUserAction(
     return { error: "Permission denied." };
   }
 
+  const isStudent = updates.role === "student";
+  const isFaculty = updates.role === "faculty";
+
   const updatePayload: Record<string, unknown> = {
     name: updates.name.trim(),
     role: updates.role,
     status: updates.status,
-    branch: updates.branch || null,
-    current_semester: updates.semester || null,
+    branch: isStudent ? (updates.branch || null) : null,
+    current_semester: isStudent ? (updates.semester || null) : null,
+    section: isStudent ? (updates.section ? updates.section.toUpperCase().trim() : "A") : null,
+    designation: isFaculty ? (updates.designation ? updates.designation.trim() : "Assistant Professor") : null,
+    roll_number: isStudent ? (updates.rollNumber ? updates.rollNumber.toUpperCase().trim() : null) : null,
   };
-
-  if (updates.section) {
-    updatePayload.section = updates.section.toUpperCase().trim();
-  }
-  if (updates.designation) {
-    updatePayload.designation = updates.designation.trim();
-  }
-  if (updates.rollNumber) {
-    updatePayload.roll_number = updates.rollNumber.toUpperCase().trim();
-  }
 
   let { data: profileData, error: updateError } = await adminClient
     .from("users")
@@ -200,6 +196,8 @@ export async function updateUserAction(
   await logAuditAction("UPDATE_USER", userId, null, updates);
 
   revalidatePath("/admin/users");
+  revalidatePath("/admin/analytics");
+  revalidatePath("/faculty/materials");
   return { success: true, user: profileData };
 }
 
@@ -423,26 +421,23 @@ export async function batchCreateUsersAction(
         }
       }
 
+      const isStudent = item.role === "student";
+      const isFaculty = item.role === "faculty";
+      const formattedRoll = isStudent && item.rollNumber ? item.rollNumber.toUpperCase().trim() : null;
+
       const rowPayload: Record<string, unknown> = {
         id: userId,
         email: item.email.trim().toLowerCase(),
         name: item.name.trim(),
         role: item.role,
         status: "active",
-        branch: item.branch || null,
-        current_semester: item.semester || null,
+        branch: isStudent ? (item.branch || (formattedRoll?.includes("47") ? "CIC" : formattedRoll?.includes("05") ? "CSD" : formattedRoll?.includes("42") ? "CSM" : "CIC")) : null,
+        current_semester: isStudent ? (item.semester || 3) : null,
+        section: isStudent ? (item.section ? item.section.toUpperCase().trim() : "A") : null,
+        designation: isFaculty ? (item.designation ? item.designation.trim() : "Assistant Professor") : null,
+        roll_number: formattedRoll,
         first_login_pending: true,
       };
-
-      if (item.section) {
-        rowPayload.section = item.section.toUpperCase().trim();
-      }
-      if (item.designation) {
-        rowPayload.designation = item.designation.trim();
-      }
-      if (item.rollNumber) {
-        rowPayload.roll_number = item.rollNumber.toUpperCase().trim();
-      }
 
       let { error: profileError } = await adminClient.from("users").upsert(rowPayload);
 

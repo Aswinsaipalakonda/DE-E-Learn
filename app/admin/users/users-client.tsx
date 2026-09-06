@@ -374,19 +374,37 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
   // CSV Parser
   const parseCSV = (text: string) => {
-    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-    const result = [];
+    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/^["']|["']$/g, ""));
+    const result: Record<string, string>[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const cells = lines[i].split(",").map((c) => c.trim());
-      if (cells.length < headers.length) continue;
+      const line = lines[i];
+      if (!line) continue;
+
+      // Handle quoted CSV fields
+      const cells: string[] = [];
+      let current = "";
+      let inQuotes = false;
+
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"' || char === "'") {
+          inQuotes = !inQuotes;
+        } else if (char === "," && !inQuotes) {
+          cells.push(current.trim().replace(/^["']|["']$/g, ""));
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      cells.push(current.trim().replace(/^["']|["']$/g, ""));
 
       const obj: Record<string, string> = {};
       headers.forEach((header, idx) => {
-        obj[header] = cells[idx];
+        obj[header] = cells[idx] || "";
       });
       result.push(obj);
     }
@@ -539,18 +557,52 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
     const formattedList = csvPreview
       .map((item) => {
-        const roll = item.roll_number || item.rollnumber || (item.email?.includes("@") ? item.email.split("@")[0].toUpperCase() : null);
-        const itemEmail = item.role === "student" && roll ? `${roll.toLowerCase()}@mvgrce.edu.in` : (item.email || "");
-        return {
-          email: itemEmail,
-          name: item.name || "",
-          role: (item.role || "student") as "student" | "faculty" | "admin",
-          branch: item.branch || null,
-          semester: item.semester ? parseInt(item.semester, 10) : null,
-          section: item.section ? item.section.toUpperCase().trim() : "A",
-          designation: item.designation ? item.designation.trim() : "Assistant Professor",
-          rollNumber: roll,
-        };
+        const role = (item.role || "student").toLowerCase().trim() as "student" | "faculty" | "admin";
+        const rawRoll = item.roll_number || item.rollnumber || item.roll || (item.email?.includes("@") ? item.email.split("@")[0] : "");
+        const roll = rawRoll ? rawRoll.toUpperCase().trim() : null;
+
+        if (role === "faculty") {
+          const facultyEmail = item.email ? item.email.trim().toLowerCase() : "";
+          return {
+            email: facultyEmail,
+            name: item.name ? item.name.trim() : "",
+            role: "faculty" as const,
+            branch: null,
+            semester: null,
+            section: null,
+            designation: item.designation ? item.designation.trim() : "Assistant Professor",
+            rollNumber: null,
+          };
+        } else if (role === "admin") {
+          const adminEmail = item.email ? item.email.trim().toLowerCase() : "";
+          return {
+            email: adminEmail,
+            name: item.name ? item.name.trim() : "",
+            role: "admin" as const,
+            branch: null,
+            semester: null,
+            section: null,
+            designation: null,
+            rollNumber: null,
+          };
+        } else {
+          // student
+          const studentEmail = roll ? `${roll.toLowerCase()}@mvgrce.edu.in` : (item.email ? item.email.trim().toLowerCase() : "");
+          const branchVal = item.branch ? item.branch.toUpperCase().trim() : (roll?.includes("47") ? "CIC" : roll?.includes("05") ? "CSD" : roll?.includes("42") ? "CSM" : "CIC");
+          const semVal = item.semester ? parseInt(item.semester, 10) : 3;
+          const secVal = item.section ? item.section.toUpperCase().trim() : (roll && parseInt(roll.slice(-2), 10) <= 36 ? "A" : "B");
+
+          return {
+            email: studentEmail,
+            name: item.name ? item.name.trim() : "",
+            role: "student" as const,
+            branch: branchVal,
+            semester: isNaN(semVal) ? 3 : semVal,
+            section: secVal || "A",
+            designation: null,
+            rollNumber: roll,
+          };
+        }
       })
       .filter((u) => u.email && u.name);
 

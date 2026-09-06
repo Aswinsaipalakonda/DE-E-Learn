@@ -184,11 +184,32 @@ export default async function AdminAnalyticsPage() {
   });
 
   const materialsWithMetrics = dbMaterials.map((m) => {
+    // Filter events for this material
     const matEvents = events.filter((e) => (e.target_id || e.targetId) === m.id);
-    const views = matEvents.filter((e) => e.type === "view").length;
-    const downloads = matEvents.filter((e) => e.type === "download").length;
 
-    const engagementLogs: StudentEngagementLog[] = matEvents.map((ev, idx) => {
+    // Only count genuine student events (exclude faculty self-visits and admin visits)
+    const validStudentEvents = matEvents.filter((ev) => {
+      const userProfile = 
+        (ev.users as Record<string, unknown>) || 
+        (ev.actor_id ? userMap.get(String(ev.actor_id)) : null) ||
+        (ev.actor_email ? userMap.get(String(ev.actor_email).toLowerCase()) : null);
+
+      const userRole = (userProfile?.role as string) || "";
+      if (userRole === "faculty" || userRole === "admin") return false;
+
+      const email = ((userProfile?.email as string) || ev.actor_email || ev.metadata?.email || "").toLowerCase();
+      if (email.startsWith("faculty") || email.startsWith("testfaculty") || email.startsWith("admin")) return false;
+
+      const roll = ((userProfile?.roll_number as string) || ev.actor_roll || ev.metadata?.roll_number || "").toUpperCase();
+      if (roll.startsWith("FACULTY") || roll.startsWith("TESTFACULTY") || roll.startsWith("ADMIN")) return false;
+
+      return true;
+    });
+
+    const views = validStudentEvents.filter((e) => e.type === "view").length;
+    const downloads = validStudentEvents.filter((e) => e.type === "download").length;
+
+    const engagementLogs: StudentEngagementLog[] = validStudentEvents.map((ev, idx) => {
       const userProfile = 
         (ev.users as Record<string, unknown>) || 
         (ev.actor_id ? userMap.get(String(ev.actor_id)) : null) ||
@@ -243,7 +264,16 @@ export default async function AdminAnalyticsPage() {
   const totalViews = materialsWithMetrics.reduce((acc, curr) => acc + curr.views, 0);
   const totalDownloads = materialsWithMetrics.reduce((acc, curr) => acc + curr.downloads, 0);
 
-  const students = dbUsers.map((u) => {
+  // Strictly filter dbUsers to ONLY genuine students
+  const studentUsers = dbUsers.filter((u) => {
+    const role = String(u.role || "").toLowerCase();
+    const email = String(u.email || "").toLowerCase();
+    if (role === "admin" || role === "faculty") return false;
+    if (email.startsWith("faculty") || email.startsWith("testfaculty") || email.startsWith("admin")) return false;
+    return true;
+  });
+
+  const students = studentUsers.map((u) => {
     const email = String(u.email || "");
     const rawRoll = (u.roll_number as string) || (email.includes("@") ? email.split("@")[0].toUpperCase() : "");
     const roll = rawRoll.toUpperCase();
@@ -255,7 +285,7 @@ export default async function AdminAnalyticsPage() {
       id: String(u.id || roll),
       name: String(u.name || (roll === "23331A4701" ? "Rahul Varma Datla" : roll === "23331A4745" ? "Aswin Sai Palakonda" : roll === "23331A4746" ? "Aswinnn" : `Student ${roll.slice(-4)}`)),
       email: email || `${roll.toLowerCase()}@mvgrce.edu.in`,
-      role: (u.role as string) || "student",
+      role: "student",
       branch,
       current_semester,
       section,

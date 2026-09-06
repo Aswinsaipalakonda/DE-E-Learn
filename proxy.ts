@@ -4,9 +4,8 @@ import { type NextRequest, NextResponse } from "next/server";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-// Explicit public routes that never require authentication
-const PUBLIC_ROUTES = [
-  "/",
+// Explicit public routes that never require authentication or server roundtrips
+const PUBLIC_ROUTES = new Set([
   "/about",
   "/terms",
   "/privacy",
@@ -16,7 +15,7 @@ const PUBLIC_ROUTES = [
   "/manifest.webmanifest",
   "/llms.txt",
   "/llms-full.txt",
-];
+]);
 
 // Protected route prefixes that strictly require an active session
 const PROTECTED_PREFIXES = [
@@ -30,7 +29,7 @@ const PROTECTED_PREFIXES = [
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Skip assets, static files, and API endpoints
+  // 1. Skip assets, static files, and API endpoints immediately (0ms overhead)
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -38,6 +37,22 @@ export async function proxy(request: NextRequest) {
     pathname.includes(".") ||
     pathname === "/favicon.ico"
   ) {
+    return NextResponse.next();
+  }
+
+  // 2. Fast-path: Return immediately for public informational and legal routes
+  if (PUBLIC_ROUTES.has(pathname)) {
+    return NextResponse.next();
+  }
+
+  const isProtectedPath = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+  const isAuthPath = pathname === "/login";
+  const isRoot = pathname === "/";
+
+  // If not visiting a protected dashboard, login, or root landing, proceed directly
+  if (!isProtectedPath && !isAuthPath && !isRoot) {
     return NextResponse.next();
   }
 
@@ -68,15 +83,10 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // Retrieve user session safely
+  // Retrieve user session
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const isProtectedPath = PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
-  const isAuthPath = pathname === "/login";
 
   // Case A: Unauthenticated Visitor
   if (!user) {
@@ -86,30 +96,33 @@ export async function proxy(request: NextRequest) {
       redirectUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(redirectUrl);
     }
-    // Allow public pages (/about, /terms, /privacy, /contact, /, 404s, etc.)
+    // Allow public root and login page
     return supabaseResponse;
   }
 
-  // Case B: Authenticated User
-  let role = user.user_metadata?.role;
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .single();
-
-  if (profile?.role) {
-    role = profile.role;
-  }
+  // Case B: Authenticated User - Fast metadata/heuristic resolution (avoids blocking DB query on every route change)
+  let role = (user.user_metadata?.role as string) || "";
 
   if (!role) {
-    if (user.email?.startsWith("admin")) role = "admin";
-    else if (user.email?.startsWith("faculty") || user.email?.startsWith("testfaculty")) role = "faculty";
-    else role = "student";
+    if (user.email?.startsWith("admin")) {
+      role = "admin";
+    } else if (user.email?.startsWith("faculty") || user.email?.startsWith("testfaculty")) {
+      role = "faculty";
+    } else if (/^\d{5}[a-zA-Z0-9]{5}@/i.test(user.email || "") || /^\d{2}/.test(user.email || "")) {
+      role = "student";
+    } else {
+      // Fallback query only when metadata is absent
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      role = profile?.role || "student";
+    }
   }
 
   // If logged in and visiting login page or root landing page, redirect to role dashboard
-  if (isAuthPath || pathname === "/") {
+  if (isAuthPath || isRoot) {
     return NextResponse.redirect(new URL(`/${role}`, request.url));
   }
 
@@ -121,7 +134,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/student", request.url));
   }
 
-  // Allow logged-in user to access their dashboard AND view informational pages (/about, /terms, /privacy, /contact)
   return supabaseResponse;
 }
 

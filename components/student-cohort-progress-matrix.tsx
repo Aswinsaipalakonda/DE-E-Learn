@@ -164,9 +164,12 @@ export default function StudentCohortProgressMatrix({
     // 2. Overlay all actual registered students from User Management & Roster
     if (students && students.length > 0) {
       students.forEach((s) => {
-        if (s.role === "admin" || s.role === "faculty") return;
+        if (s.role && s.role !== "student") return;
+        const emailLower = (s.email || "").toLowerCase();
+        if (emailLower.startsWith("faculty") || emailLower.startsWith("testfaculty") || emailLower.startsWith("admin")) return;
+
         const roll = (s.roll_number || (s.email?.includes("@") ? s.email.split("@")[0] : "") || "").trim().toUpperCase();
-        if (!roll) return;
+        if (!roll || roll.startsWith("FACULTY") || roll.startsWith("TESTFACULTY") || roll.startsWith("ADMIN")) return;
 
         const sBranch = resolveBranchCode(s.branch, roll);
         const sSem = Number(s.current_semester);
@@ -182,13 +185,21 @@ export default function StudentCohortProgressMatrix({
           });
         }
       });
-    }
-
-    // 3. Overlay students from engagement activity logs
-    if (activityLogs && activityLogs.length > 0) {
+    } else if (activityLogs && activityLogs.length > 0) {
+      // 3. Fallback only if no registered students provided: overlay verified student engagement activity logs
       activityLogs.forEach((log) => {
+        const emailLower = (log.email || "").toLowerCase();
         const logRoll = (log.rollNumber || (log.email?.includes("@") ? log.email.split("@")[0] : "")).trim().toUpperCase();
-        if (logRoll && !logRoll.startsWith("ADMIN") && !logRoll.startsWith("FACULTY")) {
+        
+        const isFacultyOrAdmin = 
+          logRoll.startsWith("ADMIN") || 
+          logRoll.startsWith("FACULTY") || 
+          logRoll.startsWith("TESTFACULTY") ||
+          emailLower.startsWith("faculty") ||
+          emailLower.startsWith("testfaculty") ||
+          emailLower.startsWith("admin");
+
+        if (logRoll && !isFacultyOrAdmin) {
           const logBranch = resolveBranchCode(log.branch, logRoll);
           if (logBranch === targetBranch) {
             const existing = cohortMap.get(logRoll);
