@@ -8,6 +8,7 @@ export interface ExamSchedule {
   title: string;
   semesters: number[];
   branch: string; // "ALL" or specific e.g. "CIC"
+  subjects: string[]; // ["ALL"] or specific subject codes e.g. ["R23SE701"]
   start_date: string; // ISO date or "YYYY-MM-DD"
   end_date: string; // ISO date or "YYYY-MM-DD"
   is_daily_recurring: boolean;
@@ -23,6 +24,7 @@ export interface ExamLockoutStatus {
   examTitle?: string;
   semesters?: number[];
   branch?: string;
+  subjects?: string[];
   startTimeText?: string;
   endTimeText?: string;
   message?: string;
@@ -67,11 +69,12 @@ export function saveLocalExamSchedules(schedules: ExamSchedule[]): void {
 }
 
 /**
- * Checks whether a given semester (and branch) is currently under an active exam lockout window.
+ * Checks whether a given semester (and branch/subject) is currently under an active exam lockout window.
  */
 export async function getActiveExamLockout(
   semester: number,
-  branch?: string | null
+  branch?: string | null,
+  subjectCode?: string | null
 ): Promise<ExamLockoutStatus> {
   const localSchedules = readLocalExamSchedules();
   let dbSchedules: ExamSchedule[] = [];
@@ -127,7 +130,13 @@ export async function getActiveExamLockout(
       continue;
     }
 
-    // 3. Check Date Boundaries
+    // 3. Check Subject Scope
+    const schedSubjects = sched.subjects && sched.subjects.length > 0 ? sched.subjects : ["ALL"];
+    if (subjectCode && !schedSubjects.includes("ALL") && !schedSubjects.includes(subjectCode)) {
+      continue;
+    }
+
+    // 4. Check Date Boundaries
     const startDateKey = sched.start_date.slice(0, 10);
     const endDateKey = sched.end_date.slice(0, 10);
 
@@ -135,7 +144,7 @@ export async function getActiveExamLockout(
       continue;
     }
 
-    // 4. Check Time Windows
+    // 5. Check Time Windows
     if (sched.is_daily_recurring) {
       // Daily Window: e.g. "10:00" to "11:30"
       const [startH, startM] = (sched.daily_start_time || "10:00").split(":").map((v) => parseInt(v, 10));
@@ -149,9 +158,10 @@ export async function getActiveExamLockout(
           examTitle: sched.title,
           semesters: sched.semesters,
           branch: sched.branch,
+          subjects: schedSubjects,
           startTimeText: sched.daily_start_time,
           endTimeText: sched.daily_end_time,
-          message: `Evaluation session active (${sched.daily_start_time} - ${sched.daily_end_time}). Semester ${semester} materials are temporarily hidden during examination. Access resumes automatically at ${sched.daily_end_time}.`,
+          message: `Evaluation session active (${sched.daily_start_time} - ${sched.daily_end_time} IST). Course materials are temporarily hidden during the examination. Access will automatically resume at ${sched.daily_end_time}.`,
         };
       }
     } else {
@@ -161,14 +171,16 @@ export async function getActiveExamLockout(
       const nowTime = now.getTime();
 
       if (nowTime >= startDateTime && nowTime <= endDateTime) {
+        const endFormatted = new Date(sched.end_date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
         return {
           isLocked: true,
           examTitle: sched.title,
           semesters: sched.semesters,
           branch: sched.branch,
+          subjects: schedSubjects,
           startTimeText: new Date(sched.start_date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-          endTimeText: new Date(sched.end_date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-          message: `Examination in progress. Semester ${semester} study materials are locked until ${new Date(sched.end_date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}.`,
+          endTimeText: endFormatted,
+          message: `Examination in progress. Course study materials are locked until ${endFormatted}. Access will automatically resume once the examination concludes.`,
         };
       }
     }

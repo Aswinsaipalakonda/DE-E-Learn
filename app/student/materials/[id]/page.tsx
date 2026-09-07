@@ -161,7 +161,7 @@ export default async function MaterialDetailsPage(props: PageProps) {
 
   // Check if material is locked for student under active Exam Mode
   if (userRole === "student" && material.semester) {
-    const examLockout = await getActiveExamLockout(material.semester, material.branch);
+    const examLockout = await getActiveExamLockout(material.semester, material.branch, material.subject);
     if (examLockout.isLocked) {
       return (
         <div className="p-8 max-w-xl mx-auto space-y-4">

@@ -1438,10 +1438,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           <input
                             type="text"
                             maxLength={3}
-                            placeholder="e.g. C"
+                            placeholder="Enter section code"
                             value={customSectionInput}
                             onChange={(e) => setCustomSectionInput(e.target.value.toUpperCase())}
-                            className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-full uppercase font-medium text-slate-900 w-20 focus:outline-none focus:border-slate-800"
+                            className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-full uppercase font-medium text-slate-900 w-32 focus:outline-none focus:border-slate-800"
                           />
                           <button
                             type="button"
@@ -1478,7 +1478,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         disabled={!!editingUser}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="e.g., faculty@mvgrce.edu.in"
+                        placeholder="Enter faculty institutional email"
                         className={`w-full px-4 py-2.5 text-sm bg-white border rounded-full focus:outline-none transition-all ${
                           isDuplicateEmail
                             ? "border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
@@ -1537,7 +1537,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         <div className="flex items-center gap-2 mt-2 p-1.5 bg-slate-50 border border-slate-200 rounded-full animate-in fade-in">
                           <input
                             type="text"
-                            placeholder="e.g. Dean of Academic Affairs"
+                            placeholder="Enter designation title"
                             value={customDesignationInput}
                             onChange={(e) => setCustomDesignationInput(e.target.value)}
                             className="px-3.5 py-1 text-xs bg-white border border-slate-200 rounded-full font-medium text-slate-900 flex-1 focus:outline-none focus:border-slate-800"
@@ -1575,7 +1575,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       disabled={!!editingUser}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g., admin@mvgrce.edu.in"
+                      placeholder="Enter administrator email address"
                       className={`w-full px-4 py-2.5 text-sm bg-white border rounded-full focus:outline-none transition-all ${
                         isDuplicateEmail
                           ? "border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"

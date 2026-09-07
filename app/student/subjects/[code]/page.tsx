@@ -163,8 +163,8 @@ export default async function SubjectDetailPage(props: PageProps) {
     regulation: "R23",
   };
 
-  // Check if subject's semester is in active Exam Lockout
-  const examLockout = await getActiveExamLockout(subject.semester || 3, studentBranch);
+  // Check if subject's semester and subject code is in active Exam Lockout
+  const examLockout = await getActiveExamLockout(subject.semester || 3, studentBranch, code);
 
   // Build Materials query from DB - strictly scoped to this subject and student's branch/section!
   const { data: dbMaterials } = await supabase

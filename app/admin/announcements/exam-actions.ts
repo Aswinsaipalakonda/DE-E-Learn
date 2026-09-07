@@ -14,6 +14,7 @@ export async function createExamScheduleAction(data: {
   title: string;
   semesters: number[];
   branch: string;
+  subjects?: string[];
   startDate: string;
   endDate: string;
   isDailyRecurring: boolean;
@@ -30,14 +31,17 @@ export async function createExamScheduleAction(data: {
     return { error: "Title and at least one semester are required." };
   }
 
+  const subjectsList = data.subjects && data.subjects.length > 0 ? data.subjects : ["ALL"];
+
   const newSchedule: ExamSchedule = {
     id: `exam-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     title: data.title.trim(),
     semesters: data.semesters,
     branch: data.branch || "ALL",
+    subjects: subjectsList,
     start_date: data.startDate,
     end_date: data.endDate,
-    is_daily_recurring: data.isDailyRecurring ?? false,
+    is_daily_recurring: data.isDailyRecurring ?? true,
     daily_start_time: data.dailyStartTime || "10:00",
     daily_end_time: data.dailyEndTime || "11:30",
     active: true,
@@ -50,13 +54,14 @@ export async function createExamScheduleAction(data: {
   localSchedules.unshift(newSchedule);
   saveLocalExamSchedules(localSchedules);
 
-  // 2. Save to Supabase DB if table exists
+  // 2. Save to Supabase DB
   try {
     await supabase.from("exam_schedules").insert({
       id: newSchedule.id,
       title: newSchedule.title,
       semesters: newSchedule.semesters,
       branch: newSchedule.branch,
+      subjects: newSchedule.subjects,
       start_date: newSchedule.start_date,
       end_date: newSchedule.end_date,
       is_daily_recurring: newSchedule.is_daily_recurring,
@@ -65,12 +70,15 @@ export async function createExamScheduleAction(data: {
       active: true,
       created_by: user.id,
     });
-  } catch {}
+  } catch (dbErr) {
+    console.warn("Exam schedule DB save notice:", dbErr);
+  }
 
   await logAuditAction("create_exam_schedule", newSchedule.id, null, {
     title: newSchedule.title,
     semesters: newSchedule.semesters,
     branch: newSchedule.branch,
+    subjects: newSchedule.subjects,
     daily_window: `${newSchedule.daily_start_time} - ${newSchedule.daily_end_time}`,
   });
 

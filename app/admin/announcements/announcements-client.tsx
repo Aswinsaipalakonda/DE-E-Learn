@@ -32,7 +32,8 @@ import {
   Unlock,
   CalendarDays,
   Check,
-  ShieldAlert
+  ShieldAlert,
+  BookOpen
 } from "lucide-react";
 
 interface AnnouncementItem {
@@ -47,11 +48,20 @@ interface AnnouncementItem {
   created_at: string;
 }
 
+interface SubjectItem {
+  code: string;
+  title: string;
+  branch: string;
+  semester: number;
+  regulation?: string;
+}
+
 interface AnnouncementsClientProps {
   initialAnnouncements: AnnouncementItem[];
   initialExamSchedules?: ExamSchedule[];
   branches: { code: string; name: string }[];
   semesters: { number: number; name: string }[];
+  subjects?: SubjectItem[];
 }
 
 export default function AnnouncementsClient({
@@ -59,6 +69,7 @@ export default function AnnouncementsClient({
   initialExamSchedules = [],
   branches,
   semesters,
+  subjects = [],
 }: AnnouncementsClientProps) {
   // Main Section Toggle
   const [mainSection, setMainSection] = useState<"broadcasts" | "exams">("broadcasts");
@@ -99,9 +110,11 @@ export default function AnnouncementsClient({
   const [examSchedules, setExamSchedules] = useState<ExamSchedule[]>(initialExamSchedules);
   const [isExamModalMounted, setIsExamModalMounted] = useState(false);
   const [isExamModalVisible, setIsExamModalVisible] = useState(false);
-  const [examTitle, setExamTitle] = useState("Mid-Term 1 Examinations");
+  const [examTitle, setExamTitle] = useState("");
   const [examSemesters, setExamSemesters] = useState<number[]>([1, 3, 5]);
   const [examBranch, setExamBranch] = useState("ALL");
+  const [examSubjectMode, setExamSubjectMode] = useState<"ALL" | "CUSTOM">("ALL");
+  const [examSelectedSubjects, setExamSelectedSubjects] = useState<string[]>([]);
   const [examStartDate, setExamStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [examEndDate, setExamEndDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
   const [examIsDailyRecurring, setExamIsDailyRecurring] = useState(true);
@@ -144,6 +157,21 @@ export default function AnnouncementsClient({
     const activeCount = examSchedules.filter((s) => s.active).length;
     return { total, activeCount };
   }, [examSchedules]);
+
+  // Available subjects matching selected semesters & branch
+  const availableSubjectsForExams = useMemo(() => {
+    const map = new Map<string, SubjectItem>();
+    subjects.forEach((s) => {
+      if (examSemesters.includes(s.semester)) {
+        if (examBranch === "ALL" || s.branch === examBranch) {
+          if (!map.has(s.code)) {
+            map.set(s.code, s);
+          }
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [subjects, examSemesters, examBranch]);
 
   // Open Drawer in Create Mode
   const openCreateDrawer = () => {
@@ -194,7 +222,7 @@ export default function AnnouncementsClient({
     }, 450);
   };
 
-  // Filter announcements
+  // Filtered dataset
   const filtered = useMemo(() => {
     return announcements.filter((a) => {
       const start = new Date(a.start_time);
@@ -310,6 +338,9 @@ export default function AnnouncementsClient({
   // EXAM LOCKOUT HANDLERS
   // =========================================================================
   const openExamModal = () => {
+    setExamTitle("");
+    setExamSubjectMode("ALL");
+    setExamSelectedSubjects([]);
     setIsExamModalMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -325,18 +356,37 @@ export default function AnnouncementsClient({
     }, 400);
   };
 
+  const toggleExamSubject = (code: string) => {
+    setExamSelectedSubjects((prev) => {
+      if (prev.includes(code)) {
+        return prev.filter((c) => c !== code);
+      } else {
+        return [...prev, code];
+      }
+    });
+  };
+
   const handleSaveExamSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!examTitle.trim() || examSemesters.length === 0) {
       addToast("error", "Validation Error", "Please provide an exam title and select at least one semester.");
       return;
     }
+
+    if (examSubjectMode === "CUSTOM" && examSelectedSubjects.length === 0) {
+      addToast("error", "Validation Error", "Please select at least one subject or choose 'All Semester Subjects'.");
+      return;
+    }
+
     setIsSavingExam(true);
+    const targetSubjects = examSubjectMode === "ALL" ? ["ALL"] : examSelectedSubjects;
+
     try {
       const res = await createExamScheduleAction({
         title: examTitle.trim(),
         semesters: examSemesters,
         branch: examBranch,
+        subjects: targetSubjects,
         startDate: examStartDate,
         endDate: examEndDate,
         isDailyRecurring: examIsDailyRecurring,
@@ -347,7 +397,11 @@ export default function AnnouncementsClient({
       if (res.error) {
         addToast("error", "Save Failed", res.error);
       } else if (res.schedule) {
-        addToast("success", "Exam Lockout Scheduled", `Materials for Semesters ${examSemesters.join(", ")} will hide during ${examDailyStartTime} - ${examDailyEndTime}.`);
+        addToast(
+          "success", 
+          "Exam Lockout Scheduled", 
+          `Materials for ${targetSubjects.includes("ALL") ? "All Subjects" : targetSubjects.join(", ")} (Sem ${examSemesters.join(", ")}) will hide daily from ${examDailyStartTime} to ${examDailyEndTime}.`
+        );
         setExamSchedules((prev) => [res.schedule!, ...prev]);
         closeExamModal();
       }
@@ -444,43 +498,52 @@ export default function AnnouncementsClient({
               <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed mt-0.5">
                 {mainSection === "broadcasts" 
                   ? "Publish targeted academic notifications, exam schedules, and department circulars."
-                  : "Automatically hide semester study materials during scheduled exam hours and unlock when the timer concludes."}
+                  : "Automatically hide semester/subject study materials during scheduled exam hours and unlock when the session concludes."}
               </p>
             </div>
           </div>
 
-          {/* Section Switcher Pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-2">
-            <button
-              onClick={() => setMainSection("broadcasts")}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all ${
-                mainSection === "broadcasts"
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200 font-normal"
-              }`}
-            >
-              📢 Broadcast Notices ({stats.total})
-            </button>
-            <button
-              onClick={() => setMainSection("exams")}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                mainSection === "exams"
-                  ? "bg-amber-600 text-white shadow-xs"
-                  : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200"
-              }`}
-            >
-              <Lock className="h-3 w-3" />
-              <span>Exam Mode Lockouts ({examStats.activeCount} Active)</span>
-            </button>
+          <div className="flex items-center gap-3 pt-1">
+            <span className="text-xs font-medium text-slate-500">
+              Active Notices: <strong className="text-slate-800 font-semibold">{stats.active}</strong>
+            </span>
+            <span className="text-slate-300">•</span>
+            <span className="text-xs font-medium text-slate-500">
+              Active Exam Lockouts: <strong className="text-amber-700 font-semibold">{examStats.activeCount}</strong>
+            </span>
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="self-start lg:self-center shrink-0">
+        {/* Section Toggle Tabs & Actions */}
+        <div className="flex flex-wrap items-center gap-3 self-start lg:self-center">
+          <div className="flex items-center p-1 bg-slate-100 rounded-full border border-slate-200">
+            <button
+              onClick={() => setMainSection("broadcasts")}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                mainSection === "broadcasts"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Broadcasts
+            </button>
+            <button
+              onClick={() => setMainSection("exams")}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                mainSection === "exams"
+                  ? "bg-amber-600 text-white shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Lock className="h-3.5 w-3.5" />
+              <span>Exam Mode Lockouts</span>
+            </button>
+          </div>
+
           {mainSection === "broadcasts" ? (
             <button
               onClick={openCreateDrawer}
-              className="inline-flex items-center gap-2 px-5.5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm transition-all shadow-xs hover:shadow-md cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold shadow-xs cursor-pointer transition-all"
             >
               <Plus className="h-4 w-4" />
               <span>New Announcement</span>
@@ -488,316 +551,126 @@ export default function AnnouncementsClient({
           ) : (
             <button
               onClick={openExamModal}
-              className="inline-flex items-center gap-2 px-5.5 py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm transition-all shadow-xs hover:shadow-md cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold shadow-xs cursor-pointer transition-all"
             >
-              <Lock className="h-4 w-4" />
-              <span>+ Schedule Exam Lockout</span>
+              <Plus className="h-4 w-4" />
+              <span>Schedule Exam Lockout</span>
             </button>
           )}
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION 1: BROADCAST ANNOUNCEMENTS */}
-      {/* ========================================================================= */}
-      {mainSection === "broadcasts" && (
-        <>
-          {/* TOOLBAR FILTER CONTROLS */}
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-            {/* Status Tabs */}
-            <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3">
-              {[
-                { id: "all", label: "All Notices", count: stats.total },
-                { id: "active", label: "Active Now", count: stats.active },
-                { id: "important", label: "Important Priority", count: stats.important },
-                { id: "expired", label: "Archived / Expired", count: announcements.filter((a) => now > new Date(a.end_time)).length },
-              ].map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveTab(tab.id as "all" | "active" | "important" | "expired");
-                      setCurrentPage(1);
-                    }}
-                    className={`px-4 py-2 rounded-full text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
-                      isActive
-                        ? "bg-slate-900 text-white shadow-xs font-semibold"
-                        : "bg-slate-100/80 text-slate-700 hover:text-slate-900 hover:bg-slate-200 font-normal"
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                        isActive ? "bg-white/20 text-white" : "bg-white border border-slate-200 text-slate-600"
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Search and Dropdowns */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-              <div className="sm:col-span-6 relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search announcements by title or content..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                />
-              </div>
-
-              <div className="sm:col-span-3">
-                <select
-                  value={branchFilter}
-                  onChange={(e) => {
-                    setBranchFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
-                >
-                  <option value="all">All Branch Scopes</option>
-                  <option value="ALL">Institutional Broadcasts (All)</option>
-                  {branches.map((b) => (
-                    <option key={b.code} value={b.code}>
-                      {b.code} Department
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="sm:col-span-3">
-                <select
-                  value={semesterFilter}
-                  onChange={(e) => {
-                    setSemesterFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
-                >
-                  <option value="all">All Semester Scopes</option>
-                  <option value="0">All Enrolled Semesters</option>
-                  {semesters.map((s) => (
-                    <option key={s.number} value={s.number.toString()}>
-                      Semester {s.number}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Announcements Card Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {paginatedAnnouncements.map((item) => {
-              const isImportant = item.priority === "important";
-              return (
-                <div
-                  key={item.id}
-                  className={`p-5 rounded-3xl border bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 relative group ${
-                    isImportant ? "border-red-200" : "border-slate-200"
-                  }`}
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {getStatusBadge(item.start_time, item.end_time)}
-                        {isImportant && (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
-                            Urgent / High Priority
-                          </span>
-                        )}
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                          {item.scope_branch ? `${item.scope_branch} Dept` : "All Branches"}
-                        </span>
-                        {item.scope_semester && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                            Sem {item.scope_semester}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100">
-                        <button
-                          onClick={() => openEditDrawer(item)}
-                          className="p-1.5 text-slate-500 hover:text-slate-900 rounded-full hover:bg-slate-100 cursor-pointer"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingItem(item)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-full hover:bg-red-50 cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <h3 className="text-base font-bold text-slate-900 leading-snug">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-slate-600 font-normal leading-relaxed whitespace-pre-wrap">
-                      {item.content}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-normal">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3 text-slate-400" />
-                      <span>{new Date(item.start_time).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – {new Date(item.end_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                    </span>
-                    <span>{new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between bg-white px-5 py-3 rounded-2xl border border-slate-200 text-xs">
-              <span className="text-slate-500">Page {currentPage} of {totalPages}</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 disabled:opacity-40 cursor-pointer"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded-xl bg-slate-900 text-white disabled:opacity-40 cursor-pointer"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ========================================================================= */}
-      {/* SECTION 2: EXAM MODE TIMED LOCKOUT SCHEDULES */}
+      {/* EXAM LOCKOUT SCHEDULES VIEW */}
       {/* ========================================================================= */}
       {mainSection === "exams" && (
         <div className="space-y-4">
-          {/* Informational Guidance Banner */}
-          <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3.5">
-            <div className="p-2 rounded-2xl bg-amber-500/20 text-amber-800 shrink-0 mt-0.5">
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold text-amber-950">How Exam Mode Works</h3>
-              <p className="text-xs text-amber-900/90 leading-relaxed">
-                When an Exam Lockout schedule is active, study materials for the chosen semesters are <strong>automatically hidden</strong> in student dashboards during the specified daily exam window (e.g. 10:00 AM – 11:30 AM). As soon as the timer ends, materials are <strong>instantly restored</strong> without requiring manual unarchiving.
+          <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm">
+            <div className="flex items-center gap-2.5">
+              <ShieldAlert className="h-5 w-5 text-amber-700 shrink-0" />
+              <p className="font-medium">
+                When active, study documents & notes for targeted course subjects are <strong className="font-bold">locked & hidden</strong> on student dashboards during the specified hours. Materials automatically reappear once the session time ends.
               </p>
             </div>
+            <button
+              onClick={openExamModal}
+              className="px-4 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shrink-0 cursor-pointer shadow-2xs"
+            >
+              + Add Exam Schedule
+            </button>
           </div>
 
-          {/* Exam Schedules List */}
           {examSchedules.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {examSchedules.map((sched) => (
                 <div
                   key={sched.id}
-                  className={`p-5 sm:p-6 rounded-3xl border bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4 ${
-                    sched.active ? "border-amber-300 ring-1 ring-amber-200" : "border-slate-200 opacity-75"
+                  className={`p-5 sm:p-6 rounded-3xl border transition-all bg-white shadow-xs space-y-4 ${
+                    sched.active ? "border-amber-300 ring-1 ring-amber-300/40" : "border-slate-200 opacity-75"
                   }`}
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        {sched.active ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                            <span className="h-2 w-2 rounded-full bg-amber-600 animate-pulse" />
-                            Lockout Active
-                          </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          sched.active ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-slate-100 text-slate-600"
+                        }`}>
+                          {sched.active ? "Lockout Active" : "Lockout Paused"}
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          Branch: <strong className="text-slate-800">{sched.branch || "ALL"}</strong>
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-slate-900 text-base leading-snug">{sched.title}</h3>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleToggleExamStatus(sched.id, sched.active)}
+                        disabled={togglingExamId === sched.id}
+                        title={sched.active ? "Pause Lockout" : "Activate Lockout"}
+                        className={`p-2 rounded-full border transition-all cursor-pointer ${
+                          sched.active 
+                            ? "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" 
+                            : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+                        }`}
+                      >
+                        {togglingExamId === sched.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : sched.active ? (
+                          <Lock className="h-4 w-4" />
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                            Paused / Inactive
-                          </span>
+                          <Unlock className="h-4 w-4" />
                         )}
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                          {sched.branch === "ALL" ? "All Branches" : `${sched.branch} Dept`}
-                        </span>
-                      </div>
+                      </button>
+                      <button
+                        onClick={() => setDeletingExamSchedule(sched)}
+                        title="Delete Schedule"
+                        className="p-2 rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
 
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleExamStatus(sched.id, sched.active)}
-                          disabled={togglingExamId === sched.id}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                            sched.active
-                              ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                              : "bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
-                          }`}
-                        >
-                          {togglingExamId === sched.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : sched.active ? (
-                            "Pause"
-                          ) : (
-                            "Activate"
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingExamSchedule(sched)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-full hover:bg-red-50 cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                  {/* Badges & Subjects */}
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-slate-500">Semesters:</span>
+                      {sched.semesters.map((s) => (
+                        <span key={s} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 font-bold border border-slate-200">
+                          Sem {s}
+                        </span>
+                      ))}
                     </div>
 
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 leading-snug">
-                        {sched.title}
-                      </h3>
-                      <div className="flex items-center gap-1.5 flex-wrap pt-2">
-                        <span className="text-xs font-semibold text-slate-600">Locked Semesters:</span>
-                        {sched.semesters.map((s) => (
-                          <span
-                            key={s}
-                            className="px-2 py-0.5 rounded-full bg-slate-900 text-white font-bold text-[11px]"
-                          >
-                            Sem {s}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-slate-500">Subjects Scope:</span>
+                      {sched.subjects && !sched.subjects.includes("ALL") ? (
+                        sched.subjects.map((subCode) => (
+                          <span key={subCode} className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 font-bold text-xs">
+                            {subCode}
                           </span>
-                        ))}
-                      </div>
+                        ))
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 font-semibold text-xs">
+                          All Subjects in Semester(s)
+                        </span>
+                      )}
                     </div>
+                  </div>
 
-                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1 text-xs">
-                      <div className="flex items-center justify-between text-slate-700 font-medium">
-                        <span className="flex items-center gap-1.5">
-                          <Clock className="h-3.5 w-3.5 text-amber-600" />
-                          Daily Lockout Window:
-                        </span>
-                        <strong className="text-slate-900 font-bold">
-                          {sched.daily_start_time} – {sched.daily_end_time} (IST)
-                        </strong>
-                      </div>
-                      <div className="flex items-center justify-between text-slate-500 font-normal text-[11px]">
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                          Evaluation Term Dates:
-                        </span>
-                        <span>
-                          {sched.start_date.slice(0, 10)} to {sched.end_date.slice(0, 10)}
-                        </span>
-                      </div>
+                  {/* Daily Timing Card */}
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs text-slate-700">
+                    <div className="flex items-center gap-2 font-medium">
+                      <Clock className="h-4 w-4 text-amber-700 shrink-0" />
+                      <span>
+                        Daily Session: <strong className="text-slate-900 font-bold">{sched.daily_start_time} – {sched.daily_end_time} IST</strong>
+                      </span>
                     </div>
+                    <span className="text-slate-400 font-normal">
+                      {sched.start_date.slice(0, 10)} to {sched.end_date.slice(0, 10)}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -824,19 +697,136 @@ export default function AnnouncementsClient({
       )}
 
       {/* ========================================================================= */}
+      {/* BROADCASTS LIST VIEW */}
+      {/* ========================================================================= */}
+      {mainSection === "broadcasts" && (
+        <div className="space-y-4">
+          {/* Filter Bar */}
+          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="sm:col-span-6 relative">
+              <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search announcements by title or keyword..."
+                className="w-full pl-11 pr-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-full text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+
+            <div className="sm:col-span-3">
+              <select
+                value={branchFilter}
+                onChange={(e) => {
+                  setBranchFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-full text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer"
+              >
+                <option value="all">All Target Branches</option>
+                <option value="ALL">Campus-Wide Only</option>
+                {branches.map((b) => (
+                  <option key={b.code} value={b.code}>
+                    {b.code}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-3">
+              <select
+                value={semesterFilter}
+                onChange={(e) => {
+                  setSemesterFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-full text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer"
+              >
+                <option value="all">All Semesters</option>
+                {semesters.map((s) => (
+                  <option key={s.number} value={s.number.toString()}>
+                    Semester {s.number}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Announcements Grid */}
+          {paginatedAnnouncements.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {paginatedAnnouncements.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      {getStatusBadge(item.start_time, item.end_time)}
+                      {item.priority === "important" && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase">
+                          Important
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="font-bold text-slate-900 text-base leading-snug">{item.title}</h3>
+                    <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed font-normal">
+                      {item.content}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <div className="text-slate-400 font-medium">
+                      {item.scope_branch ? `Branch: ${item.scope_branch}` : "All Branches"}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => openEditDrawer(item)}
+                        className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                        title="Edit Notice"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeletingItem(item)}
+                        className="p-1.5 rounded-full hover:bg-red-50 text-red-600 transition-colors cursor-pointer"
+                        title="Delete Notice"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-xs space-y-2">
+              <p className="text-sm font-semibold text-slate-800">No Announcements Found</p>
+              <p className="text-xs text-slate-500">No broadcast records match your search query.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* EXAM LOCKOUT SCHEDULE CREATION MODAL */}
       {/* ========================================================================= */}
       {isExamModalMounted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 ${
               isExamModalVisible ? "opacity-100" : "opacity-0"
             }`}
             onClick={() => !isSavingExam && closeExamModal()}
           />
           <div
             data-lenis-prevent
-            className={`bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-xl p-6 sm:p-7 space-y-5 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+            className={`bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-xl p-6 sm:p-7 space-y-5 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-300 overscroll-contain ${
               isExamModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
             }`}
             onClick={(e) => e.stopPropagation()}
@@ -877,8 +867,8 @@ export default function AnnouncementsClient({
                   required
                   value={examTitle}
                   onChange={(e) => setExamTitle(e.target.value)}
-                  placeholder="e.g. Mid-Term 1 Examinations, Semester End Labs"
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  placeholder="Enter examination session title"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
                 />
               </div>
 
@@ -908,8 +898,13 @@ export default function AnnouncementsClient({
                         key={semNum}
                         type="button"
                         onClick={() => {
-                          if (isChecked) setExamSemesters((prev) => prev.filter((s) => s !== semNum));
-                          else setExamSemesters((prev) => [...prev, semNum].sort());
+                          if (isChecked) {
+                            if (examSemesters.length > 1) {
+                              setExamSemesters((prev) => prev.filter((s) => s !== semNum));
+                            }
+                          } else {
+                            setExamSemesters((prev) => [...prev, semNum].sort());
+                          }
                         }}
                         className={`py-2 px-3 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           isChecked
@@ -942,6 +937,95 @@ export default function AnnouncementsClient({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Subject Scope Granularity */}
+              <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-indigo-950 uppercase tracking-wide flex items-center gap-1.5">
+                    <BookOpen className="h-4 w-4 text-indigo-700" />
+                    <span>Target Subjects Scope *</span>
+                  </label>
+                  <span className="text-[11px] font-medium text-indigo-700">
+                    {availableSubjectsForExams.length} matching subjects
+                  </span>
+                </div>
+
+                {/* Radio Selector: ALL Subjects vs CUSTOM Subjects */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setExamSubjectMode("ALL")}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer text-left flex items-center gap-2 ${
+                      examSubjectMode === "ALL"
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      examSubjectMode === "ALL" ? "border-white bg-white/20" : "border-slate-300"
+                    }`}>
+                      {examSubjectMode === "ALL" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <span>All Subjects in Semester(s)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setExamSubjectMode("CUSTOM")}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer text-left flex items-center gap-2 ${
+                      examSubjectMode === "CUSTOM"
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      examSubjectMode === "CUSTOM" ? "border-white bg-white/20" : "border-slate-300"
+                    }`}>
+                      {examSubjectMode === "CUSTOM" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <span>Specific Exam Subjects</span>
+                  </button>
+                </div>
+
+                {/* Custom Subjects Checkbox List */}
+                {examSubjectMode === "CUSTOM" && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[11px] text-slate-600">
+                      Select specific course subjects to lock during this exam window:
+                    </p>
+                    <div className="max-h-36 overflow-y-auto space-y-1 p-2 bg-white rounded-xl border border-indigo-100">
+                      {availableSubjectsForExams.length > 0 ? (
+                        availableSubjectsForExams.map((sub) => {
+                          const isSelected = examSelectedSubjects.includes(sub.code);
+                          return (
+                            <button
+                              key={sub.code}
+                              type="button"
+                              onClick={() => toggleExamSubject(sub.code)}
+                              className={`w-full p-2 rounded-lg text-left text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                                isSelected ? "bg-indigo-50 font-bold text-indigo-950" : "hover:bg-slate-50 text-slate-700"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-700">
+                                  Sem {sub.semester}
+                                </span>
+                                <span className="font-bold">{sub.code}</span>
+                                <span className="truncate text-slate-500 font-normal">{sub.title}</span>
+                              </div>
+                              {isSelected && <Check className="h-4 w-4 text-indigo-600 shrink-0" />}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="text-xs text-slate-400 p-2 text-center">
+                          No subjects registered for Semesters {examSemesters.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Daily Time Window (e.g. 10:00 to 11:30) */}
@@ -1088,87 +1172,69 @@ export default function AnnouncementsClient({
       {isDrawerMounted && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div
-            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-450 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 ${
               isDrawerVisible ? "opacity-100" : "opacity-0"
             }`}
             onClick={() => !isSubmitting && closeDrawer()}
           />
           <div
             data-lenis-prevent
-            className={`w-full max-w-xl bg-white border-l border-slate-200 h-full shadow-2xl relative z-10 flex flex-col transform transition-transform duration-450 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
+            className={`w-full max-w-xl bg-white border-l border-slate-200 h-full shadow-2xl relative z-10 flex flex-col transform transition-transform duration-300 overscroll-contain ${
               isDrawerVisible ? "translate-x-0" : "translate-x-full"
             }`}
-            onClick={(e) => e.stopPropagation()}
           >
-            {/* Drawer Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-slate-100 text-slate-700">
+                <div className="p-2.5 rounded-2xl bg-slate-900 text-white shadow-xs">
                   <Megaphone className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
-                    {editingItem ? "Edit Announcement" : "Create New Notice"}
-                  </h2>
-                  <p className="text-xs text-slate-500 font-normal mt-0.5">
-                    Targeted broadcast notification for academic cohorts
+                  <h3 className="text-base font-bold text-slate-900">
+                    {editingItem ? "Edit Broadcast Notice" : "Broadcast New Notice"}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-normal">
+                    {editingItem ? "Modify notice details and audience" : "Publish announcement to student and faculty portals"}
                   </p>
                 </div>
               </div>
               <button
-                type="button"
                 onClick={closeDrawer}
                 disabled={isSubmitting}
-                className="p-2 text-slate-400 hover:text-slate-700 rounded-full cursor-pointer hover:bg-slate-100"
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 cursor-pointer"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Drawer Body Form */}
-            <form id="announcement-manage-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5 overscroll-contain">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Notice Title *
+                  Announcement Title *
                 </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Mid-Term 1 Schedule & Hall Allotments"
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  placeholder="Enter announcement headline or title"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 font-medium"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Broadcast Content / Instructions *
-                </label>
-                <textarea
-                  required
-                  rows={5}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Provide comprehensive details or guidelines for students and faculty..."
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Branch Scope
+                    Target Branch
                   </label>
                   <select
                     value={scopeBranch}
                     onChange={(e) => setScopeBranch(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
+                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer font-medium"
                   >
-                    <option value="ALL">All Departments</option>
+                    <option value="ALL">All Branches (Campus-wide)</option>
                     {branches.map((b) => (
                       <option key={b.code} value={b.code}>
-                        {b.code} ({b.name})
+                        {b.code}
                       </option>
                     ))}
                   </select>
@@ -1176,12 +1242,12 @@ export default function AnnouncementsClient({
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Semester Scope
+                    Target Semester
                   </label>
                   <select
                     value={scopeSemester}
                     onChange={(e) => setScopeSemester(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
+                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer font-medium"
                   >
                     <option value="0">All Semesters</option>
                     {semesters.map((s) => (
@@ -1193,141 +1259,92 @@ export default function AnnouncementsClient({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                  Priority Level
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPriority("normal")}
+                    className={`py-2 px-4 rounded-xl border text-xs font-semibold cursor-pointer ${
+                      priority === "normal" ? "bg-slate-900 text-white border-slate-900" : "bg-slate-50 border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    Normal Notice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPriority("important")}
+                    className={`py-2 px-4 rounded-xl border text-xs font-semibold cursor-pointer ${
+                      priority === "important" ? "bg-red-600 text-white border-red-600" : "bg-slate-50 border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    Important Alert
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                  Message Content *
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Enter notice details, circular text, or instructions for students..."
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 font-normal leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Start Broadcast
+                    Display Start Time
                   </label>
                   <input
                     type="datetime-local"
                     required
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none font-medium"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Expire Broadcast
+                    Display End Time
                   </label>
                   <input
                     type="datetime-local"
                     required
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none font-medium"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Priority Banner
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setPriority("normal")}
-                    className={`py-2 px-3 rounded-2xl border text-xs font-semibold cursor-pointer transition-all ${
-                      priority === "normal"
-                        ? "bg-slate-900 text-white border-slate-900"
-                        : "bg-slate-50 border-slate-200 text-slate-700"
-                    }`}
-                  >
-                    Normal Priority
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPriority("important")}
-                    className={`py-2 px-3 rounded-2xl border text-xs font-semibold cursor-pointer transition-all ${
-                      priority === "important"
-                        ? "bg-red-600 text-white border-red-600"
-                        : "bg-red-50/50 border-red-200 text-red-700"
-                    }`}
-                  >
-                    High / Urgent Priority
-                  </button>
-                </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={closeDrawer}
+                  disabled={isSubmitting}
+                  className="px-5 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{editingItem ? "Save Changes" : "Broadcast Announcement"}</span>
+                </button>
               </div>
             </form>
-
-            {/* Drawer Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={closeDrawer}
-                disabled={isSubmitting}
-                className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="announcement-manage-form"
-                disabled={isSubmitting}
-                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{editingItem ? "Saving..." : "Publishing..."}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{editingItem ? "Save Changes" : "Publish Notice"}</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* DELETE ANNOUNCEMENT MODAL */}
-      {/* ========================================================================= */}
-      {deletingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => !isDeleting && setDeletingItem(null)}
-          />
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-3 text-red-600">
-              <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
-                <Trash2 className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900">Delete Announcement</h3>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
-              Are you sure you want to delete <strong className="text-slate-900 font-semibold">{deletingItem.title}</strong>? It will immediately be removed from all student and faculty feeds.
-            </p>
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingItem(null)}
-                disabled={isDeleting}
-                className="px-5 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteConfirm}
-                disabled={isDeleting}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Confirm Delete"
-                )}
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -549,7 +549,7 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Unit 1: Introduction to Agile Development & Scrum Framework"
+              placeholder="Enter material title or unit topic name"
               className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
           </div>
@@ -580,7 +580,7 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
                 type="text"
                 value={tagsStr}
                 onChange={(e) => setTagsStr(e.target.value)}
-                placeholder="e.g., Agile, Scrum, Unit-1"
+                placeholder="Enter topic keywords separated by commas"
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>

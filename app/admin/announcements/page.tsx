@@ -15,6 +15,14 @@ interface AnnouncementItem {
   created_at: string;
 }
 
+interface SubjectItem {
+  code: string;
+  title: string;
+  branch: string;
+  semester: number;
+  regulation?: string;
+}
+
 const FALLBACK_ANNOUNCEMENTS: AnnouncementItem[] = [
   {
     id: "mock-ann-1",
@@ -49,17 +57,6 @@ const FALLBACK_ANNOUNCEMENTS: AnnouncementItem[] = [
     end_time: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
-  {
-    id: "mock-ann-4",
-    title: "Library Book Bank Distribution for Semester 1",
-    content: "Prescribed reference textbooks for Semester 1 Mathematics, Physics, and Introduction to Programming are available for collection at Central Library Desk 3.",
-    scope_branch: null,
-    scope_semester: 1,
-    priority: "normal",
-    start_time: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    end_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  }
 ];
 
 import { readLocalExamSchedules, ExamSchedule } from "@/utils/exam-lockout";
@@ -72,8 +69,8 @@ export default async function AdminAnnouncementsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch announcements, branches, semesters, and exam schedules
-  const [announcementsRes, branchesRes, semestersRes, examSchedulesRes] = await Promise.all([
+  // Fetch announcements, branches, semesters, subjects, and exam schedules in parallel
+  const [announcementsRes, branchesRes, semestersRes, subjectsRes, examSchedulesRes] = await Promise.all([
     supabase
       .from("announcements")
       .select("*")
@@ -87,6 +84,11 @@ export default async function AdminAnnouncementsPage() {
       .select("number, name")
       .eq("active", true)
       .order("number", { ascending: true }),
+    supabase
+      .from("subjects")
+      .select("code, title, branch, semester, regulation")
+      .eq("active", true)
+      .order("code", { ascending: true }),
     supabase
       .from("exam_schedules")
       .select("*")
@@ -121,12 +123,19 @@ export default async function AdminAnnouncementsPage() {
     { number: 8, name: "8th Semester" },
   ];
 
+  const subjects = (subjectsRes.data as unknown as SubjectItem[]) || [
+    { code: "R23MATT101", title: "LINEAR ALGEBRA & CALCULUS", branch: "CIC", semester: 1, regulation: "R23" },
+    { code: "R23SE701", title: "Software Engineering", branch: "CIC", semester: 7, regulation: "R23" },
+    { code: "23CIC301", title: "Database Management Systems", branch: "CIC", semester: 3, regulation: "R23" },
+  ];
+
   return (
     <AnnouncementsClient
       initialAnnouncements={allAnnouncements}
       initialExamSchedules={allExamSchedules}
       branches={branches}
       semesters={semesters}
+      subjects={subjects}
     />
   );
 }

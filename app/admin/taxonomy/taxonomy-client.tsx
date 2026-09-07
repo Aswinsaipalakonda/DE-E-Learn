@@ -1154,7 +1154,7 @@ export default function TaxonomyClient({
                     required
                     value={subCode}
                     onChange={(e) => setSubCode(e.target.value)}
-                    placeholder="e.g., R23MATT101 or 23CIC301"
+                    placeholder="Enter course subject code"
                     className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40 uppercase"
                   />
                 </div>
@@ -1169,7 +1169,7 @@ export default function TaxonomyClient({
                     required
                     value={subTitle}
                     onChange={(e) => setSubTitle(e.target.value)}
-                    placeholder="e.g., LINEAR ALGEBRA & CALCULUS"
+                    placeholder="Enter subject title"
                     className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40"
                   />
                 </div>
@@ -1397,7 +1397,7 @@ export default function TaxonomyClient({
                   required
                   value={newRegCode}
                   onChange={(e) => setNewRegCode(e.target.value)}
-                  placeholder="e.g., R23, R24, A2"
+                  placeholder="Enter regulation code"
                   className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-400 text-primary font-semibold uppercase"
                 />
               </div>
@@ -1410,7 +1410,7 @@ export default function TaxonomyClient({
                   type="text"
                   value={newRegName}
                   onChange={(e) => setNewRegName(e.target.value)}
-                  placeholder="e.g., R23 Autonomous B.Tech Regulation"
+                  placeholder="Enter regulation description or title"
                   className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-400 text-primary font-normal"
                 />
               </div>
@@ -1482,7 +1482,7 @@ export default function TaxonomyClient({
                   required
                   value={branchCode}
                   onChange={(e) => setBranchCode(e.target.value)}
-                  placeholder="e.g., CIC, CSD, CSM"
+                  placeholder="Enter branch code"
                   className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-semibold uppercase"
                 />
               </div>
@@ -1496,7 +1496,7 @@ export default function TaxonomyClient({
                   required
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
-                  placeholder="e.g., Cyber Security & Data Engineering"
+                  placeholder="Enter branch full name"
                   className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal"
                 />
               </div>
