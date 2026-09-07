@@ -43,7 +43,98 @@ export async function createRegulationAction(code: string, name: string) {
   return { success: true };
 }
 
-// Delete a regulation
+// Update an existing regulation
+export async function updateRegulationAction(
+  originalCode: string,
+  updates: {
+    code: string;
+    name: string;
+    active?: boolean;
+  }
+) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  const formattedCode = updates.code.toUpperCase().trim();
+  const formattedName = updates.name.trim();
+
+  // If code changed, check if new code already exists
+  if (formattedCode !== originalCode) {
+    const { data: existing } = await supabase
+      .from("regulations")
+      .select("code")
+      .eq("code", formattedCode)
+      .maybeSingle();
+
+    if (existing) {
+      return { error: `Regulation code "${formattedCode}" already exists.` };
+    }
+  }
+
+  const { error } = await supabase
+    .from("regulations")
+    .update({
+      code: formattedCode,
+      name: formattedName,
+      ...(updates.active !== undefined ? { active: updates.active } : {}),
+    })
+    .eq("code", originalCode);
+
+  if (error) return { error: error.message };
+
+  await logAuditAction("UPDATE_REGULATION", formattedCode, { originalCode }, updates);
+
+  revalidatePath("/admin/taxonomy");
+  revalidatePath("/faculty/upload");
+  return { success: true };
+}
+
+// Toggle regulation active status
+export async function toggleRegulationActiveAction(code: string, currentActive: boolean) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  const { error } = await supabase
+    .from("regulations")
+    .update({ active: !currentActive })
+    .eq("code", code);
+
+  if (error) return { error: error.message };
+
+  await logAuditAction("TOGGLE_REGULATION_STATUS", code, { active: currentActive }, { active: !currentActive });
+
+  revalidatePath("/admin/taxonomy");
+  revalidatePath("/faculty/upload");
+  return { success: true };
+}
+
+// Delete a regulation (with mapped subjects safety check)
 export async function deleteRegulationAction(code: string) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -59,6 +150,18 @@ export async function deleteRegulationAction(code: string) {
 
   if (!profile || profile.role !== "admin") {
     return { error: "Permission denied." };
+  }
+
+  // Safety check: verify no mapped subjects
+  const { count } = await supabase
+    .from("subjects")
+    .select("*", { count: "exact", head: true })
+    .eq("regulation", code);
+
+  if (count && count > 0) {
+    return { 
+      error: `Cannot delete regulation "${code}" because ${count} curriculum subject(s) are currently mapped to it. Reassign or delete those subjects first.` 
+    };
   }
 
   const { error } = await supabase
@@ -332,8 +435,75 @@ export async function createBranchAction(code: string, name: string) {
   return { success: true };
 }
 
-// Delete a branch
-export async function deleteBranchAction(code: string) {
+// Update an existing branch
+export async function updateBranchAction(
+  originalCode: string,
+  updates: {
+    code: string;
+    name: string;
+    active?: boolean;
+  }
+) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  const formattedCode = updates.code.toUpperCase().trim();
+  const formattedName = updates.name.trim();
+
+  // If code changed, check if new code exists
+  if (formattedCode !== originalCode) {
+    const { data: existing } = await supabase
+      .from("branches")
+      .select("code")
+      .eq("code", formattedCode)
+      .maybeSingle();
+
+    if (existing) {
+      return { error: `Branch code "${formattedCode}" already exists.` };
+    }
+  }
+
+  const { error } = await supabase
+    .from("branches")
+    .update({
+      code: formattedCode,
+      name: formattedName,
+      ...(updates.active !== undefined ? { active: updates.active } : {}),
+    })
+    .eq("code", originalCode);
+
+  if (error) return { error: error.message };
+
+  // If code changed, also update subjects with this branch
+  if (formattedCode !== originalCode) {
+    await supabase
+      .from("subjects")
+      .update({ branch: formattedCode })
+      .eq("branch", originalCode);
+  }
+
+  await logAuditAction("UPDATE_BRANCH", formattedCode, { originalCode }, updates);
+
+  revalidatePath("/admin/taxonomy");
+  revalidatePath("/faculty/upload");
+  return { success: true };
+}
+
+// Toggle branch active status
+export async function toggleBranchActiveAction(code: string, currentActive: boolean) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -352,6 +522,49 @@ export async function deleteBranchAction(code: string) {
 
   const { error } = await supabase
     .from("branches")
+    .update({ active: !currentActive })
+    .eq("code", code);
+
+  if (error) return { error: error.message };
+
+  await logAuditAction("TOGGLE_BRANCH_STATUS", code, { active: currentActive }, { active: !currentActive });
+
+  revalidatePath("/admin/taxonomy");
+  return { success: true };
+}
+
+// Delete a branch (with mapped subjects safety check)
+export async function deleteBranchAction(code: string) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  // Safety check: verify no mapped subjects
+  const { count } = await supabase
+    .from("subjects")
+    .select("*", { count: "exact", head: true })
+    .eq("branch", code);
+
+  if (count && count > 0) {
+    return { 
+      error: `Cannot delete branch "${code}" because ${count} curriculum subject(s) are currently mapped to it. Reassign or delete those subjects first.` 
+    };
+  }
+
+  const { error } = await supabase
+    .from("branches")
     .delete()
     .eq("code", code);
 
@@ -362,3 +575,82 @@ export async function deleteBranchAction(code: string) {
   revalidatePath("/admin/taxonomy");
   return { success: true };
 }
+
+// Update an existing semester
+export async function updateSemesterAction(
+  number: number,
+  updates: {
+    name: string;
+    active?: boolean;
+  }
+) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  const formattedName = updates.name.trim() || `Semester ${number}`;
+
+  const { error } = await supabase
+    .from("semesters")
+    .upsert({
+      number,
+      name: formattedName,
+      ...(updates.active !== undefined ? { active: updates.active } : {}),
+    }, { onConflict: "number" });
+
+  if (error) return { error: error.message };
+
+  await logAuditAction("UPDATE_SEMESTER", `Sem ${number}`, null, updates);
+
+  revalidatePath("/admin/taxonomy");
+  revalidatePath("/student/subjects");
+  revalidatePath("/faculty/upload");
+  return { success: true };
+}
+
+// Toggle semester active status
+export async function toggleSemesterActiveAction(number: number, currentActive: boolean) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Permission denied." };
+  }
+
+  const { error } = await supabase
+    .from("semesters")
+    .upsert({
+      number,
+      name: `Semester ${number}`,
+      active: !currentActive,
+    }, { onConflict: "number" });
+
+  if (error) return { error: error.message };
+
+  await logAuditAction("TOGGLE_SEMESTER_STATUS", `Sem ${number}`, { active: currentActive }, { active: !currentActive });
+
+  revalidatePath("/admin/taxonomy");
+  return { success: true };
+}
+
