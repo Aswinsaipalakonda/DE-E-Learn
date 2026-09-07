@@ -15,97 +15,131 @@ interface SemesterItem {
   active: boolean;
 }
 
+interface RegulationItem {
+  code: string;
+  name: string;
+  active: boolean;
+}
+
 interface SubjectItem {
   code: string;
   title: string;
   branch: string;
   semester: number;
+  regulation?: string;
   active: boolean;
 }
 
+const DEFAULT_REGULATIONS: RegulationItem[] = [
+  { code: "R23", name: "R23 Autonomous Regulation", active: true },
+  { code: "R20", name: "R20 Autonomous Regulation", active: true },
+  { code: "R19", name: "R19 Autonomous Regulation", active: true },
+  { code: "A2", name: "A2 Autonomous Regulation", active: true },
+];
+
 const MOCK_DEFAULT_SUBJECTS: SubjectItem[] = [
   {
-    code: "23CI3001",
+    code: "R23MATT101",
+    title: "LINEAR ALGEBRA & CALCULUS",
+    branch: "CIC",
+    semester: 1,
+    regulation: "R23",
+    active: true,
+  },
+  {
+    code: "R23MATT101",
+    title: "LINEAR ALGEBRA & CALCULUS",
+    branch: "CSD",
+    semester: 1,
+    regulation: "R23",
+    active: true,
+  },
+  {
+    code: "R23MATT101",
+    title: "LINEAR ALGEBRA & CALCULUS",
+    branch: "CSM",
+    semester: 1,
+    regulation: "R23",
+    active: true,
+  },
+  {
+    code: "R23SE701",
+    title: "Software Engineering",
+    branch: "CIC",
+    semester: 7,
+    regulation: "R23",
+    active: true,
+  },
+  {
+    code: "R23SE701",
+    title: "Software Engineering",
+    branch: "CSD",
+    semester: 7,
+    regulation: "R23",
+    active: true,
+  },
+  {
+    code: "R23SE701",
+    title: "Software Engineering",
+    branch: "CSM",
+    semester: 7,
+    regulation: "R23",
+    active: true,
+  },
+  {
+    code: "23CIC301",
     title: "Database Management Systems",
     branch: "CIC",
     semester: 3,
+    regulation: "R23",
     active: true,
   },
   {
-    code: "23CI3002",
-    title: "Data Warehousing & Data Mining",
+    code: "23CIC302",
+    title: "Cloud Infrastructure & Distributed Systems",
     branch: "CIC",
     semester: 3,
+    regulation: "R23",
     active: true,
   },
   {
-    code: "23CI3003",
-    title: "Big Data Analytics with Hadoop & Spark",
+    code: "23CIC303",
+    title: "Big Data Processing with Apache Spark",
     branch: "CIC",
-    semester: 4,
+    semester: 3,
+    regulation: "R23",
     active: true,
   },
   {
-    code: "23CI3004",
-    title: "Data Pipelines & Streaming Architecture",
+    code: "23CIC304",
+    title: "Operating Systems & Linux Kernel Architecture",
     branch: "CIC",
-    semester: 4,
+    semester: 3,
+    regulation: "R23",
     active: true,
   },
   {
-    code: "23CI3005",
-    title: "Cloud Infrastructure & Distributed Computing",
+    code: "23CIC305",
+    title: "Computer Networks & IoT Protocols",
     branch: "CIC",
+    semester: 3,
+    regulation: "R23",
+    active: true,
+  },
+  {
+    code: "23CSD501",
+    title: "Data Warehousing & Dimensional Mining",
+    branch: "CSD",
     semester: 5,
+    regulation: "R23",
     active: true,
   },
   {
-    code: "23CI3006",
-    title: "Machine Learning Operations (MLOps)",
-    branch: "CIC",
-    semester: 5,
-    active: true,
-  },
-  {
-    code: "23CI1001",
-    title: "Linear Algebra & Probability for Data Science",
-    branch: "CIC",
+    code: "23CSM101",
+    title: "Machine Learning with Python",
+    branch: "CSM",
     semester: 1,
-    active: true,
-  },
-  {
-    code: "23CI2001",
-    title: "Data Structures & Advanced Algorithms",
-    branch: "CIC",
-    semester: 2,
-    active: true,
-  },
-  {
-    code: "23CD3001",
-    title: "Design Thinking & UI/UX Systems",
-    branch: "CSD",
-    semester: 3,
-    active: true,
-  },
-  {
-    code: "23CD4001",
-    title: "Interactive Web & Mobile App Architecture",
-    branch: "CSD",
-    semester: 4,
-    active: true,
-  },
-  {
-    code: "23CM3001",
-    title: "Deep Learning & Neural Network Architectures",
-    branch: "CSM",
-    semester: 3,
-    active: true,
-  },
-  {
-    code: "23CM4001",
-    title: "Natural Language Processing & Generative AI",
-    branch: "CSM",
-    semester: 4,
+    regulation: "R23",
     active: true,
   },
 ];
@@ -130,28 +164,30 @@ export default async function AdminTaxonomyPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch data
-  const [branchesRes, semestersRes, subjectsRes] = await Promise.all([
+  // Fetch data in parallel
+  const [branchesRes, semestersRes, subjectsRes, regulationsRes] = await Promise.all([
     supabase.from("branches").select("code, name, active").order("code"),
     supabase.from("semesters").select("number, name, active").order("number"),
-    supabase.from("subjects").select("code, title, branch, semester, active").order("code"),
+    supabase.from("subjects").select("code, title, branch, semester, regulation, active").order("code"),
+    supabase.from("regulations").select("code, name, active").order("code"),
   ]);
 
   const dbBranches = (branchesRes.data as unknown as BranchItem[]) || [];
   const dbSemesters = (semestersRes.data as unknown as SemesterItem[]) || [];
   const dbSubjects = (subjectsRes.data as unknown as SubjectItem[]) || [];
+  const dbRegulations = (regulationsRes.data as unknown as RegulationItem[]) || [];
 
   const branches = dbBranches.length > 0 ? dbBranches : DEFAULT_BRANCHES;
   const semesters = dbSemesters.length > 0 ? dbSemesters : DEFAULT_SEMESTERS;
   const subjects = dbSubjects.length > 0 ? dbSubjects : MOCK_DEFAULT_SUBJECTS;
+  const regulations = dbRegulations.length > 0 ? dbRegulations : DEFAULT_REGULATIONS;
 
   return (
     <TaxonomyClient 
       branches={branches} 
       semesters={semesters} 
-      subjects={subjects} 
+      subjects={subjects}
+      regulations={regulations}
     />
   );
 }
-
-

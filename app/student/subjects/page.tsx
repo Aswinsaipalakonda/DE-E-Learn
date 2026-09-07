@@ -14,6 +14,17 @@ interface SubjectItem {
 }
 
 const FALLBACK_SUBJECTS: Record<number, SubjectItem[]> = {
+  1: [
+    {
+      code: "R23MATT101",
+      title: "LINEAR ALGEBRA & CALCULUS",
+      branch: "CIC",
+      semester: 1,
+      active: true,
+      materialsCount: 4,
+      lastUpdatedStr: "Sep 01, 2026",
+    }
+  ],
   3: [
     {
       code: "23CIC301",
@@ -61,6 +72,17 @@ const FALLBACK_SUBJECTS: Record<number, SubjectItem[]> = {
       lastUpdatedStr: "Aug 15, 2026",
     },
   ],
+  7: [
+    {
+      code: "R23SE701",
+      title: "Software Engineering",
+      branch: "CIC",
+      semester: 7,
+      active: true,
+      materialsCount: 3,
+      lastUpdatedStr: "Sep 05, 2026",
+    }
+  ]
 };
 
 export default async function SubjectsBrowserPage() {
@@ -81,18 +103,19 @@ export default async function SubjectsBrowserPage() {
   const branch = profile?.branch || "CIC";
   const semester = profile?.current_semester || 3;
 
-  // Fetch subjects from DB
+  // Fetch subjects from DB scoped to student's branch & semester
   const { data: dbSubjects } = await supabase
     .from("subjects")
-    .select("code, title, branch, semester, active")
+    .select("code, title, branch, semester, regulation, active")
     .eq("branch", branch)
     .eq("semester", semester)
     .eq("active", true);
 
-  // Fetch published materials to count per subject
+  // Fetch published materials strictly for the student's branch
   const { data: dbMaterials } = await supabase
     .from("materials")
     .select("id, subject, updated_at, created_at")
+    .eq("branch", branch)
     .eq("state", "published");
 
   const materialsList = dbMaterials || [];
@@ -118,6 +141,7 @@ export default async function SubjectsBrowserPage() {
       title: sub.title,
       branch: sub.branch,
       semester: sub.semester,
+      regulation: sub.regulation || "R23",
       active: sub.active ?? true,
       materialsCount: count,
       lastUpdatedStr: updatedStr,
@@ -137,52 +161,46 @@ export default async function SubjectsBrowserPage() {
             Enrolled Subjects
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-normal">
-            Select any registered subject to explore validated lecture notes, lab manuals, and assignments.
+            Select any registered subject to explore validated lecture notes, lab manuals, and assignments for your branch.
           </p>
         </div>
 
-        <Link
-          href="/student"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md self-start md:self-auto cursor-pointer"
-        >
-          <span>Return to Dashboard</span>
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="px-4 py-2 rounded-full bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
+            {rawSubjects.length} Active Courses
+          </span>
+        </div>
       </div>
 
-      {/* Grid of Subject Cards */}
+      {/* Grid of Subjects */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {rawSubjects.map((sub) => (
+        {rawSubjects.map((sub: any) => (
           <Link
-            key={sub.code}
+            key={`${sub.code}-${sub.branch}`}
             href={`/student/subjects/${sub.code}`}
-            className="group p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-5 cursor-pointer relative"
+            className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:border-primary/40 transition-all flex flex-col justify-between space-y-4 group cursor-pointer"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                   {sub.code}
                 </span>
-                <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 group-hover:bg-primary group-hover:text-white flex items-center justify-center transition-all duration-300 shadow-2xs">
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </div>
-
-              <h3 className="font-bold text-slate-900 text-base leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                {sub.title}
-              </h3>
-
-              <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                <FolderOpen className="h-4 w-4 text-blue-600 shrink-0" />
-                <span>
-                  {sub.materialsCount} study material{sub.materialsCount === 1 ? "" : "s"} uploaded
+                <span className="text-[11px] font-semibold text-slate-400">
+                  {sub.materialsCount} {sub.materialsCount === 1 ? "Document" : "Documents"}
                 </span>
               </div>
+
+              <h2 className="font-bold text-slate-900 text-base group-hover:text-primary transition-colors leading-snug">
+                {sub.title}
+              </h2>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-normal">
-              <span>Last updated</span>
-              <span className="font-semibold text-slate-600">{sub.lastUpdatedStr}</span>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-normal">
+              <span>Updated: {sub.lastUpdatedStr}</span>
+              <div className="flex items-center gap-1 font-semibold text-primary group-hover:translate-x-1 transition-transform">
+                <span>View Notes</span>
+                <ChevronRight className="h-4 w-4" />
+              </div>
             </div>
           </Link>
         ))}

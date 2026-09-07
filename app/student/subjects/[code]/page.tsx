@@ -9,7 +9,9 @@ import {
   BookOpen, 
   ChevronRight,
   Layers,
-  Sparkles
+  Sparkles,
+  User,
+  ShieldCheck
 } from "lucide-react";
 
 import { getActiveExamLockout } from "@/utils/exam-lockout";
@@ -21,6 +23,48 @@ interface PageProps {
 }
 
 const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; semester: number; materials: any[] }> = {
+  "R23MATT101": {
+    title: "LINEAR ALGEBRA & CALCULUS",
+    branch: "CIC",
+    semester: 1,
+    materials: [
+      {
+        id: "mock-mat-la-1",
+        title: "Unit 1: Matrices, Rank of Matrix & System of Linear Equations",
+        type: "Notes",
+        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Matrices", "Rank", "Linear Equations"],
+      },
+      {
+        id: "mock-mat-la-2",
+        title: "Unit 2: Eigenvalues, Eigenvectors & Cayley-Hamilton Theorem",
+        type: "Lecture Slides",
+        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Eigenvalues", "Cayley-Hamilton"],
+      },
+    ],
+  },
+  "R23SE701": {
+    title: "Software Engineering",
+    branch: "CIC",
+    semester: 7,
+    materials: [
+      {
+        id: "mock-mat-se-1",
+        title: "Unit 1: Software Process Models, Agile Methodologies & Scrum Framework",
+        type: "Notes",
+        created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["Agile", "Scrum", "Process Models"],
+      },
+      {
+        id: "mock-mat-se-2",
+        title: "Unit 2: Requirements Engineering & SRS Documentation Standards",
+        type: "Lecture Slides",
+        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["SRS", "Requirements", "Use Cases"],
+      },
+    ],
+  },
   "23CIC301": {
     title: "Database Management Systems (DBMS)",
     branch: "CIC",
@@ -54,20 +98,6 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
         created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ["MySQL", "PostgreSQL", "DDL/DML"],
       },
-      {
-        id: "mock-mat-15",
-        title: "DBMS Mid-Term 1 & End-Semester Model Question Bank",
-        type: "Question Banks",
-        created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Question Bank", "Mid-1", "Exam Prep"],
-      },
-      {
-        id: "mock-mat-16",
-        title: "Assignment 1: Complex ER Modeling & BCNF Decomposition Problems",
-        type: "Assignments",
-        created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Assignment", "BCNF", "Normalization"],
-      },
     ],
   },
   "23CIC302": {
@@ -79,120 +109,8 @@ const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; 
         id: "mock-mat-2",
         title: "Cloud Infrastructure & Distributed Computing - Complete Lab Manual",
         type: "Lab Manuals",
-        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Docker", "Kubernetes", "AWS"],
-      },
-      {
-        id: "mock-mat-17",
-        title: "Unit 1: Cloud Service Models (IaaS, PaaS, SaaS) & Virtualization Slides",
-        type: "Lecture Slides",
-        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["IaaS", "PaaS", "Virtualization"],
-      },
-      {
-        id: "mock-mat-18",
-        title: "Unit 2: AWS Elastic Compute Cloud (EC2) & S3 Storage Architecture",
-        type: "Notes",
-        created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["AWS", "EC2", "S3"],
-      },
-    ],
-  },
-  "23CIC303": {
-    title: "Big Data Processing with Apache Spark",
-    branch: "CIC",
-    semester: 3,
-    materials: [
-      {
-        id: "mock-mat-5",
-        title: "Big Data Processing with Apache Spark - Mid-Term Question Bank",
-        type: "Question Banks",
-        created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Spark", "Big Data", "MapReduce"],
-      },
-      {
-        id: "mock-mat-19",
-        title: "Unit 1: Hadoop Distributed File System (HDFS) & MapReduce Paradigms",
-        type: "Notes",
-        created_at: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Hadoop", "HDFS", "MapReduce"],
-      },
-      {
-        id: "mock-mat-20",
-        title: "PySpark Resilient Distributed Datasets (RDD) Architecture Slides",
-        type: "Lecture Slides",
-        created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["PySpark", "RDD", "Transformations"],
-      },
-    ],
-  },
-  "23CIC304": {
-    title: "Operating Systems & Linux Kernel Architecture",
-    branch: "CIC",
-    semester: 3,
-    materials: [
-      {
-        id: "mock-mat-6",
-        title: "Operating Systems & Linux Kernel Architecture - Complete Slide Deck",
-        type: "Lecture Slides",
-        created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Linux", "Kernel", "Processes"],
-      },
-      {
-        id: "mock-mat-21",
-        title: "Unit 1: CPU Scheduling Algorithms & Process Synchronization Notes",
-        type: "Notes",
-        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Scheduling", "Semaphores", "Mutex"],
-      },
-      {
-        id: "mock-mat-22",
-        title: "Linux System Programming & Shell Scripting Lab Manual",
-        type: "Lab Manuals",
-        created_at: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Bash", "System Calls", "POSIX"],
-      },
-    ],
-  },
-  "23CIC305": {
-    title: "Computer Networks & IoT Protocols",
-    branch: "CIC",
-    semester: 3,
-    materials: [
-      {
-        id: "mock-mat-23",
-        title: "Unit 1: OSI 7-Layer Architecture & TCP/IP Protocol Stack Notes",
-        type: "Notes",
-        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["OSI", "TCP/IP", "Subnetting"],
-      },
-      {
-        id: "mock-mat-24",
-        title: "Unit 2: Wireless Sensor Networks & MQTT / CoAP IoT Protocols Slides",
-        type: "Lecture Slides",
-        created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["MQTT", "CoAP", "IoT"],
-      },
-      {
-        id: "mock-mat-25",
-        title: "Cisco Packet Tracer Network Topology Simulation Lab Manual",
-        type: "Lab Manuals",
-        created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Packet Tracer", "Routing", "VLANs"],
-      },
-      {
-        id: "mock-mat-26",
-        title: "Computer Networks Question Bank & Solved Numerical Problems",
-        type: "Question Banks",
-        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Question Bank", "Subnet Calculations", "Exams"],
-      },
-      {
-        id: "mock-mat-27",
-        title: "Assignment 1: IP Subnetting & CIDR Address Planning",
-        type: "Assignments",
-        created_at: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Assignment", "CIDR", "Subnets"],
+        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        tags: ["AWS", "Docker", "Kubernetes"],
       },
     ],
   },
@@ -213,39 +131,66 @@ export default async function SubjectDetailPage(props: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Fetch subject from DB
+  // Get student profile (branch, semester, section)
+  const { data: profile } = await supabase
+    .from("users")
+    .select("branch, current_semester, section, name")
+    .or(`id.eq.${user.id},email.eq.${user.email}`)
+    .maybeSingle();
+
+  const studentBranch = profile?.branch || "CIC";
+
+  // Fetch subject matching this course code and student's branch
   const { data: dbSubject } = await supabase
+    .from("subjects")
+    .select("*")
+    .eq("code", code)
+    .eq("branch", studentBranch)
+    .maybeSingle();
+
+  const { data: dbAnySubject } = dbSubject ? { data: dbSubject } : await supabase
     .from("subjects")
     .select("*")
     .eq("code", code)
     .maybeSingle();
 
   const fallbackData = FALLBACK_SUBJECT_CATALOG[code] || FALLBACK_SUBJECT_CATALOG["23CIC301"];
-  const subject = dbSubject || {
+  const subject = dbSubject || dbAnySubject || {
     code: code,
     title: fallbackData.title,
-    branch: fallbackData.branch,
+    branch: studentBranch,
     semester: fallbackData.semester,
+    regulation: "R23",
   };
 
   // Check if subject's semester is in active Exam Lockout
-  const examLockout = await getActiveExamLockout(subject.semester || 3, subject.branch);
+  const examLockout = await getActiveExamLockout(subject.semester || 3, studentBranch);
 
-  // Build Materials query from DB
+  // Build Materials query from DB - strictly scoped to this subject and student's branch/section!
   const { data: dbMaterials } = await supabase
     .from("materials")
-    .select("id, title, type, created_at, tags")
+    .select(`
+      id, 
+      title, 
+      type, 
+      created_at, 
+      tags,
+      branch,
+      subject,
+      users:owner (
+        name
+      )
+    `)
     .eq("subject", code)
+    .eq("branch", studentBranch)
     .eq("state", "published")
     .order("created_at", { ascending: false });
 
-  // Prioritize real uploaded materials from database!
+  // Prioritize real uploaded materials from database
   let rawMaterials: any[] = [];
   if (dbMaterials && dbMaterials.length > 0) {
-    // Show real uploaded materials
     rawMaterials = dbMaterials;
   } else {
-    // Fallback demo catalog
     rawMaterials = fallbackData.materials;
   }
 
@@ -291,15 +236,21 @@ export default async function SubjectDetailPage(props: PageProps) {
       {/* Header Banner */}
       <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800">
-            <Layers className="h-3.5 w-3.5 text-blue-600" />
-            <span>Course Code: {subject.code} • Semester {subject.semester || 3}</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-800">
+              {subject.regulation || "R23"} Regulation
+            </span>
+            <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800 flex items-center gap-1">
+              <Layers className="h-3 w-3 text-blue-600" />
+              <span>Section {studentBranch} • Sem {subject.semester || 3}</span>
+            </span>
           </div>
+
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
             {subject.title}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-normal">
-            Curated syllabus materials, faculty lecture notes, and lab problem statements.
+            Curated syllabus materials uploaded by faculty specifically for <span className="font-semibold text-slate-700">Section {studentBranch}</span>.
           </p>
         </div>
 
@@ -353,7 +304,7 @@ export default async function SubjectDetailPage(props: PageProps) {
             </div>
           </div>
           <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed font-normal">
-            {examLockout.message || `Course materials for Semester ${subject.semester || 3} are temporarily locked during the scheduled evaluation window. Materials will automatically unlock when the session concludes.`}
+            {examLockout.message || `Course materials for Semester ${subject.semester || 3} are temporarily locked during the scheduled evaluation window.`}
           </p>
           <div className="pt-2 flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-xs font-semibold text-amber-800">
@@ -365,48 +316,55 @@ export default async function SubjectDetailPage(props: PageProps) {
       ) : (
         <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden divide-y divide-slate-100">
           {materials && materials.length > 0 ? (
-            materials.map((mat: any) => (
-              <Link
-                key={mat.id}
-                href={`/student/materials/${mat.id}`}
-                className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-slate-50/80 transition-all group cursor-pointer"
-              >
-                <div className="space-y-1.5 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
-                      {mat.type}
-                    </span>
-                    <span className="text-xs text-slate-400 font-normal">
-                      {new Date(mat.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    </span>
-                  </div>
-
-                  <h2 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-primary transition-colors leading-snug">
-                    {mat.title}
-                  </h2>
-
-                  {mat.tags && mat.tags.length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                      {mat.tags.map((t: string) => (
-                        <span key={t} className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] text-slate-500 font-normal">
-                          #{t}
-                        </span>
-                      ))}
+            materials.map((mat: any) => {
+              const facultyName = mat.users?.name || "Faculty Incharge";
+              return (
+                <Link
+                  key={mat.id}
+                  href={`/student/materials/${mat.id}`}
+                  className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-slate-50/80 transition-all group cursor-pointer"
+                >
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
+                        {mat.type}
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-medium text-slate-600">
+                        <User className="h-2.5 w-2.5" />
+                        {facultyName}
+                      </span>
+                      <span className="text-xs text-slate-400 font-normal">
+                        {new Date(mat.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
                     </div>
-                  )}
-                </div>
 
-                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
-                  <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-primary group-hover:text-white transition-all shadow-2xs">
-                    <ChevronRight className="h-4 w-4" />
+                    <h2 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-primary transition-colors leading-snug">
+                      {mat.title}
+                    </h2>
+
+                    {mat.tags && mat.tags.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        {mat.tags.map((t: string) => (
+                          <span key={t} className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] text-slate-500 font-normal">
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </Link>
-            ))
+
+                  <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                    <div className="p-2 rounded-full bg-slate-100 text-slate-600 group-hover:bg-primary group-hover:text-white transition-all shadow-2xs">
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })
           ) : (
             <div className="p-12 text-center text-xs text-slate-400 font-normal space-y-2">
-              <p className="font-semibold text-slate-700 text-sm">No materials found for &quot;{selectedType || query}&quot;</p>
-              <p>Try selecting another category pill or clear the search query.</p>
+              <p className="font-semibold text-slate-700 text-sm">No materials published yet for Section {studentBranch}</p>
+              <p>Your faculty member will publish reference materials and syllabus decks here soon.</p>
             </div>
           )}
         </div>

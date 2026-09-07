@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { createSubjectAction, updateSubjectAction, deleteSubjectAction, toggleSubjectActiveAction, createBranchAction, deleteBranchAction } from "./actions";
+import { 
+  createSubjectAction, 
+  updateSubjectAction, 
+  deleteSubjectAction, 
+  toggleSubjectActiveAction, 
+  createBranchAction, 
+  deleteBranchAction,
+  createRegulationAction,
+  deleteRegulationAction
+} from "./actions";
 import { ToastContainer, ToastMessage } from "@/components/toast";
 import { 
   BookOpen, 
@@ -19,7 +28,8 @@ import {
   Trash2,
   Check,
   ChevronDown,
-  CheckSquare
+  CheckSquare,
+  Award
 } from "lucide-react";
 
 interface Branch {
@@ -34,11 +44,18 @@ interface Semester {
   active: boolean;
 }
 
+interface Regulation {
+  code: string;
+  name: string;
+  active: boolean;
+}
+
 interface Subject {
   code: string;
   title: string;
   branch: string;
   semester: number;
+  regulation?: string;
   active: boolean;
 }
 
@@ -46,25 +63,36 @@ interface TaxonomyClientProps {
   branches: Branch[];
   semesters: Semester[];
   subjects: Subject[];
+  regulations?: Regulation[];
 }
+
+const DEFAULT_REGULATIONS: Regulation[] = [
+  { code: "R23", name: "R23 Autonomous Regulation", active: true },
+  { code: "R20", name: "R20 Autonomous Regulation", active: true },
+  { code: "R19", name: "R19 Autonomous Regulation", active: true },
+  { code: "A2", name: "A2 Autonomous Regulation", active: true },
+];
 
 export default function TaxonomyClient({
   branches: initialBranches,
   semesters: initialSemesters,
   subjects: initialSubjects,
+  regulations: initialRegulations = DEFAULT_REGULATIONS,
 }: TaxonomyClientProps) {
-  // Navigation Tabs: "subjects" | "branches" | "semesters"
-  const [activeTab, setActiveTab] = useState<"subjects" | "branches" | "semesters">("subjects");
+  // Navigation Tabs: "subjects" | "branches" | "semesters" | "regulations"
+  const [activeTab, setActiveTab] = useState<"subjects" | "branches" | "semesters" | "regulations">("subjects");
 
   // Master Data
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
   const [semesters] = useState<Semester[]>(initialSemesters);
+  const [regulations, setRegulations] = useState<Regulation[]>(initialRegulations);
 
   // Filter States for Subjects
   const [searchQuery, setSearchQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
   const [semesterFilter, setSemesterFilter] = useState("all");
+  const [regulationFilter, setRegulationFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Pagination for Subjects
@@ -74,7 +102,7 @@ export default function TaxonomyClient({
   // Slide-over Right Drawer for Subject Creation & Editing
   const [isSubjectDrawerMounted, setIsSubjectDrawerMounted] = useState(false);
   const [isSubjectDrawerVisible, setIsSubjectDrawerVisible] = useState(false);
-  const [editingSubject, setEditingSubject] = useState<{ originalCode: string; originalBranch: string } | null>(null);
+  const [editingSubject, setEditingSubject] = useState<{ originalCode: string; originalBranch: string; originalRegulation: string } | null>(null);
 
   // Delete Subject Confirmation Modal
   const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
@@ -84,13 +112,21 @@ export default function TaxonomyClient({
   const [isBranchModalMounted, setIsBranchModalMounted] = useState(false);
   const [isBranchModalVisible, setIsBranchModalVisible] = useState(false);
 
+  // Modal for Quick Regulation Creation
+  const [isRegulationModalMounted, setIsRegulationModalMounted] = useState(false);
+  const [isRegulationModalVisible, setIsRegulationModalVisible] = useState(false);
+  const [newRegCode, setNewRegCode] = useState("");
+  const [newRegName, setNewRegName] = useState("");
+  const [regLoading, setRegLoading] = useState(false);
+
   // Delete Branch Confirmation Modal
   const [deletingBranch, setDeletingBranch] = useState<Branch | null>(null);
   const [isDeletingBranch, setIsDeletingBranch] = useState(false);
 
-  // Subject Form State (Supports Multiple Branches)
+  // Subject Form State (Supports Multiple Branches & Regulation)
   const [subCode, setSubCode] = useState("");
   const [subTitle, setSubTitle] = useState("");
+  const [subRegulation, setSubRegulation] = useState(initialRegulations[0]?.code || "R23");
   const [subBranches, setSubBranches] = useState<string[]>([initialBranches[0]?.code || "CIC"]);
   const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
   const [subSemester, setSubSemester] = useState("1");
@@ -143,6 +179,7 @@ export default function TaxonomyClient({
     setEditingSubject(null);
     setSubCode("");
     setSubTitle("");
+    setSubRegulation(regulations[0]?.code || "R23");
     setSubBranches(branches.map((b) => b.code)); // Default to all branches for convenience
     setSubSemester("1");
     setSubActive(true);
@@ -157,9 +194,14 @@ export default function TaxonomyClient({
 
   // Open Drawer in Edit Mode
   const openEditSubjectDrawer = (subject: Subject) => {
-    setEditingSubject({ originalCode: subject.code, originalBranch: subject.branch });
+    setEditingSubject({ 
+      originalCode: subject.code, 
+      originalBranch: subject.branch,
+      originalRegulation: subject.regulation || "R23"
+    });
     setSubCode(subject.code);
     setSubTitle(subject.title);
+    setSubRegulation(subject.regulation || "R23");
     setSubBranches([subject.branch]);
     setSubSemester(subject.semester.toString());
     setSubActive(subject.active);
@@ -197,14 +239,33 @@ export default function TaxonomyClient({
     }, 400);
   };
 
+  const openRegulationModal = () => {
+    setNewRegCode("");
+    setNewRegName("");
+    setIsRegulationModalMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsRegulationModalVisible(true);
+      });
+    });
+  };
+
+  const closeRegulationModal = () => {
+    setIsRegulationModalVisible(false);
+    setTimeout(() => {
+      setIsRegulationModalMounted(false);
+    }, 400);
+  };
+
   // Stats calculation
   const stats = useMemo(() => {
     const totalSubjects = subjects.length;
     const activeSubjects = subjects.filter((s) => s.active).length;
     const totalBranches = branches.length;
     const totalSemesters = initialSemesters.length;
-    return { totalSubjects, activeSubjects, totalBranches, totalSemesters };
-  }, [subjects, branches, initialSemesters]);
+    const totalRegulations = regulations.length;
+    return { totalSubjects, activeSubjects, totalBranches, totalSemesters, totalRegulations };
+  }, [subjects, branches, initialSemesters, regulations]);
 
   // Filtered Subjects
   const filteredSubjects = useMemo(() => {
@@ -214,6 +275,7 @@ export default function TaxonomyClient({
         s.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesBranch = branchFilter === "all" ? true : s.branch === branchFilter;
       const matchesSemester = semesterFilter === "all" ? true : s.semester.toString() === semesterFilter;
+      const matchesRegulation = regulationFilter === "all" ? true : (s.regulation || "R23") === regulationFilter;
       const matchesStatus =
         statusFilter === "all"
           ? true
@@ -221,9 +283,9 @@ export default function TaxonomyClient({
           ? s.active
           : !s.active;
 
-      return matchesSearch && matchesBranch && matchesSemester && matchesStatus;
+      return matchesSearch && matchesBranch && matchesSemester && matchesRegulation && matchesStatus;
     });
-  }, [subjects, searchQuery, branchFilter, semesterFilter, statusFilter]);
+  }, [subjects, searchQuery, branchFilter, semesterFilter, regulationFilter, statusFilter]);
 
   // Paginated Subjects
   const totalPages = Math.max(1, Math.ceil(filteredSubjects.length / pageSize));
@@ -244,6 +306,7 @@ export default function TaxonomyClient({
     const semNum = parseInt(subSemester, 10);
     const formattedCode = subCode.toUpperCase().trim();
     const formattedTitle = subTitle.trim();
+    const formattedReg = subRegulation.toUpperCase().trim() || "R23";
 
     try {
       if (editingSubject) {
@@ -251,11 +314,13 @@ export default function TaxonomyClient({
         const result = await updateSubjectAction(
           editingSubject.originalCode,
           editingSubject.originalBranch,
+          editingSubject.originalRegulation,
           {
             code: formattedCode,
             title: formattedTitle,
             branches: subBranches,
             semester: semNum,
+            regulation: formattedReg,
             active: subActive,
           }
         );
@@ -266,31 +331,33 @@ export default function TaxonomyClient({
           addToast(
             "success", 
             "Subject Updated", 
-            `${formattedCode} - ${formattedTitle} updated across ${subBranches.join(", ")}.`
+            `${formattedCode} - ${formattedTitle} [${formattedReg}] updated across ${subBranches.join(", ")}.`
           );
           const updatedRecords = subBranches.map((b) => ({
             code: formattedCode,
             title: formattedTitle,
             branch: b,
             semester: semNum,
+            regulation: formattedReg,
             active: subActive,
           }));
           setSubjects((prev) => [
             ...updatedRecords,
             ...prev.filter((s) => !(
-              (s.code === editingSubject.originalCode && s.branch === editingSubject.originalBranch) ||
-              (s.code === formattedCode && subBranches.includes(s.branch))
+              (s.code === editingSubject.originalCode && s.branch === editingSubject.originalBranch && (s.regulation || "R23") === editingSubject.originalRegulation) ||
+              (s.code === formattedCode && subBranches.includes(s.branch) && (s.regulation || "R23") === formattedReg)
             )),
           ]);
           closeSubjectDrawer();
         }
       } else {
-        // CREATE Subject across selected branches
+        // CREATE Subject across selected branches with regulation
         const result = await createSubjectAction(
           formattedCode,
           formattedTitle,
           subBranches,
-          semNum
+          semNum,
+          formattedReg
         );
 
         if (result.error) {
@@ -299,18 +366,19 @@ export default function TaxonomyClient({
           addToast(
             "success",
             "Subject Created Successfully",
-            `${formattedCode} - ${formattedTitle} registered for ${subBranches.join(", ")}.`
+            `${formattedCode} - ${formattedTitle} (${formattedReg}) registered for ${subBranches.join(", ")}.`
           );
           const createdRecords = subBranches.map((b) => ({
             code: formattedCode,
             title: formattedTitle,
             branch: b,
             semester: semNum,
+            regulation: formattedReg,
             active: true,
           }));
           setSubjects((prev) => [
             ...createdRecords,
-            ...prev.filter((s) => !(s.code === formattedCode && subBranches.includes(s.branch))),
+            ...prev.filter((s) => !(s.code === formattedCode && subBranches.includes(s.branch) && (s.regulation || "R23") === formattedReg)),
           ]);
           setSubCode("");
           setSubTitle("");
@@ -330,13 +398,13 @@ export default function TaxonomyClient({
     setIsDeletingSubject(true);
 
     try {
-      const result = await deleteSubjectAction(deletingSubject.code, deletingSubject.branch);
+      const result = await deleteSubjectAction(deletingSubject.code, deletingSubject.branch, deletingSubject.regulation || "R23");
       if (result.error) {
         addToast("error", "Delete Failed", result.error);
       } else {
-        addToast("success", "Subject Deleted", `${deletingSubject.code} was removed from the catalog.`);
+        addToast("success", "Subject Deleted", `${deletingSubject.code} [${deletingSubject.branch}] was removed.`);
         setSubjects((prev) =>
-          prev.filter((s) => !(s.code === deletingSubject.code && s.branch === deletingSubject.branch))
+          prev.filter((s) => !(s.code === deletingSubject.code && s.branch === deletingSubject.branch && (s.regulation || "R23") === (deletingSubject.regulation || "R23")))
         );
         setDeletingSubject(null);
       }
@@ -347,27 +415,42 @@ export default function TaxonomyClient({
     }
   };
 
+  // Toggle Subject Active
+  const handleToggleSubject = async (code: string, branch: string, regulation: string = "R23", currentActive: boolean) => {
+    const key = `${code}-${branch}-${regulation}`;
+    setTogglingCode(key);
+    try {
+      const res = await toggleSubjectActiveAction(code, branch, regulation, currentActive);
+      if (res.error) {
+        addToast("error", "Status Update Failed", res.error);
+      } else {
+        setSubjects((prev) =>
+          prev.map((s) =>
+            s.code === code && s.branch === branch && (s.regulation || "R23") === regulation ? { ...s, active: !currentActive } : s
+          )
+        );
+        addToast("success", "Status Updated", `${code} is now ${!currentActive ? "Active" : "Inactive"}.`);
+      }
+    } catch {
+      addToast("error", "Error", "Failed to update subject status.");
+    } finally {
+      setTogglingCode(null);
+    }
+  };
+
   // Create Branch Handler
-  const handleBranchSubmit = async (e: React.FormEvent) => {
+  const handleCreateBranch = async (e: React.FormEvent) => {
     e.preventDefault();
     setBranchLoading(true);
-
-    const formattedCode = branchCode.toUpperCase().trim();
-    const formattedName = branchName.trim();
-
     try {
-      const result = await createBranchAction(formattedCode, formattedName);
-      if (result.error) {
-        addToast("error", "Branch Creation Failed", result.error);
+      const res = await createBranchAction(branchCode, branchName);
+      if (res.error) {
+        addToast("error", "Branch Creation Failed", res.error);
       } else {
-        addToast(
-          "success",
-          "Branch Created Successfully",
-          `${formattedCode} (${formattedName}) is now registered.`
-        );
+        addToast("success", "Branch Created", `Branch ${branchCode.toUpperCase()} was added.`);
         setBranches((prev) => [
           ...prev,
-          { code: formattedCode, name: formattedName, active: true },
+          { code: branchCode.toUpperCase().trim(), name: branchName.trim(), active: true },
         ]);
         setBranchCode("");
         setBranchName("");
@@ -380,80 +463,61 @@ export default function TaxonomyClient({
     }
   };
 
-  // Delete Branch Handler
-  const handleDeleteBranchConfirm = async () => {
-    if (!deletingBranch) return;
-    setIsDeletingBranch(true);
+  // Create Quick Regulation Handler
+  const handleCreateRegulation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRegCode.trim()) return;
+    setRegLoading(true);
+    const code = newRegCode.toUpperCase().trim();
+    const name = newRegName.trim() || `${code} Autonomous Regulation`;
 
     try {
-      const result = await deleteBranchAction(deletingBranch.code);
-      if (result.error) {
-        addToast("error", "Delete Failed", result.error);
+      const res = await createRegulationAction(code, name);
+      if (res.error) {
+        addToast("error", "Regulation Creation Failed", res.error);
       } else {
-        addToast("success", "Branch Deleted", `${deletingBranch.code} specialization was removed.`);
-        setBranches((prev) => prev.filter((b) => b.code !== deletingBranch.code));
-        setDeletingBranch(null);
+        addToast("success", "Regulation Created", `Regulation ${code} (${name}) was registered.`);
+        const newReg = { code, name, active: true };
+        setRegulations((prev) => [...prev.filter((r) => r.code !== code), newReg]);
+        setSubRegulation(code); // auto select for user
+        closeRegulationModal();
       }
     } catch {
-      addToast("error", "Error", "Failed to delete branch.");
+      addToast("error", "Error", "Failed to register regulation.");
     } finally {
-      setIsDeletingBranch(false);
-    }
-  };
-
-  const handleToggleSubject = async (code: string, branch: string, currentActive: boolean) => {
-    setTogglingCode(`${code}-${branch}`);
-    try {
-      const result = await toggleSubjectActiveAction(code, branch, currentActive);
-      if (result.error) {
-        addToast("error", "Status Toggle Failed", result.error);
-      } else {
-        setSubjects((prev) =>
-          prev.map((s) =>
-            s.code === code && s.branch === branch
-              ? { ...s, active: !currentActive }
-              : s
-          )
-        );
-        addToast(
-          "info",
-          "Subject Status Updated",
-          `${code} is now ${!currentActive ? "ACTIVE" : "INACTIVE"}.`
-        );
-      }
-    } catch {
-      addToast("error", "Error", "Failed to update subject status.");
-    } finally {
-      setTogglingCode(null);
+      setRegLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6 relative pb-10">
-      {/* Toast Alert Notifications Container */}
+    <div className="space-y-6 sm:space-y-7 w-full pb-10">
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       {/* ========================================================================= */}
-      {/* UNIFIED EXECUTIVE HEADER */}
+      {/* HEADER BANNER */}
       {/* ========================================================================= */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-surface p-6 sm:p-7 rounded-3xl border border-border shadow-xs">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
-              <Layers className="h-5 w-5" />
-            </div>
+      <div className="p-6 sm:p-8 rounded-3xl bg-surface border border-border shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-xl bg-primary/5 text-primary">
+              <Sparkles className="h-5 w-5" />
+            </span>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">
-                Courses & Academic Taxonomy
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight">
+                Curriculum & Taxonomy Management
               </h1>
-              <p className="text-xs sm:text-sm text-primary/60 font-normal leading-relaxed mt-0.5">
-                Configure curriculum catalogs, departmental branches, semesters, and course syllabus codes.
+              <p className="text-xs sm:text-sm text-primary/60 font-normal">
+                Manage autonomous regulations (R23, R24, A2), branches, semesters, and multi-branch course catalogs.
               </p>
             </div>
           </div>
 
           {/* Stat Badges */}
           <div className="flex flex-wrap items-center gap-2 pt-1.5">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/70 text-xs font-medium text-indigo-700">
+              <Award className="h-3.5 w-3.5 text-indigo-600" />
+              Regulations: <span className="font-semibold">{stats.totalRegulations}</span>
+            </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-medium text-blue-700">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
               Subjects: <span className="font-semibold">{stats.totalSubjects}</span> ({stats.activeSubjects} Active)
@@ -470,21 +534,29 @@ export default function TaxonomyClient({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3 self-start lg:self-center shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center shrink-0">
+          <button
+            onClick={openRegulationModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 font-semibold text-xs sm:text-sm transition-all shadow-xs cursor-pointer"
+          >
+            <Award className="h-4 w-4 text-indigo-600" />
+            <span>+ Add Regulation</span>
+          </button>
+
           <button
             onClick={openBranchModal}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-bg hover:bg-surface text-primary font-medium text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-border bg-bg hover:bg-surface text-primary font-medium text-xs sm:text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
           >
             <FolderPlus className="h-4 w-4 text-primary/70" />
-            <span>Add Branch</span>
+            <span>+ Add Branch</span>
           </button>
 
           <button
             onClick={openSubjectDrawer}
-            className="inline-flex items-center gap-2 px-5.5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-medium text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
           >
             <BookOpen className="h-4 w-4" />
-            <span>Add Subject</span>
+            <span>+ Add Subject</span>
           </button>
         </div>
       </div>
@@ -496,6 +568,7 @@ export default function TaxonomyClient({
         <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3">
           {[
             { id: "subjects", label: "Subjects Catalog", count: subjects.length, icon: BookOpen },
+            { id: "regulations", label: "Academic Regulations", count: regulations.length, icon: Award },
             { id: "branches", label: "Department Branches", count: branches.length, icon: FolderPlus },
             { id: "semesters", label: "Semester Timelines", count: semesters.length, icon: Calendar },
           ].map((tab) => {
@@ -505,7 +578,7 @@ export default function TaxonomyClient({
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab.id as "subjects" | "branches" | "semesters");
+                  setActiveTab(tab.id as "subjects" | "regulations" | "branches" | "semesters");
                   setCurrentPage(1);
                 }}
                 className={`px-4 py-2 rounded-full text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
@@ -532,10 +605,10 @@ export default function TaxonomyClient({
         {activeTab === "subjects" && (
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-0.5">
             {/* Search Box */}
-            <div className="sm:col-span-5 relative">
+            <div className="sm:col-span-4 relative">
               <Search className="absolute left-4 top-3 h-4 w-4 text-primary/40" />
               <input
-                placeholder="Search subject code or title..."
+                placeholder="Search code or subject title..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -556,8 +629,27 @@ export default function TaxonomyClient({
               )}
             </div>
 
+            {/* Regulation Filter */}
+            <div className="sm:col-span-2">
+              <select
+                value={regulationFilter}
+                onChange={(e) => {
+                  setRegulationFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+              >
+                <option value="all">All Regulations</option>
+                {regulations.map((r) => (
+                  <option key={r.code} value={r.code}>
+                    {r.code} ({r.name})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Branch Selector */}
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-2">
               <select
                 value={branchFilter}
                 onChange={(e) => {
@@ -569,7 +661,7 @@ export default function TaxonomyClient({
                 <option value="all">All Branches</option>
                 {branches.map((b) => (
                   <option key={b.code} value={b.code}>
-                    {b.code} ({b.name})
+                    {b.code}
                   </option>
                 ))}
               </select>
@@ -614,7 +706,7 @@ export default function TaxonomyClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* SUBJECTS CATALOG VIEW WITH FULL CRUD ACTIONS */}
+      {/* SUBJECTS CATALOG VIEW WITH REGULATION COLUMN & FULL CRUD */}
       {/* ========================================================================= */}
       {activeTab === "subjects" && (
         <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
@@ -623,9 +715,10 @@ export default function TaxonomyClient({
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-bg/50 text-primary/50 font-semibold uppercase tracking-wider text-xs border-b border-border">
-                    <th className="py-3.5 pl-6 pr-4">Course Code</th>
+                    <th className="py-3.5 pl-6 pr-4">Regulation</th>
+                    <th className="py-3.5 px-4">Course Code</th>
                     <th className="py-3.5 px-4">Subject Title</th>
-                    <th className="py-3.5 px-4">Branch Specialization</th>
+                    <th className="py-3.5 px-4">Branch</th>
                     <th className="py-3.5 px-4">Semester</th>
                     <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
@@ -633,12 +726,20 @@ export default function TaxonomyClient({
                 </thead>
                 <tbody className="divide-y divide-border">
                   {paginatedSubjects.map((sub) => {
-                    const isToggling = togglingCode === `${sub.code}-${sub.branch}`;
+                    const reg = sub.regulation || "R23";
+                    const isToggling = togglingCode === `${sub.code}-${sub.branch}-${reg}`;
 
                     return (
-                      <tr key={`${sub.code}-${sub.branch}`} className="hover:bg-bg/30 transition-colors group">
-                        {/* Course Code Badge */}
+                      <tr key={`${sub.code}-${sub.branch}-${reg}`} className="hover:bg-bg/30 transition-colors group">
+                        {/* Regulation Badge */}
                         <td className="py-3.5 pl-6 pr-4">
+                          <span className="px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 font-bold text-xs tracking-wide">
+                            {reg}
+                          </span>
+                        </td>
+
+                        {/* Course Code Badge */}
+                        <td className="py-3.5 px-4">
                           <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 font-bold text-xs">
                             {sub.code}
                           </span>
@@ -659,7 +760,7 @@ export default function TaxonomyClient({
                         {/* Semester */}
                         <td className="py-3.5 px-4">
                           <span className="px-2.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 text-xs font-medium text-secondary">
-                            Semester {sub.semester}
+                            Sem {sub.semester}
                           </span>
                         </td>
 
@@ -678,7 +779,7 @@ export default function TaxonomyClient({
                           )}
                         </td>
 
-                        {/* Full CRUD Actions: Edit, Toggle, Delete */}
+                        {/* Full CRUD Actions */}
                         <td className="py-3.5 pl-4 pr-6 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {/* Edit Trigger */}
@@ -692,7 +793,7 @@ export default function TaxonomyClient({
 
                             {/* Activate / Deactivate Toggle */}
                             <button
-                              onClick={() => handleToggleSubject(sub.code, sub.branch, sub.active)}
+                              onClick={() => handleToggleSubject(sub.code, sub.branch, reg, sub.active)}
                               disabled={isToggling}
                               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
                                 sub.active
@@ -731,9 +832,9 @@ export default function TaxonomyClient({
                 <BookOpen className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="font-semibold text-primary text-sm">No Subjects Registered</h3>
+                <h3 className="font-semibold text-primary text-sm">No Subjects Found</h3>
                 <p className="text-xs text-primary/50 mt-0.5 max-w-sm mx-auto font-normal">
-                  No curriculum subject records match your current filter criteria.
+                  No curriculum subject records match your current regulation, branch, or semester criteria.
                 </p>
               </div>
               <button
@@ -761,58 +862,35 @@ export default function TaxonomyClient({
                   of <span className="text-primary font-semibold">{filteredSubjects.length}</span> subjects
                 </span>
 
-                <div className="flex items-center gap-1.5">
-                  <label htmlFor="taxPageSize" className="text-primary/50">Rows:</label>
-                  <select
-                    id="taxPageSize"
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(parseInt(e.target.value, 10));
-                      setCurrentPage(1);
-                    }}
-                    className="px-2.5 py-0.5 text-xs font-medium bg-surface border border-border rounded-full text-primary focus:outline-none cursor-pointer"
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2.5 py-1 text-xs bg-bg border border-border rounded-lg text-primary focus:outline-none cursor-pointer"
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="p-1.5 rounded-lg border border-border bg-surface text-primary disabled:opacity-30 hover:bg-bg transition-colors cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                  .map((p, idx, arr) => {
-                    const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
-                    return (
-                      <div key={p} className="flex items-center gap-1.5">
-                        {showEllipsis && <span className="px-1 text-xs text-primary/40 font-normal">...</span>}
-                        <button
-                          onClick={() => setCurrentPage(p)}
-                          className={`w-8 h-8 rounded-full text-xs transition-all cursor-pointer ${
-                            currentPage === p
-                              ? "bg-primary text-white shadow-2xs font-semibold"
-                              : "bg-surface border border-border text-primary/70 hover:text-primary hover:bg-bg font-normal"
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      </div>
-                    );
-                  })}
-
+                <span className="text-xs font-medium px-2 text-primary">
+                  Page {currentPage} of {totalPages}
+                </span>
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="p-1.5 rounded-lg border border-border bg-surface text-primary disabled:opacity-30 hover:bg-bg transition-colors cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -823,20 +901,82 @@ export default function TaxonomyClient({
       )}
 
       {/* ========================================================================= */}
-      {/* BRANCHES DIRECTORY VIEW WITH CRUD ACTIONS */}
+      {/* REGULATIONS TAB */}
+      {/* ========================================================================= */}
+      {activeTab === "regulations" && (
+        <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
+          <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-primary">Registered Academic Regulations</h2>
+              <p className="text-xs text-primary/60 font-normal">
+                Manage university autonomous regulations (e.g., R23, R24, R20, A2).
+              </p>
+            </div>
+            <button
+              onClick={openRegulationModal}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Regulation</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="bg-bg/50 text-primary/50 font-semibold uppercase tracking-wider text-xs border-b border-border">
+                  <th className="py-3.5 pl-6 pr-4">Regulation Code</th>
+                  <th className="py-3.5 px-4">Regulation Description</th>
+                  <th className="py-3.5 px-4">Mapped Subjects</th>
+                  <th className="py-3.5 px-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {regulations.map((reg) => {
+                  const mappedCount = subjects.filter((s) => (s.regulation || "R23") === reg.code).length;
+                  return (
+                    <tr key={reg.code} className="hover:bg-bg/30 transition-colors">
+                      <td className="py-3.5 pl-6 pr-4">
+                        <span className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 font-bold text-xs">
+                          {reg.code}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-primary">{reg.name}</td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">
+                          {mappedCount} Subjects
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          Active
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* BRANCHES TAB */}
       {/* ========================================================================= */}
       {activeTab === "branches" && (
         <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
-          <div className="p-5 sm:p-6 border-b border-border/80 flex items-center justify-between">
+          <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-primary">Department Branch Specializations</h3>
-              <p className="text-xs sm:text-sm text-primary/60 font-normal mt-0.5">
-                Specializations under Data Engineering and Computer Science
+              <h2 className="text-base font-bold text-primary">Departmental Branches</h2>
+              <p className="text-xs text-primary/60 font-normal">
+                Autonomous engineering specializations offering student enrollment.
               </p>
             </div>
             <button
               onClick={openBranchModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-white font-medium text-xs shadow-xs hover:bg-primary/95 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary hover:bg-primary/95 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Add Branch</span>
@@ -848,39 +988,36 @@ export default function TaxonomyClient({
               <thead>
                 <tr className="bg-bg/50 text-primary/50 font-semibold uppercase tracking-wider text-xs border-b border-border">
                   <th className="py-3.5 pl-6 pr-4">Branch Code</th>
-                  <th className="py-3.5 px-4">Full Program Name</th>
+                  <th className="py-3.5 px-4">Specialization Title</th>
+                  <th className="py-3.5 px-4">Associated Subjects</th>
                   <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {branches.map((b) => (
-                  <tr key={b.code} className="hover:bg-bg/30 transition-colors">
-                    <td className="py-3.5 pl-6 pr-4">
-                      <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-700 font-bold text-xs">
-                        {b.code}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-primary text-sm">
-                      {b.name}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        Active
-                      </span>
-                    </td>
-                    <td className="py-3.5 pl-4 pr-6 text-right">
-                      <button
-                        onClick={() => setDeletingBranch(b)}
-                        title="Delete Branch"
-                        className="p-1.5 rounded-full border border-red-200/60 bg-red-50/50 text-red-600 hover:bg-red-100/80 hover:border-red-300 transition-all cursor-pointer shadow-2xs"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {branches.map((b) => {
+                  const mappedCount = subjects.filter((s) => s.branch === b.code).length;
+                  return (
+                    <tr key={b.code} className="hover:bg-bg/30 transition-colors">
+                      <td className="py-3.5 pl-6 pr-4">
+                        <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 font-bold text-xs">
+                          {b.code}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-primary">{b.name}</td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+                          {mappedCount} Subjects
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          Active
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -888,69 +1025,75 @@ export default function TaxonomyClient({
       )}
 
       {/* ========================================================================= */}
-      {/* SEMESTERS VIEW */}
+      {/* SEMESTERS TAB */}
       {/* ========================================================================= */}
       {activeTab === "semesters" && (
         <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs">
-          <div className="p-5 sm:p-6 border-b border-border/80">
-            <h3 className="text-base sm:text-lg font-bold text-primary">Academic Semester Timelines</h3>
-            <p className="text-xs sm:text-sm text-primary/60 font-normal mt-0.5">
-              Standardized 4-Year B.Tech Curriculum Term Cycle
+          <div className="p-4 sm:p-5 border-b border-border">
+            <h2 className="text-base font-bold text-primary">Academic Semesters</h2>
+            <p className="text-xs text-primary/60 font-normal">
+              Four-year B.Tech curriculum timelines (Semesters 1 through 8).
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-5 sm:p-6">
-            {semesters.map((s) => (
-              <div
-                key={s.number}
-                className="p-5 rounded-3xl border border-border bg-bg/50 hover:bg-surface hover:shadow-xs transition-all space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs">
-                    TERM 0{s.number}
-                  </span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {semesters.map((sem) => {
+              const semSubjects = subjects.filter((s) => s.semester === sem.number);
+              return (
+                <div
+                  key={sem.number}
+                  className="p-5 rounded-2xl bg-bg border border-border/80 space-y-2 hover:border-primary/30 transition-all shadow-2xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                      Sem {sem.number}
+                    </span>
+                    <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Active
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-primary text-sm">{sem.name}</h3>
+                  <p className="text-xs text-primary/60 font-normal">
+                    {semSubjects.length} curriculum subjects registered
+                  </p>
                 </div>
-                <h4 className="font-semibold text-primary text-sm sm:text-base">{s.name}</h4>
-                <p className="text-xs text-primary/50 font-normal">B.Tech Year {Math.ceil(s.number / 2)}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* SLIDE-OVER RIGHT DRAWER (ADD / EDIT SUBJECT) */}
+      {/* SLIDE-OVER DRAWER: CREATE / EDIT SUBJECT WITH REGULATION SUPPORT */}
       {/* ========================================================================= */}
       {isSubjectDrawerMounted && (
         <div className="fixed inset-0 z-50 overflow-hidden">
           {/* Backdrop */}
           <div
-            className={`fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            onClick={closeSubjectDrawer}
+            className={`absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ease-out cursor-pointer ${
               isSubjectDrawerVisible ? "opacity-100" : "opacity-0"
             }`}
-            onClick={() => !subjectLoading && closeSubjectDrawer()}
           />
 
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
             <div
-              data-lenis-prevent
-              className={`w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
-                isSubjectDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+              className={`w-screen max-w-md bg-surface border-l border-border shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
+                isSubjectDrawerVisible ? "translate-x-0" : "translate-x-full"
               }`}
             >
-              {/* Header */}
-              <div className="p-5 sm:p-6 border-b border-border bg-bg/40 flex items-center justify-between shrink-0">
+              {/* Drawer Header */}
+              <div className="p-5 sm:p-6 border-b border-border flex items-center justify-between bg-bg/40">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-primary text-white shadow-xs">
-                    {editingSubject ? <Pencil className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
+                  <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                    <BookOpen className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-primary leading-tight">
+                    <h3 className="text-lg font-bold text-primary">
                       {editingSubject ? "Edit Curriculum Subject" : "Add New Subject"}
                     </h3>
                     <p className="text-xs text-primary/55 font-normal mt-0.5">
-                      {editingSubject ? `Modify course syllabus code: ${editingSubject.originalCode}` : "Register curriculum course syllabus code"}
+                      {editingSubject ? `Modify course code: ${editingSubject.originalCode}` : "Register curriculum subject with regulation"}
                     </p>
                   </div>
                 </div>
@@ -971,6 +1114,37 @@ export default function TaxonomyClient({
                 onSubmit={handleSubjectSubmit}
                 className="p-5 sm:p-6 space-y-4 flex-1 overflow-y-auto overscroll-contain"
               >
+                {/* Regulation Selector with Quick Add */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
+                      Academic Regulation *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={openRegulationModal}
+                      className="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <Plus className="h-3 w-3" /> Add New Regulation
+                    </button>
+                  </div>
+                  <select
+                    value={subRegulation}
+                    onChange={(e) => setSubRegulation(e.target.value)}
+                    className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-semibold cursor-pointer"
+                  >
+                    {regulations.map((r) => (
+                      <option key={r.code} value={r.code}>
+                        {r.code} - {r.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-primary/50 mt-1">
+                    Defines the academic regulation syllabus standard (e.g. R23, R24, A2).
+                  </p>
+                </div>
+
+                {/* Course Code */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
                     Subject Course Code *
@@ -980,11 +1154,12 @@ export default function TaxonomyClient({
                     required
                     value={subCode}
                     onChange={(e) => setSubCode(e.target.value)}
-                    placeholder="e.g., 23CI3001"
+                    placeholder="e.g., R23MATT101 or 23CIC301"
                     className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40 uppercase"
                   />
                 </div>
 
+                {/* Subject Title */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
                     Subject Title *
@@ -994,16 +1169,16 @@ export default function TaxonomyClient({
                     required
                     value={subTitle}
                     onChange={(e) => setSubTitle(e.target.value)}
-                    placeholder="e.g., Database Management Systems"
+                    placeholder="e.g., LINEAR ALGEBRA & CALCULUS"
                     className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal placeholder:text-primary/40"
                   />
                 </div>
 
-                {/* Multi-Select Branches Checkbox Dropdown */}
+                {/* Multi-Select Branches */}
                 <div className="relative">
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60">
-                      Branches (Multi-Select) *
+                      Assigned Branches (Multi-Select) *
                     </label>
                     <button
                       type="button"
@@ -1014,7 +1189,7 @@ export default function TaxonomyClient({
                     </button>
                   </div>
 
-                  {/* Multi-Select Trigger Button */}
+                  {/* Multi-Select Trigger */}
                   <button
                     type="button"
                     onClick={() => setIsBranchDropdownOpen((prev) => !prev)}
@@ -1039,9 +1214,6 @@ export default function TaxonomyClient({
                       )}
                     </div>
                     <div className="flex items-center gap-1 text-primary/50 shrink-0">
-                      <span className="text-[11px] font-medium hidden sm:inline">
-                        {subBranches.length} selected
-                      </span>
                       <ChevronDown
                         className={`h-4 w-4 transition-transform duration-200 ${
                           isBranchDropdownOpen ? "rotate-180" : ""
@@ -1050,16 +1222,14 @@ export default function TaxonomyClient({
                     </div>
                   </button>
 
-                  {/* Multi-Select Dropdown Menu */}
+                  {/* Dropdown Menu */}
                   {isBranchDropdownOpen && (
                     <>
-                      {/* Backdrop to close on click outside */}
                       <div
                         className="fixed inset-0 z-40"
                         onClick={() => setIsBranchDropdownOpen(false)}
                       />
                       <div className="absolute left-0 right-0 top-full mt-1.5 p-2 bg-surface border border-border rounded-2xl shadow-xl z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150">
-                        {/* Select All Option */}
                         <button
                           type="button"
                           onClick={toggleSelectAllBranches}
@@ -1081,7 +1251,6 @@ export default function TaxonomyClient({
 
                         <div className="border-t border-border my-1" />
 
-                        {/* Individual Branches List */}
                         <div className="max-h-48 overflow-y-auto space-y-0.5 pr-1">
                           {branches.map((b) => {
                             const isSelected = subBranches.includes(b.code);
@@ -1104,14 +1273,7 @@ export default function TaxonomyClient({
                                     className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer pointer-events-none shrink-0"
                                   />
                                   <div className="min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="font-extrabold text-xs">{b.code}</span>
-                                      {!b.active && (
-                                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                                          Inactive
-                                        </span>
-                                      )}
-                                    </div>
+                                    <span className="font-extrabold text-xs">{b.code}</span>
                                     <span className="text-[11px] text-primary/55 block truncate font-normal">
                                       {b.name}
                                     </span>
@@ -1147,60 +1309,42 @@ export default function TaxonomyClient({
                   </select>
                 </div>
 
+                {/* Active Checkbox */}
                 {editingSubject && (
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
-                      Status
+                  <div className="flex items-center gap-2.5 pt-2">
+                    <input
+                      type="checkbox"
+                      id="sub-active-status"
+                      checked={subActive}
+                      onChange={(e) => setSubActive(e.target.checked)}
+                      className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer"
+                    />
+                    <label htmlFor="sub-active-status" className="text-xs font-medium text-primary cursor-pointer">
+                      Subject is Active in Catalog
                     </label>
-                    <select
-                      value={subActive ? "active" : "inactive"}
-                      onChange={(e) => setSubActive(e.target.value === "active")}
-                      className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal cursor-pointer"
-                    >
-                      <option value="active">Active (Visible to Students)</option>
-                      <option value="inactive">Inactive (Archived)</option>
-                    </select>
                   </div>
                 )}
-
-                <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-1 text-xs">
-                  <div className="flex items-center gap-1.5 font-semibold text-primary">
-                    <Sparkles className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>Curriculum Alignment</span>
-                  </div>
-                  <p className="text-[11px] text-primary/65 leading-relaxed font-normal">
-                    Once saved, students enrolled in this branch and semester will see this subject syllabus updated across their learning dashboard.
-                  </p>
-                </div>
               </form>
 
-              {/* Footer */}
-              <div className="p-5 sm:p-6 border-t border-border bg-bg/40 flex items-center justify-end gap-2.5 shrink-0">
+              {/* Drawer Footer */}
+              <div className="p-4 sm:p-6 border-t border-border bg-bg/40 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={closeSubjectDrawer}
                   disabled={subjectLoading}
-                  className="px-5 py-2.5 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
+                  className="px-5 py-2.5 rounded-full border border-border bg-surface text-primary text-xs font-semibold hover:bg-bg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   form="subject-manage-form"
                   disabled={subjectLoading}
-                  className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
+                  className="px-6 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
                 >
-                  {subjectLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>{editingSubject ? "Save Changes" : "Create Subject"}</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </>
-                  )}
+                  {subjectLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{editingSubject ? "Save Changes" : "Register Subject"}</span>
                 </button>
               </div>
             </div>
@@ -1209,30 +1353,207 @@ export default function TaxonomyClient({
       )}
 
       {/* ========================================================================= */}
-      {/* DELETE SUBJECT CONFIRMATION MODAL */}
+      {/* MODAL: QUICK ADD REGULATION */}
+      {/* ========================================================================= */}
+      {isRegulationModalMounted && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div
+            onClick={closeRegulationModal}
+            className={`fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ${
+              isRegulationModalVisible ? "opacity-100" : "opacity-0"
+            }`}
+          />
+
+          <div
+            className={`relative bg-surface rounded-3xl border border-border shadow-2xl max-w-md w-full p-6 space-y-5 transform transition-all duration-300 ${
+              isRegulationModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            }`}
+          >
+            <div className="flex items-center justify-between border-b border-border/80 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-indigo-50 text-indigo-700">
+                  <Award className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-primary">Add Academic Regulation</h3>
+                  <p className="text-xs text-primary/55 font-normal">Define syllabus regulation code</p>
+                </div>
+              </div>
+              <button
+                onClick={closeRegulationModal}
+                className="p-1.5 rounded-full text-primary/40 hover:text-primary hover:bg-bg cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateRegulation} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                  Regulation Code *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newRegCode}
+                  onChange={(e) => setNewRegCode(e.target.value)}
+                  placeholder="e.g., R23, R24, A2"
+                  className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-400 text-primary font-semibold uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                  Regulation Description
+                </label>
+                <input
+                  type="text"
+                  value={newRegName}
+                  onChange={(e) => setNewRegName(e.target.value)}
+                  placeholder="e.g., R23 Autonomous B.Tech Regulation"
+                  className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-400 text-primary font-normal"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeRegulationModal}
+                  className="px-4 py-2 rounded-full border border-border text-xs font-semibold text-primary hover:bg-bg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={regLoading || !newRegCode.trim()}
+                  className="px-5 py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {regLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>Save Regulation</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: ADD BRANCH */}
+      {/* ========================================================================= */}
+      {isBranchModalMounted && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div
+            onClick={closeBranchModal}
+            className={`fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ${
+              isBranchModalVisible ? "opacity-100" : "opacity-0"
+            }`}
+          />
+
+          <div
+            className={`relative bg-surface rounded-3xl border border-border shadow-2xl max-w-md w-full p-6 space-y-5 transform transition-all duration-300 ${
+              isBranchModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            }`}
+          >
+            <div className="flex items-center justify-between border-b border-border/80 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <FolderPlus className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-primary">Add Department Branch</h3>
+                  <p className="text-xs text-primary/55 font-normal">Define engineering specialization</p>
+                </div>
+              </div>
+              <button
+                onClick={closeBranchModal}
+                className="p-1.5 rounded-full text-primary/40 hover:text-primary hover:bg-bg cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBranch} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                  Branch Code *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={branchCode}
+                  onChange={(e) => setBranchCode(e.target.value)}
+                  placeholder="e.g., CIC, CSD, CSM"
+                  className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-semibold uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
+                  Branch Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={branchName}
+                  onChange={(e) => setBranchName(e.target.value)}
+                  placeholder="e.g., Cyber Security & Data Engineering"
+                  className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeBranchModal}
+                  className="px-4 py-2 rounded-full border border-border text-xs font-semibold text-primary hover:bg-bg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={branchLoading || !branchCode.trim() || !branchName.trim()}
+                  className="px-5 py-2 rounded-full bg-primary hover:bg-primary/95 text-white text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {branchLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>Save Branch</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: DELETE SUBJECT CONFIRMATION */}
       {/* ========================================================================= */}
       {deletingSubject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => !isDeletingSubject && setDeletingSubject(null)}
+            onClick={() => setDeletingSubject(null)}
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
           />
-          <div className="bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
+
+          <div className="relative bg-surface rounded-3xl border border-border shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-center gap-3 text-red-600">
-              <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
-                <Trash2 className="h-5 w-5" />
+              <div className="p-2.5 rounded-2xl bg-red-50">
+                <Trash2 className="h-6 w-6" />
               </div>
-              <h3 className="text-base font-bold text-primary">Delete Subject</h3>
+              <div>
+                <h3 className="text-base font-bold text-primary">Delete Subject?</h3>
+                <p className="text-xs text-primary/55 font-normal">This action cannot be undone.</p>
+              </div>
             </div>
-            <p className="text-xs sm:text-sm text-primary/70 font-normal leading-relaxed">
-              Are you sure you want to permanently delete course <strong className="text-primary font-semibold">{deletingSubject.code}</strong> - <em>{deletingSubject.title}</em> from <strong className="text-primary font-semibold">{deletingSubject.branch}</strong>?
+
+            <p className="text-xs text-primary/70 leading-relaxed font-normal">
+              Are you sure you want to remove <span className="font-bold text-primary">{deletingSubject.code} - {deletingSubject.title}</span> ({deletingSubject.branch}, {deletingSubject.regulation || "R23"}) from the catalog?
             </p>
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+
+            <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setDeletingSubject(null)}
                 disabled={isDeletingSubject}
-                className="px-5 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
+                className="px-4 py-2 rounded-full border border-border text-xs font-semibold text-primary hover:bg-bg cursor-pointer"
               >
                 Cancel
               </button>
@@ -1240,162 +1561,12 @@ export default function TaxonomyClient({
                 type="button"
                 onClick={handleDeleteSubjectConfirm}
                 disabled={isDeletingSubject}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-5 py-2 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
-                {isDeletingSubject ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Confirm Delete"
-                )}
+                {isDeletingSubject && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <span>Delete Subject</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* DELETE BRANCH CONFIRMATION MODAL */}
-      {/* ========================================================================= */}
-      {deletingBranch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => !isDeletingBranch && setDeletingBranch(null)}
-          />
-          <div className="bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-3 text-red-600">
-              <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
-                <Trash2 className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-bold text-primary">Delete Branch Specialization</h3>
-            </div>
-            <p className="text-xs sm:text-sm text-primary/70 font-normal leading-relaxed">
-              Are you sure you want to remove <strong className="text-primary font-semibold">{deletingBranch.code}</strong> ({deletingBranch.name}) from academic branches?
-            </p>
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingBranch(null)}
-                disabled={isDeletingBranch}
-                className="px-5 py-2 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteBranchConfirm}
-                disabled={isDeletingBranch}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isDeletingBranch ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Confirm Delete"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL (ADD BRANCH) */}
-      {/* ========================================================================= */}
-      {isBranchModalMounted && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className={`fixed inset-0 bg-primary/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-              isBranchModalVisible ? "opacity-100" : "opacity-0"
-            }`}
-            onClick={() => !branchLoading && closeBranchModal()}
-          />
-          <div
-            data-lenis-prevent
-            className={`bg-surface border border-border rounded-3xl shadow-2xl w-full max-w-lg p-6 space-y-5 relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
-              isBranchModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border pb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-secondary/10 text-secondary">
-                  <FolderPlus className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-primary">Add Department Branch</h3>
-                  <p className="text-xs text-primary/60 font-normal mt-0.5">
-                    Register a new specialization program
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={closeBranchModal}
-                disabled={branchLoading}
-                className="p-2 text-primary/50 hover:text-primary rounded-full cursor-pointer hover:bg-bg"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleBranchSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
-                  Branch Code (e.g. CIC, CSD) *
-                </label>
-                <input
-                  required
-                  maxLength={6}
-                  value={branchCode}
-                  onChange={(e) => setBranchCode(e.target.value)}
-                  placeholder="e.g., CIC"
-                  className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal uppercase"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-primary/60 mb-1">
-                  Full Branch Specialization Name *
-                </label>
-                <input
-                  required
-                  value={branchName}
-                  onChange={(e) => setBranchName(e.target.value)}
-                  placeholder="e.g., Computer Science & Design"
-                  className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 text-primary font-normal"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border shrink-0">
-                <button
-                  type="button"
-                  onClick={closeBranchModal}
-                  disabled={branchLoading}
-                  className="px-5 py-2.5 text-xs sm:text-sm font-normal text-primary/70 hover:text-primary rounded-full cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={branchLoading}
-                  className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {branchLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Register Branch"
-                  )}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
