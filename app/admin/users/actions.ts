@@ -18,7 +18,8 @@ export async function createUserAction(
   semester: number | null,
   section?: string | null,
   designation?: string | null,
-  rollNumber?: string | null
+  rollNumber?: string | null,
+  phone?: string | null
 ) {
   const cookieStore = await cookies();
   const adminClient = createServerClient(cookieStore);
@@ -97,6 +98,7 @@ export async function createUserAction(
     current_semester: role === "student" ? (semester || 3) : null,
     section: role === "student" ? (section ? section.toUpperCase().trim() : "A") : null,
     designation: role === "faculty" ? (designation ? designation.trim() : "Assistant Professor") : null,
+    phone: phone ? phone.trim() : null,
     roll_number: role === "student" ? formattedRollNumber : null,
     first_login_pending: true,
   };
@@ -139,6 +141,7 @@ export async function updateUserAction(
     semester: number | null;
     section: string | null;
     designation: string | null;
+    phone?: string | null;
     rollNumber?: string | null;
     status: "active" | "deactivated";
   }
@@ -170,8 +173,12 @@ export async function updateUserAction(
     current_semester: isStudent ? (updates.semester || null) : null,
     section: isStudent ? (updates.section ? updates.section.toUpperCase().trim() : "A") : null,
     designation: isFaculty ? (updates.designation ? updates.designation.trim() : "Assistant Professor") : null,
+    phone: updates.phone !== undefined ? (updates.phone ? updates.phone.trim() : null) : undefined,
     roll_number: isStudent ? (updates.rollNumber ? updates.rollNumber.toUpperCase().trim() : null) : null,
   };
+
+  // Remove undefined properties
+  Object.keys(updatePayload).forEach((k) => updatePayload[k] === undefined && delete updatePayload[k]);
 
   let { data: profileData, error: updateError } = await adminClient
     .from("users")
@@ -359,6 +366,7 @@ export async function batchCreateUsersAction(
     semester: number | null;
     section?: string | null;
     designation?: string | null;
+    phone?: string | null;
     rollNumber?: string | null;
   }[]
 ) {
@@ -390,7 +398,7 @@ export async function batchCreateUsersAction(
     try {
       const defaultPassword = item.role === "student" && item.rollNumber 
         ? item.rollNumber.toUpperCase().trim() 
-        : "Password@789";
+        : (item.role === "faculty" && item.phone ? `MVGRDE@${item.phone.trim().slice(-4)}` : "Password@789");
 
       const { data: authData, error: authErr } = await statelessClient.auth.signUp({
         email: item.email.trim().toLowerCase(),
@@ -399,6 +407,8 @@ export async function batchCreateUsersAction(
           data: {
             name: item.name.trim(),
             role: item.role,
+            phone: item.phone ? item.phone.trim() : null,
+            designation: item.designation ? item.designation.trim() : null,
           }
         }
       });
@@ -435,6 +445,7 @@ export async function batchCreateUsersAction(
         current_semester: isStudent ? (item.semester || 3) : null,
         section: isStudent ? (item.section ? item.section.toUpperCase().trim() : "A") : null,
         designation: isFaculty ? (item.designation ? item.designation.trim() : "Assistant Professor") : null,
+        phone: item.phone ? item.phone.trim() : null,
         roll_number: formattedRoll,
         first_login_pending: true,
       };

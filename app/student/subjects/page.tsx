@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import Link from "next/link";
 import { FolderOpen, ArrowRight, BookOpen, Sparkles, Layers, ChevronRight } from "lucide-react";
 
@@ -13,92 +12,11 @@ interface SubjectItem {
   lastUpdatedStr: string;
 }
 
-const FALLBACK_SUBJECTS: Record<number, SubjectItem[]> = {
-  1: [
-    {
-      code: "R23MATT101",
-      title: "LINEAR ALGEBRA & CALCULUS",
-      branch: "CIC",
-      semester: 1,
-      active: true,
-      materialsCount: 4,
-      lastUpdatedStr: "Sep 01, 2026",
-    }
-  ],
-  3: [
-    {
-      code: "23CIC301",
-      title: "Database Management Systems",
-      branch: "CIC",
-      semester: 3,
-      active: true,
-      materialsCount: 1,
-      lastUpdatedStr: "Aug 31, 2026",
-    },
-    {
-      code: "23CIC302",
-      title: "Cloud Infrastructure & Distributed Systems",
-      branch: "CIC",
-      semester: 3,
-      active: true,
-      materialsCount: 3,
-      lastUpdatedStr: "Aug 26, 2026",
-    },
-    {
-      code: "23CIC303",
-      title: "Big Data Processing with Apache Spark",
-      branch: "CIC",
-      semester: 3,
-      active: true,
-      materialsCount: 2,
-      lastUpdatedStr: "Aug 22, 2026",
-    },
-    {
-      code: "23CIC304",
-      title: "Operating Systems & Linux Kernel Architecture",
-      branch: "CIC",
-      semester: 3,
-      active: true,
-      materialsCount: 3,
-      lastUpdatedStr: "Aug 18, 2026",
-    },
-    {
-      code: "23CIC305",
-      title: "Computer Networks & IoT Protocols",
-      branch: "CIC",
-      semester: 3,
-      active: true,
-      materialsCount: 4,
-      lastUpdatedStr: "Aug 15, 2026",
-    },
-  ],
-  7: [
-    {
-      code: "R23SE701",
-      title: "Software Engineering",
-      branch: "CIC",
-      semester: 7,
-      active: true,
-      materialsCount: 3,
-      lastUpdatedStr: "Sep 05, 2026",
-    }
-  ]
-};
+const FALLBACK_SUBJECTS: Record<number, any[]> = {};
 
-export default async function SubjectsBrowserPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser();
+export default async function StudentSubjectsPage() {
+  const { user, profile, supabase } = await getCachedUserProfile();
   if (!user) return null;
-
-  // Get user profile
-  const { data: profile } = await supabase
-    .from("users")
-    .select("branch, current_semester")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .single();
 
   const branch = profile?.branch || "CIC";
   const semester = profile?.current_semester || 3;
@@ -120,7 +38,7 @@ export default async function SubjectsBrowserPage() {
 
   const materialsList = dbMaterials || [];
 
-  const rawSubjects = (dbSubjects && dbSubjects.length > 0 ? dbSubjects : (FALLBACK_SUBJECTS[semester] || FALLBACK_SUBJECTS[3])).map((sub: any) => {
+  const rawSubjects = (dbSubjects || []).map((sub: any) => {
     const subjectMaterials = materialsList.filter((m: any) => m.subject === sub.code);
     const count = subjectMaterials.length;
     let updatedStr = "Recent";
@@ -172,39 +90,53 @@ export default async function SubjectsBrowserPage() {
         </div>
       </div>
 
-      {/* Grid of Subjects */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {rawSubjects.map((sub: any) => (
-          <Link
-            key={`${sub.code}-${sub.branch}`}
-            href={`/student/subjects/${sub.code}`}
-            className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:border-primary/40 transition-all flex flex-col justify-between space-y-4 group cursor-pointer"
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  {sub.code}
-                </span>
-                <span className="text-[11px] font-semibold text-slate-400">
-                  {sub.materialsCount} {sub.materialsCount === 1 ? "Document" : "Documents"}
-                </span>
+      {/* Grid of Subjects or Clean Empty State */}
+      {rawSubjects.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {rawSubjects.map((sub: any) => (
+            <Link
+              key={`${sub.code}-${sub.branch}`}
+              href={`/student/subjects/${sub.code}`}
+              className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:border-primary/40 transition-all flex flex-col justify-between space-y-4 group cursor-pointer"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    {sub.code}
+                  </span>
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    {sub.materialsCount} {sub.materialsCount === 1 ? "Document" : "Documents"}
+                  </span>
+                </div>
+
+                <h2 className="font-bold text-slate-900 text-base group-hover:text-primary transition-colors leading-snug">
+                  {sub.title}
+                </h2>
               </div>
 
-              <h2 className="font-bold text-slate-900 text-base group-hover:text-primary transition-colors leading-snug">
-                {sub.title}
-              </h2>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-normal">
-              <span>Updated: {sub.lastUpdatedStr}</span>
-              <div className="flex items-center gap-1 font-semibold text-primary group-hover:translate-x-1 transition-transform">
-                <span>View Notes</span>
-                <ChevronRight className="h-4 w-4" />
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-normal">
+                <span>Updated: {sub.lastUpdatedStr}</span>
+                <div className="flex items-center gap-1 font-semibold text-primary group-hover:translate-x-1 transition-transform">
+                  <span>View Notes</span>
+                  <ChevronRight className="h-4 w-4" />
+                </div>
               </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="py-16 text-center bg-white rounded-3xl border border-slate-200/90 p-8 space-y-3 shadow-xs">
+          <div className="w-12 h-12 mx-auto rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400">
+            <BookOpen className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-slate-900">No Subjects Enrolled Yet</h3>
+            <p className="text-xs text-slate-500 font-normal max-w-md mx-auto">
+              No active curriculum subjects are registered for Branch {branch} Semester {semester}. Once syllabus courses are provisioned, they will appear here automatically.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

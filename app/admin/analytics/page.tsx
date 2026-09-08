@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AnalyticsClient from "./analytics-client";
@@ -75,10 +75,7 @@ export interface StudentEngagementLog {
 
 export default async function AdminAnalyticsPage() {
   const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Authenticate user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, supabase } = await getCachedUserProfile();
   if (!user) redirect("/login");
 
   // Fetch materials, activity events, users, and branches in parallel

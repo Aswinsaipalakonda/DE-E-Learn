@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -32,95 +32,14 @@ interface MaterialWithFiles {
   material_files: MaterialFileItem[];
 }
 
-const FALLBACK_FACULTY_MATERIALS: MaterialWithFiles[] = [
-  {
-    id: "mock-mat-1",
-    title: "Database Management Systems (DBMS) - Unit 1 Relational Models",
-    type: "Lecture Notes",
-    state: "published",
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    views: 142,
-    downloads: 87,
-    material_files: [{ size: 3450000 }, { size: 1200000 }],
-  },
-  {
-    id: "mock-mat-8",
-    title: "Unit 2: SQL Advanced Queries, Nested Joins, and Trigger Stored Procedures",
-    type: "Lecture Slides",
-    state: "published",
-    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    views: 119,
-    downloads: 64,
-    material_files: [{ size: 2800000 }],
-  },
-  {
-    id: "mock-mat-9",
-    title: "Unit 3: Transaction Processing, ACID Properties, and Concurrency Control",
-    type: "Lecture Notes",
-    state: "published",
-    created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    views: 95,
-    downloads: 51,
-    material_files: [{ size: 3100000 }],
-  },
-  {
-    id: "mock-mat-14",
-    title: "DBMS Lab Manual: MySQL & PostgreSQL Hands-on Practice",
-    type: "Lab Manual",
-    state: "published",
-    created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    views: 210,
-    downloads: 168,
-    material_files: [{ size: 4500000 }],
-  },
-  {
-    id: "mock-mat-15",
-    title: "DBMS Mid-Term 1 & End-Semester Model Question Bank",
-    type: "Question Bank",
-    state: "draft",
-    created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    views: 0,
-    downloads: 0,
-    material_files: [{ size: 1900000 }],
-  },
-];
+const FALLBACK_FACULTY_MATERIALS: MaterialWithFiles[] = [];
 
-const FALLBACK_FACULTY_ANNOUNCEMENTS = [
-  {
-    id: "ann-f-1",
-    title: "Syllabus Compliance & Mid-Term Exam Material Upload Deadline",
-    content: "All faculty members are requested to upload verified Unit 1-3 lecture notes and model question papers for the upcoming Mid-Term 1 evaluations.",
-    priority: "important",
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "ann-f-2",
-    title: "Curriculum Committee Meeting for Next Semester Course Electives",
-    content: "Departmental review session on syllabus revisions and new elective course offerings will be held in the Seminar Hall.",
-    priority: "normal",
-    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+const FALLBACK_FACULTY_ANNOUNCEMENTS: any[] = [];
 
 export default async function FacultyDashboardPage() {
   const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Authenticate user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, profile, supabase } = await getCachedUserProfile();
   if (!user) redirect("/login");
-
-  // Fetch faculty profile
-  const { data: profile } = await supabase
-    .from("users")
-    .select("name, designation, role")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .single();
 
   const rawFacultyName = profile?.name || user.user_metadata?.name || user.email?.split("@")[0] || "Faculty";
   const facultyName = rawFacultyName.includes("@")
@@ -131,7 +50,7 @@ export default async function FacultyDashboardPage() {
   const { data: materialsData } = await supabase
     .from("materials")
     .select("id, title, type, state, created_at, subject, material_files(size)")
-    .eq("owner", user.id)
+    .or(`owner.eq.${user.id},owner.eq.${user.email}`)
     .neq("state", "deleted")
     .order("created_at", { ascending: false });
 
@@ -162,59 +81,35 @@ export default async function FacultyDashboardPage() {
   });
   const events = Array.from(eventsMap.values());
 
-  // Attach dynamic real-time metrics to each material (Counting distinct student viewers and downloaders)
+  const facultyMaterialIds = new Set(rawMaterials.map((m) => m.id));
+
+  // Attach dynamic real-time metrics to each material
   const materialsWithMetrics = rawMaterials.map((m) => {
     const matEvents = events.filter((e) => (e.target_id || e.targetId) === m.id);
-
-    const uniqueStudentViewers = new Set(
-      matEvents
-        .filter((e) => e.type === "view")
-        .map((e) => e.actor_id || e.actor_roll || e.actor_email || e.metadata?.roll_number)
-        .filter(Boolean)
-    );
-
-    const uniqueStudentDownloaders = new Set(
-      matEvents
-        .filter((e) => e.type === "download")
-        .map((e) => e.actor_id || e.actor_roll || e.actor_email || e.metadata?.roll_number)
-        .filter(Boolean)
-    );
+    const viewCount = matEvents.filter((e) => e.type === "view").length;
+    const downloadCount = matEvents.filter((e) => e.type === "download").length;
 
     return {
       ...m,
-      views: uniqueStudentViewers.size,
-      downloads: uniqueStudentDownloaders.size,
-      rawViewCount: matEvents.filter((e) => e.type === "view").length,
+      views: viewCount,
+      downloads: downloadCount,
     };
   });
 
-  const materials = rawMaterials.length > 0 ? materialsWithMetrics : FALLBACK_FACULTY_MATERIALS;
-  const totalUploads = rawMaterials.length > 0 ? rawMaterials.length : 0;
+  const materials = materialsWithMetrics;
+  const totalUploads = rawMaterials.length;
 
-  // Derive distinct subjects handled
+  // Derive distinct subjects handled from materials
   const distinctSubjects = new Set<string>();
   rawMaterials.forEach((m) => {
-    if (m.subject) distinctSubjects.add(m.subject);
+    if (m.subject) distinctSubjects.add(m.subject.toUpperCase().trim());
   });
   const totalSubjectsCount = distinctSubjects.size;
 
-  // Total unique students across all faculty materials
-  const allStudentViewers = new Set(
-    events
-      .filter((e) => e.type === "view" && rawMaterials.some((m) => m.id === (e.target_id || e.targetId)))
-      .map((e) => e.actor_id || e.actor_roll || e.actor_email || e.metadata?.roll_number)
-      .filter(Boolean)
-  );
-
-  const allStudentDownloaders = new Set(
-    events
-      .filter((e) => e.type === "download" && rawMaterials.some((m) => m.id === (e.target_id || e.targetId)))
-      .map((e) => e.actor_id || e.actor_roll || e.actor_email || e.metadata?.roll_number)
-      .filter(Boolean)
-  );
-
-  const totalViews = rawMaterials.length > 0 ? allStudentViewers.size : 0;
-  const totalDownloads = rawMaterials.length > 0 ? allStudentDownloaders.size : 0;
+  // Total views and downloads across all materials owned by this faculty
+  const facultyEvents = events.filter((e) => facultyMaterialIds.has(e.target_id || e.targetId));
+  const totalViews = facultyEvents.filter((e) => e.type === "view").length;
+  const totalDownloads = facultyEvents.filter((e) => e.type === "download").length;
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-7xl pb-8">
@@ -342,66 +237,87 @@ export default async function FacultyDashboardPage() {
             </Link>
           </div>
 
-          <div className="divide-y divide-slate-100">
-            {materials.map((mat) => {
-              const isPublished = mat.state === "published";
-              return (
-                <div
-                  key={mat.id}
-                  className="py-4 p-3 rounded-2xl hover:bg-slate-50/80 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group"
-                >
-                  <div className="space-y-1.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
-                        {mat.type}
-                      </span>
-                      {mat.subject && (
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-medium text-slate-600">
-                          {mat.subject}
+          {materials.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {materials.map((mat) => {
+                const isPublished = mat.state === "published";
+                return (
+                  <div
+                    key={mat.id}
+                    className="py-4 p-3 rounded-2xl hover:bg-slate-50/80 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group"
+                  >
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
+                          {mat.type}
                         </span>
-                      )}
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          isPublished
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-slate-100 text-slate-600 border border-slate-200"
-                        }`}
+                        {mat.subject && (
+                          <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-medium text-slate-600">
+                            {mat.subject}
+                          </span>
+                        )}
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            isPublished
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}
+                        >
+                          {isPublished ? "Published" : "Draft"}
+                        </span>
+                      </div>
+
+                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
+                        {mat.title}
+                      </h3>
+
+                      <div className="text-xs text-slate-500 font-normal flex items-center gap-3 flex-wrap">
+                        <span>{new Date(mat.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-3.5 w-3.5 text-slate-400" />
+                          <span>{mat.views ?? 0} views</span>
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Download className="h-3.5 w-3.5 text-slate-400" />
+                          <span>{mat.downloads ?? 0} downloads</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                      <Link
+                        href="/faculty/materials"
+                        className="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-2xs"
                       >
-                        {isPublished ? "Published" : "Draft"}
-                      </span>
-                    </div>
-
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
-                      {mat.title}
-                    </h3>
-
-                    <div className="text-xs text-slate-500 font-normal flex items-center gap-3 flex-wrap">
-                      <span>{new Date(mat.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Eye className="h-3.5 w-3.5 text-slate-400" />
-                        <span>{mat.views ?? 0} views</span>
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Download className="h-3.5 w-3.5 text-slate-400" />
-                        <span>{mat.downloads ?? 0} downloads</span>
-                      </span>
+                        Manage
+                      </Link>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
-                    <Link
-                      href="/faculty/materials"
-                      className="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-2xs"
-                    >
-                      Manage
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-12 text-center space-y-3">
+              <div className="w-12 h-12 mx-auto rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400">
+                <FileText className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-800">No Course Materials Uploaded Yet</p>
+                <p className="text-xs text-slate-500 font-normal max-w-sm mx-auto">
+                  You haven&apos;t published any study materials. Click below to upload lecture notes or lab manuals.
+                </p>
+              </div>
+              <Link
+                href="/faculty/upload"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary hover:bg-primary/95 text-white text-xs font-semibold shadow-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Upload First Material</span>
+              </Link>
+            </div>
+          )}
         </section>
 
         {/* Right Column (4 cols): Quick Tools & Department Notices */}

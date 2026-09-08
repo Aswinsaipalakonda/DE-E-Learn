@@ -68,6 +68,12 @@ export function saveLocalExamSchedules(schedules: ExamSchedule[]): void {
   }
 }
 
+let cachedDbSchedules: { schedules: ExamSchedule[]; expiresAt: number } | null = null;
+
+export function invalidateExamLockoutCache(): void {
+  cachedDbSchedules = null;
+}
+
 /**
  * Checks whether a given semester (and branch/subject) is currently under an active exam lockout window.
  */
@@ -79,17 +85,23 @@ export async function getActiveExamLockout(
   const localSchedules = readLocalExamSchedules();
   let dbSchedules: ExamSchedule[] = [];
 
-  try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-    const { data } = await supabase
-      .from("exam_schedules")
-      .select("*")
-      .eq("active", true);
-    if (data && Array.isArray(data)) {
-      dbSchedules = data as ExamSchedule[];
-    }
-  } catch {}
+  const nowMs = Date.now();
+  if (cachedDbSchedules && cachedDbSchedules.expiresAt > nowMs) {
+    dbSchedules = cachedDbSchedules.schedules;
+  } else {
+    try {
+      const cookieStore = await cookies();
+      const supabase = createClient(cookieStore);
+      const { data } = await supabase
+        .from("exam_schedules")
+        .select("*")
+        .eq("active", true);
+      if (data && Array.isArray(data)) {
+        dbSchedules = data as ExamSchedule[];
+        cachedDbSchedules = { schedules: dbSchedules, expiresAt: nowMs + 30_000 };
+      }
+    } catch {}
+  }
 
   const allSchedules = [...localSchedules, ...dbSchedules].filter((s) => s.active);
   const now = new Date();

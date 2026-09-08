@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { redirect } from "next/navigation";
 import InquiriesClient, { InquiryItem } from "./inquiries-client";
 
@@ -9,10 +8,7 @@ export const metadata = {
 };
 
 export default async function AdminInquiriesPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, supabase } = await getCachedUserProfile();
   if (!user) {
     redirect("/login");
   }

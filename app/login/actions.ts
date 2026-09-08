@@ -3,11 +3,15 @@
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createStatelessClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { logAuditAction } from "@/utils/audit-logger";
+import { checkRateLimit, resetRateLimit } from "@/utils/rate-limiter";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+
+// RFC-compliant email regex ensuring input cleanliness and safety
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export async function login(formData: FormData) {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
@@ -15,6 +19,36 @@ export async function login(formData: FormData) {
 
   if (!email || !password) {
     return { error: "Email and password are required." };
+  }
+
+  // 1. Input sanitization & validation
+  if (!EMAIL_REGEX.test(email) || email.length > 254) {
+    return { error: "Please enter a valid institutional email address." };
+  }
+
+  if (password.length > 128) {
+    return { error: "Invalid password format." };
+  }
+
+  // 2. Brute-force / Login attack mitigation via rate limiting
+  const headerList = await headers();
+  const rawIp = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                headerList.get("x-real-ip") || 
+                "local-client";
+  const clientIp = rawIp.replace(/[^a-zA-Z0-9.:_-]/g, ""); // sanitize ip string
+
+  const ipCheck = checkRateLimit(`ip:${clientIp}`, { maxAttempts: 15, windowMs: 5 * 60 * 1000 });
+  if (!ipCheck.allowed) {
+    return {
+      error: `Too many login attempts from this network. Please wait ${ipCheck.retryAfterSeconds} seconds before trying again.`,
+    };
+  }
+
+  const emailCheck = checkRateLimit(`email:${email}`, { maxAttempts: 5, windowMs: 5 * 60 * 1000 });
+  if (!emailCheck.allowed) {
+    return {
+      error: `Too many failed login attempts for this account. Please wait ${emailCheck.retryAfterSeconds} seconds before trying again.`,
+    };
   }
 
   const cookieStore = await cookies();
@@ -26,24 +60,24 @@ export async function login(formData: FormData) {
 
   const regNo = email.split("@")[0].toUpperCase();
 
-  // 1. Try standard case-sensitive authentication first
+  // 3. Try standard authentication first
   let { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  // 2. Fetch user profile from public.users to check status & reset flags
+  // 4. Fetch user profile from public.users using parameterized safe query
   const { data: userProfile } = await supabase
     .from("users")
     .select("*")
-    .ilike("email", email)
-    .single();
+    .eq("email", email)
+    .maybeSingle();
 
   if (userProfile && userProfile.status === "deactivated") {
     return { error: "This account has been deactivated. Please contact your administrator." };
   }
 
-  // 3. Fallback: If login failed, check if user is logging in with a reset password or default credential
+  // 5. Fallback: If login failed, check default credentials or admin reset credentials
   if (error && userProfile) {
     const validStudentPasswords = [
       regNo,
@@ -56,7 +90,13 @@ export async function login(formData: FormData) {
       "ChangeMe1234!",
     ].filter(Boolean) as string[];
 
-    const validFacultyPasswords = ["Password@789", "ChangeMe1234!"];
+    // Faculty default passwords include phone-derived default password MVGRDE@<last4>
+    const phoneSuffix = userProfile.phone ? userProfile.phone.slice(-4) : null;
+    const validFacultyPasswords = [
+      phoneSuffix ? `MVGRDE@${phoneSuffix}` : null,
+      "Password@789",
+      "ChangeMe1234!",
+    ].filter(Boolean) as string[];
 
     const isAllowedDefaultPassword =
       password === "Password@789" ||
@@ -64,9 +104,8 @@ export async function login(formData: FormData) {
       (userProfile.role === "student" && validStudentPasswords.includes(password)) ||
       (userProfile.role !== "student" && validFacultyPasswords.includes(password));
 
-    // A. If Admin reset the password (first_login_pending = true) or default password was entered
+    // If default or reset password was supplied
     if (isAllowedDefaultPassword) {
-      // If service role key is available, directly synchronize the password in auth.users
       if (hasServiceKey) {
         try {
           const { error: syncErr } = await adminAuthClient.auth.admin.updateUserById(userProfile.id, {
@@ -74,7 +113,6 @@ export async function login(formData: FormData) {
           });
 
           if (syncErr) {
-            // If userProfile.id was not the auth id, look up by email
             const { data: userListData } = await adminAuthClient.auth.admin.listUsers();
             const foundUser = userListData?.users?.find(
               (u) => u.email?.toLowerCase() === email
@@ -89,7 +127,6 @@ export async function login(formData: FormData) {
                 .update({ id: foundUser.id })
                 .eq("email", email);
             } else {
-              // User has no auth record at all - create one
               await adminAuthClient.auth.admin.createUser({
                 email,
                 password,
@@ -97,12 +134,13 @@ export async function login(formData: FormData) {
                 user_metadata: {
                   name: userProfile.name,
                   role: userProfile.role,
+                  phone: userProfile.phone,
+                  designation: userProfile.designation,
                 },
               });
             }
           }
 
-          // Now retry sign in with the synchronized password
           const retrySignIn = await supabase.auth.signInWithPassword({
             email,
             password,
@@ -116,18 +154,12 @@ export async function login(formData: FormData) {
         }
       }
 
-      // B. If still not authenticated, try candidate previous default passwords to log in & auto-update
+      // Candidate previous default passwords fallback
       if (error) {
         const candidatePasswords = [
-          "Password@789",
-          "ChangeMe1234!",
-          regNo,
-          regNo.toLowerCase(),
-          regNo.toUpperCase(),
-          userProfile.roll_number,
-          userProfile.roll_number?.toLowerCase(),
-          userProfile.roll_number?.toUpperCase(),
-        ].filter(Boolean) as string[];
+          ...validFacultyPasswords,
+          ...validStudentPasswords,
+        ];
 
         for (const cand of candidatePasswords) {
           if (cand === password) continue;
@@ -138,7 +170,6 @@ export async function login(formData: FormData) {
 
           if (!tryRes.error && tryRes.data.user) {
             error = null;
-            // Seamlessly update password to what the user typed so future logins are instant
             try {
               await supabase.auth.updateUser({ password });
             } catch {}
@@ -147,7 +178,7 @@ export async function login(formData: FormData) {
         }
       }
 
-      // C. If user is in public.users but has no auth.users record at all, register via stateless signup
+      // If user is in public.users but has no auth record yet
       if (error) {
         const signUpRes = await statelessClient.auth.signUp({
           email,
@@ -156,6 +187,8 @@ export async function login(formData: FormData) {
             data: {
               name: userProfile.name,
               role: userProfile.role,
+              phone: userProfile.phone,
+              designation: userProfile.designation,
             },
           },
         });
@@ -183,22 +216,37 @@ export async function login(formData: FormData) {
     return { error: error.message || "Invalid login credentials. Please check your email and password." };
   }
 
+  // Authentication succeeded! Reset rate limits
+  resetRateLimit(`email:${email}`);
+  resetRateLimit(`ip:${clientIp}`);
+
   // Get authenticated session user
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Resolve user role to navigate directly to their dashboard
+  // Resolve user role securely using parameterized query
   let userRole = "student";
   if (user) {
     const { data: profile } = await supabase
       .from("users")
       .select("role")
-      .or(`id.eq.${user.id},email.eq.${email}`)
-      .single();
+      .eq("id", user.id)
+      .maybeSingle();
 
     if (profile?.role) {
       userRole = profile.role;
-    } else if (user.user_metadata?.role) {
-      userRole = user.user_metadata.role;
+    } else {
+      // Secondary lookup strictly by email if profile ID was misaligned
+      const { data: emailProfile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (emailProfile?.role) {
+        userRole = emailProfile.role;
+      } else if (user.user_metadata?.role) {
+        userRole = user.user_metadata.role;
+      }
     }
   }
 

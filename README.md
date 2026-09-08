@@ -1,72 +1,116 @@
 # MVGR Data Engineering E-Learning Portal (DE E-Learn)
 
-Welcome to the **MVGR Data Engineering E-Learning Portal** (`MVGR DE E-learn`), a premium academic resource repository designed specifically for students and faculty of the Data Engineering department at **MVGR College of Engineering**.
-
-**Live Production URL:** [https://de-mvgrce.vercel.app/](https://de-mvgrce.vercel.app/)
+Welcome to the **MVGR Data Engineering E-Learning Portal** (`MVGR DE E-learn`), a high-performance academic resource distribution and syllabus management system built for the students, faculty, and administration of the **Department of Data Engineering** at **MVGR College of Engineering (Autonomous)**.
 
 ---
 
-## 🔍 SEO & Search Optimization Keywords
-To maintain a high search ranking and assist MVGR students in finding course materials quickly, this repository is optimized for:
-*   `MVGR` / `MVGR College of Engineering`
-*   `MVGR DE E-learn` / `MVGR Data Engineering E-Learn`
-*   `MVGR Data Engineering` / `Data Engineering MVGR`
-*   `MVGR Data Science` / `MVGR Cyber Security` / `MVGR AI ML`
-*   `Data Engineering syllabus notes` / `MVGR lab manuals`
+## 🏛️ System Overview & Architecture
+
+DE E-Learn is engineered to streamline curriculum material delivery, enforce strict academic regulation isolation, provide engagement telemetry, and secure exam integrity across autonomous cohorts.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MVGR DE E-Learn Platform                 │
+├─────────────────┬───────────────────────────┬───────────────┤
+│  Student Portal │       Faculty Portal      │  Admin Suite  │
+│  - Syllabus Hub │  - Resource Distribution  │  - Governance │
+│  - Dynamic View │  - Engagement Telemetry   │  - Roster CSV │
+│  - Bookmarks    │  - Material Lifecycle     │  - Lockouts   │
+└─────────────────┴───────────────────────────┴───────────────┘
+                                │
+               Supabase PostgreSQL & Storage Engine
+```
 
 ---
 
-## 🚀 Key Portal Features
+## 🚀 Key Modules & Capabilities
 
-### 👨‍🎓 For Students
-1.  **Direct Portal Access:** Sign in instantly using your college email and roll number.
-2.  **Auto-Filtering Semester Selector:** Easily switch semesters (Semester 1 to Semester 8) via a dropdown selector to display corresponding notes and manuals.
-3.  **Bookmarking System:** Save files to your private bookmarks page for offline learning.
-4.  **Case-Insensitive Passwords:** Login supports both uppercase and lowercase student roll numbers.
+### 👨‍🎓 1. Student Academic Hub
+* **Curriculum Exploration:** Filter notes, lecture presentations, lab manuals, and question banks by Autonomous Regulation (`R23`), Department Branch (`CIC`, `CSD`, `CSM`), and Semester (`Sem 1` – `Sem 8`).
+* **Personalized Bookmarking:** Save materials to a private, persistent library for quick revision.
+* **Integrated Inquiries:** Submit academic inquiries directly to course coordinators and faculty.
+* **Exam Lockout Compliance:** Automated UI lockdown during scheduled examination windows to prevent unauthorized material access.
 
-### 👩‍🏫 For Faculty
-1.  **Resource Uploader:** Upload and publish PDFs/docs categorized by Branch, Semester, and Subject.
-2.  **Engagement Tracking:** Monitor which resources have been viewed or downloaded.
-3.  **Branch Specializations:**
-    *   `CIC`: *Cyber Security, IoT with BlockChain Technology*
-    *   `CSD`: *Data Science*
-    *   `CSM`: *Artificial Intelligence and Machine Learning*
+### 👩‍🏫 2. Faculty Distribution & Analytics
+* **Course Material Publisher:** Multi-file drag-and-drop uploader supporting PDF, Word, PowerPoint, and lab archives with version tracking.
+* **Real-time Engagement Metrics:** Real-time dashboards monitoring total published files, unique student readers, download counts, and active subject portfolios.
+* **Cohort Isolation:** Direct material publishing scoped to specific branches or cross-listed cohorts.
+* **Broadcast Circulars:** Post targeted departmental announcements and notice board updates.
 
-### 🛠️ For Administrators
-1.  **Usage Metrics & Analytics Dashboard:** View overall downloads and student view metrics.
-2.  **Student & Faculty Roster Manager:** Single and bulk-CSV user account generation.
-3.  **Courses & Branches Manager:** Create subjects, courses, and branches.
+### 🛠️ 3. Administrative Governance Suite
+* **Student Roster & Cohort Management:** Single student enrollment with 10-digit roll number validation, auto-generated institutional emails, and bulk CSV roster imports.
+* **Batch Cohort Promotion:** Advance an entire semester cohort to the next curriculum term with a single administrative action.
+* **Academic Taxonomy Manager:** Dynamic CRUD operations for Autonomous Regulations, Department Branches, and Semester Timelines.
+* **Examination Lockout Scheduler:** Schedule timed material lockouts for specific branches, semesters, and subject codes.
+* **Security & Immutable Audit Logs:** Append-only logging tracking user lifecycle, password resets, and curriculum adjustments.
 
 ---
 
-## 🔑 Default Credentials & Portal URLs
-Users can log in directly at [https://de-mvgrce.vercel.app/login](https://de-mvgrce.vercel.app/login):
+## 🏢 Departmental Specializations Supported
 
-*   **Administrator Account:**
-    *   **Email:** `admin@mvgrce.edu.in`
-    *   **Password:** `AdminPassword123!`
-*   **Faculty Account:**
-    *   **Email:** `faculty@mvgrce.edu.in`
-    *   **Password:** `ChangeMe1234!`
-*   **Student Account:**
-    *   **Email:** `23331a4745@mvgrce.edu.in` (example roll number)
-    *   **Password:** `23331A4745` (roll number is case-insensitive)
+* **CIC:** *Computer Science and Information Technology*
+* **CSD:** *Computer Science and Design*
+* **CSM:** *Artificial Intelligence and Machine Learning*
+
+---
+
+## 🔐 Role-Based Access Control (RBAC)
+
+The platform enforces strict role-based access:
+* **Administrators:** Full system governance, taxonomy, roster imports, and exam schedules.
+* **Faculty Members:** Publishing materials, viewing engagement metrics, and posting announcements.
+* **Students:** Accessing enrolled semester materials, bookmarking documents, and submitting inquiries.
+
+> [!NOTE]
+> For authenticated credentials and setup procedures, authorized staff should consult the internal `creds.md` documentation.
+
+---
+
+## 🛠️ Technology Stack
+
+* **Framework:** Next.js 16 (App Router & Server Actions)
+* **Language:** TypeScript 5.x
+* **Database & Auth:** Supabase (PostgreSQL with Row Level Security & GoTrue)
+* **Storage:** Supabase Storage Bucket (`materials`)
+* **Styling:** Tailwind CSS with custom design tokens
+* **Icons:** Lucide React
 
 ---
 
 ## 💻 Local Development Setup
 
-First, initialize the local environment configuration in `.env.local` containing your Supabase project keys:
+### 1. Prerequisites
+* Node.js 18+ or 20+
+* npm or pnpm
+* Supabase Project
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-anon-key
+### 2. Environment Configuration
+Create a `.env.local` file in the root directory:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project-id>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 ```
 
-Run the development server:
+### 3. Install Dependencies
+```bash
+npm install
+```
 
+### 4. Run Development Server
 ```bash
 npm run dev
 ```
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to view the local server.
+### 5. Validate Production Build
+```bash
+npm run build
+```
+
+---
+
+## 📄 License & Institutional Rights
+
+Developed for the **Department of Data Engineering**, **MVGR College of Engineering (Autonomous)**, Vizianagaram, Andhra Pradesh, India.

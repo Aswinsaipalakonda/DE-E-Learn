@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { redirect } from "next/navigation";
 import AnnouncementsClient from "./announcements-client";
 
@@ -62,11 +61,7 @@ const FALLBACK_ANNOUNCEMENTS: AnnouncementItem[] = [
 import { readLocalExamSchedules, ExamSchedule } from "@/utils/exam-lockout";
 
 export default async function AdminAnnouncementsPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Authenticate Admin user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, supabase } = await getCachedUserProfile();
   if (!user) redirect("/login");
 
   // Fetch announcements, branches, semesters, subjects, and exam schedules in parallel
@@ -123,11 +118,7 @@ export default async function AdminAnnouncementsPage() {
     { number: 8, name: "8th Semester" },
   ];
 
-  const subjects = (subjectsRes.data as unknown as SubjectItem[]) || [
-    { code: "R23MATT101", title: "LINEAR ALGEBRA & CALCULUS", branch: "CIC", semester: 1, regulation: "R23" },
-    { code: "R23SE701", title: "Software Engineering", branch: "CIC", semester: 7, regulation: "R23" },
-    { code: "23CIC301", title: "Database Management Systems", branch: "CIC", semester: 3, regulation: "R23" },
-  ];
+  const subjects = (subjectsRes.data as unknown as SubjectItem[]) || [];
 
   return (
     <AnnouncementsClient

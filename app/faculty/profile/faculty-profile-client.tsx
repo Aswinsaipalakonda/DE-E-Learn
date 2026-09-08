@@ -143,8 +143,8 @@ export default function FacultyProfileClient({ profile }: FacultyProfileClientPr
                 <BookOpen className="h-4 w-4 text-emerald-600" />
               </div>
               <div className="min-w-0">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Assigned Courses</span>
-                <span className="text-xs font-bold text-slate-800 block">23CIC301 (DBMS), 23CIC302 (Cloud)</span>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Assigned Department</span>
+                <span className="text-xs font-bold text-slate-800 block">Department of Data Engineering</span>
               </div>
             </div>
           </div>

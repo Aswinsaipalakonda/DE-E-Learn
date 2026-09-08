@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { redirect } from "next/navigation";
 import UploadForm from "./upload-form";
 import Link from "next/link";
@@ -25,28 +24,10 @@ const FALLBACK_REGULATIONS: RegulationOption[] = [
   { code: "A2", name: "A2 Autonomous Regulation" },
 ];
 
-const FALLBACK_SUBJECTS: SubjectOption[] = [
-  { code: "R23MATT101", title: "LINEAR ALGEBRA & CALCULUS", branch: "CIC", semester: 1, regulation: "R23" },
-  { code: "R23MATT101", title: "LINEAR ALGEBRA & CALCULUS", branch: "CSD", semester: 1, regulation: "R23" },
-  { code: "R23MATT101", title: "LINEAR ALGEBRA & CALCULUS", branch: "CSM", semester: 1, regulation: "R23" },
-  { code: "R23SE701", title: "Software Engineering", branch: "CIC", semester: 7, regulation: "R23" },
-  { code: "R23SE701", title: "Software Engineering", branch: "CSD", semester: 7, regulation: "R23" },
-  { code: "R23SE701", title: "Software Engineering", branch: "CSM", semester: 7, regulation: "R23" },
-  { code: "23CIC301", title: "Database Management Systems", branch: "CIC", semester: 3, regulation: "R23" },
-  { code: "23CIC302", title: "Cloud Infrastructure & Distributed Systems", branch: "CIC", semester: 3, regulation: "R23" },
-  { code: "23CIC303", title: "Big Data Processing with Apache Spark", branch: "CIC", semester: 3, regulation: "R23" },
-  { code: "23CIC304", title: "Operating Systems & Linux Kernel Architecture", branch: "CIC", semester: 3, regulation: "R23" },
-  { code: "23CIC305", title: "Computer Networks & IoT Protocols", branch: "CIC", semester: 3, regulation: "R23" },
-  { code: "23CSD501", title: "Data Warehousing & Dimensional Mining", branch: "CSD", semester: 5, regulation: "R23" },
-  { code: "23CSM101", title: "Machine Learning with Python", branch: "CSM", semester: 1, regulation: "R23" },
-];
+const FALLBACK_SUBJECTS: SubjectOption[] = [];
 
 export default async function FacultyUploadPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, supabase } = await getCachedUserProfile();
   if (!user) redirect("/login");
 
   // Fetch active regulations and subjects in parallel
@@ -59,9 +40,7 @@ export default async function FacultyUploadPage() {
     ? regulationsRes.data
     : FALLBACK_REGULATIONS;
 
-  const activeSubjects = (subjectsRes.data && subjectsRes.data.length > 0)
-    ? subjectsRes.data
-    : FALLBACK_SUBJECTS;
+  const activeSubjects = (subjectsRes.data as SubjectOption[]) || [];
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">

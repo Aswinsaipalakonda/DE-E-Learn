@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { 
@@ -35,103 +35,9 @@ interface MaterialItem {
   facultyName?: string;
 }
 
-const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {
-  3: [
-    {
-      id: "mock-mat-1",
-      title: "Database Management Systems (DBMS) - Unit 1 Relational Models",
-      type: "Lecture Notes",
-      created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Database Management Systems",
-      subjectCode: "23CIC301",
-      facultyName: "Dr. P. Satyanarayana",
-    },
-    {
-      id: "mock-mat-2",
-      title: "Cloud Infrastructure & Distributed Computing - Lab Manual",
-      type: "Lab Manual",
-      created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Cloud Computing & DevOps",
-      subjectCode: "23CIC302",
-      facultyName: "Dr. K. Srinivas Rao",
-    },
-    {
-      id: "mock-mat-5",
-      title: "Big Data Processing with Apache Spark - Mid-Term Question Bank",
-      type: "Question Bank",
-      created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Big Data Analytics",
-      subjectCode: "23CIC303",
-      facultyName: "Prof. M. V. Ramana",
-    },
-    {
-      id: "mock-mat-6",
-      title: "Operating Systems & Linux Kernel Architecture - Slide Deck",
-      type: "Lecture Slides",
-      created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Operating Systems",
-      subjectCode: "23CIC304",
-      facultyName: "Dr. B. Anitha",
-    },
-  ],
-  2: [
-    {
-      id: "mock-mat-10",
-      title: "Data Structures & Algorithms in Java - Unit 2 Trees and Graphs",
-      type: "Lecture Notes",
-      created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Data Structures & Algorithms",
-      subjectCode: "23CS201",
-      facultyName: "Dr. P. Satyanarayana",
-    },
-    {
-      id: "mock-mat-11",
-      title: "Digital Logic Design & Computer Organization - Lab Manual",
-      type: "Lab Manual",
-      created_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Digital Logic & Microprocessors",
-      subjectCode: "23EC202",
-      facultyName: "Dr. K. Srinivas Rao",
-    },
-  ],
-  1: [
-    {
-      id: "mock-mat-4",
-      title: "Machine Learning with Python - Jupyter Notebook Reference",
-      type: "Code Repository",
-      created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Introduction to AI & Python",
-      subjectCode: "23CSM101",
-      facultyName: "V. Lakshmi Lavanya",
-    },
-    {
-      id: "mock-mat-7",
-      title: "Linear Algebra & Probability Theory - Assignment 1 Solutions",
-      type: "Assignment",
-      created_at: new Date(Date.now() - 65 * 24 * 60 * 60 * 1000).toISOString(),
-      subjectTitle: "Engineering Mathematics I",
-      subjectCode: "23BS101",
-      facultyName: "Dr. K. Srinivas Rao",
-    },
-  ],
-};
+const FALLBACK_STUDENT_MATERIALS: Record<number, MaterialItem[]> = {};
 
-const FALLBACK_ANNOUNCEMENTS = [
-  {
-    id: "mock-ann-1",
-    title: "Mid-Term Examination Schedule & Hall Allotments",
-    content: "Evaluation sessions are scheduled. Please review seating plans posted outside the department office.",
-    priority: "important",
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "mock-ann-2",
-    title: "Special Workshop: Big Data Technologies with Google Cloud",
-    content: "Interactive workshop for 3rd and 5th semester students in the main auditorium.",
-    priority: "normal",
-    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+const FALLBACK_ANNOUNCEMENTS: any[] = [];
 
 export default async function StudentDashboard({
   searchParams,
@@ -139,18 +45,8 @@ export default async function StudentDashboard({
   searchParams: Promise<{ sem?: string }>;
 }) {
   const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, profile, supabase } = await getCachedUserProfile();
   if (!user) return null;
-
-  // Get user profile
-  const { data: profile } = await supabase
-    .from("users")
-    .select("name, branch, current_semester, roll_number")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .single();
 
   const studentName = profile?.name || user.user_metadata?.name || user.email?.split("@")[0] || "Student";
   const branch = profile?.branch || "CIC";
@@ -192,7 +88,7 @@ export default async function StudentDashboard({
       .order("created_at", { ascending: false })
       .limit(6);
 
-    const rawUploads = (dbLatestUploads || []).map((m) => ({
+    const rawUploads = (dbLatestUploads || []).map((m: any) => ({
       id: m.id,
       title: m.title,
       type: m.type,
@@ -455,7 +351,7 @@ export default async function StudentDashboard({
             </div>
 
             <div className="space-y-3">
-              {announcements.map((ann) => {
+              {announcements.map((ann: any) => {
                 const isImportant = ann.priority === "important";
                 return (
                   <div

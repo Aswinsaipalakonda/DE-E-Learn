@@ -123,6 +123,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
             <Link
               key={item.name}
               href={item.href}
+              prefetch={true}
               className={`flex items-center gap-3.5 px-5 py-3 rounded-full text-sm transition-all duration-200 group ${
                 isActive 
                   ? "bg-white text-slate-900 shadow-sm font-bold" 

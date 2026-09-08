@@ -58,6 +58,7 @@ export default function BottomNav({ userRole, signOutAction }: BottomNavProps) {
           <Link
             key={item.name}
             href={item.href}
+            prefetch={true}
             className={`flex flex-col items-center justify-center flex-1 py-1.5 px-2 rounded-full transition-all duration-200 cursor-pointer ${
               isActive 
                 ? "bg-primary text-white shadow-xs" 

@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { 
@@ -30,50 +29,10 @@ interface ActivityEvent {
   };
 }
 
-const FALLBACK_EVENTS: ActivityEvent[] = [
-  {
-    id: "evt-1",
-    created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    type: "CREATE_USER",
-    user_email: "admin@mvgrce.edu.in",
-    metadata: { title: "Enrolled Student 23331A4745 (Aswin Sai)" }
-  },
-  {
-    id: "evt-2",
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    type: "UPLOAD_MATERIAL",
-    user_email: "faculty.psn@mvgrce.edu.in",
-    metadata: { title: "DBMS Unit 1 Relational Models" }
-  },
-  {
-    id: "evt-3",
-    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    type: "BROADCAST_NOTICE",
-    user_email: "admin@mvgrce.edu.in",
-    metadata: { title: "Mid-Term Examination Schedule" }
-  },
-  {
-    id: "evt-4",
-    created_at: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString(),
-    type: "CREATE_USER",
-    user_email: "admin@mvgrce.edu.in",
-    metadata: { title: "Registered Faculty Dr. K. Srinivas Rao" }
-  },
-  {
-    id: "evt-5",
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    type: "DOWNLOAD_RESOURCE",
-    user_email: "23331a4701@mvgrce.edu.in",
-    metadata: { title: "Cloud Computing Lab Manual" }
-  },
-];
+const FALLBACK_EVENTS: ActivityEvent[] = [];
 
 export default async function AdminDashboardPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, supabase } = await getCachedUserProfile();
   if (!user) redirect("/login");
 
   // Run aggregate queries
@@ -104,24 +63,24 @@ export default async function AdminDashboardPage() {
     supabase.from("support_inquiries").select("id, status")
   ]);
 
-  const rawStudents = studentsRes.count || 0;
-  const rawFaculty = facultyRes.count || 0;
-  const rawMaterials = materialsRes.count || 0;
+  const rawStudents = studentsRes.count ?? 0;
+  const rawFaculty = facultyRes.count ?? 0;
+  const rawMaterials = materialsRes.count ?? 0;
+  const rawBranches = branchesRes.count ?? 0;
   const totalInquiries = inquiriesRes.data?.length || 0;
-  const pendingInquiries = inquiriesRes.data?.filter((i) => i.status === "pending").length || 0;
+  const pendingInquiries = (inquiriesRes.data as Array<{ status: string }> | null)?.filter((i) => i.status === "pending").length || 0;
 
-  const totalStudents = rawStudents > 0 ? rawStudents : 6;
-  const totalFaculty = rawFaculty > 0 ? rawFaculty : 4;
-  const totalMaterials = rawMaterials > 0 ? rawMaterials : 5;
+  const totalStudents = rawStudents;
+  const totalFaculty = rawFaculty;
+  const totalMaterials = rawMaterials;
+  const totalBranches = rawBranches;
 
   // Calculate storage consumed
   let totalStorageBytes = 0;
   if (filesRes.data && filesRes.data.length > 0) {
-    filesRes.data.forEach((f) => {
+    (filesRes.data as Array<{ size: number }>).forEach((f) => {
       totalStorageBytes += f.size || 0;
     });
-  } else {
-    totalStorageBytes = 28450000; // ~27.13 MB default sample
   }
 
   const formatStorage = (bytes: number) => {
@@ -141,7 +100,7 @@ export default async function AdminDashboardPage() {
     };
   });
 
-  const events = rawEvents.length > 0 ? rawEvents : FALLBACK_EVENTS;
+  const events = rawEvents;
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full pb-6">
@@ -239,7 +198,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div>
             <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {branchesRes.count || 3} Branches
+              {totalBranches} {totalBranches === 1 ? "Branch" : "Branches"}
             </span>
             <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">
               Department Curricula

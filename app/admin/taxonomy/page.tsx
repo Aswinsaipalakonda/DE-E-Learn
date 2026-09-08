@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { redirect } from "next/navigation";
 import TaxonomyClient from "./taxonomy-client";
 
@@ -37,113 +36,6 @@ const DEFAULT_REGULATIONS: RegulationItem[] = [
   { code: "A2", name: "A2 Autonomous Regulation", active: true },
 ];
 
-const MOCK_DEFAULT_SUBJECTS: SubjectItem[] = [
-  {
-    code: "R23MATT101",
-    title: "LINEAR ALGEBRA & CALCULUS",
-    branch: "CIC",
-    semester: 1,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "R23MATT101",
-    title: "LINEAR ALGEBRA & CALCULUS",
-    branch: "CSD",
-    semester: 1,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "R23MATT101",
-    title: "LINEAR ALGEBRA & CALCULUS",
-    branch: "CSM",
-    semester: 1,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "R23SE701",
-    title: "Software Engineering",
-    branch: "CIC",
-    semester: 7,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "R23SE701",
-    title: "Software Engineering",
-    branch: "CSD",
-    semester: 7,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "R23SE701",
-    title: "Software Engineering",
-    branch: "CSM",
-    semester: 7,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "23CIC301",
-    title: "Database Management Systems",
-    branch: "CIC",
-    semester: 3,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "23CIC302",
-    title: "Cloud Infrastructure & Distributed Systems",
-    branch: "CIC",
-    semester: 3,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "23CIC303",
-    title: "Big Data Processing with Apache Spark",
-    branch: "CIC",
-    semester: 3,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "23CIC304",
-    title: "Operating Systems & Linux Kernel Architecture",
-    branch: "CIC",
-    semester: 3,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "23CIC305",
-    title: "Computer Networks & IoT Protocols",
-    branch: "CIC",
-    semester: 3,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "23CSD501",
-    title: "Data Warehousing & Dimensional Mining",
-    branch: "CSD",
-    semester: 5,
-    regulation: "R23",
-    active: true,
-  },
-  {
-    code: "23CSM101",
-    title: "Machine Learning with Python",
-    branch: "CSM",
-    semester: 1,
-    regulation: "R23",
-    active: true,
-  },
-];
-
 const DEFAULT_BRANCHES: BranchItem[] = [
   { code: "CIC", name: "Computer Science & IoT, Cyber Security & Data Engineering", active: true },
   { code: "CSD", name: "Computer Science & Design", active: true },
@@ -157,11 +49,7 @@ const DEFAULT_SEMESTERS: SemesterItem[] = Array.from({ length: 8 }, (_, i) => ({
 }));
 
 export default async function AdminTaxonomyPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Authenticate user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, supabase } = await getCachedUserProfile();
   if (!user) redirect("/login");
 
   // Fetch data in parallel
@@ -179,7 +67,7 @@ export default async function AdminTaxonomyPage() {
 
   const branches = dbBranches.length > 0 ? dbBranches : DEFAULT_BRANCHES;
   const semesters = dbSemesters.length > 0 ? dbSemesters : DEFAULT_SEMESTERS;
-  const subjects = dbSubjects.length > 0 ? dbSubjects : MOCK_DEFAULT_SUBJECTS;
+  const subjects = dbSubjects;
   const regulations = dbRegulations.length > 0 ? dbRegulations : DEFAULT_REGULATIONS;
 
   return (

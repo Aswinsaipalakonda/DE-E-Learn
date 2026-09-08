@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { createUserAction, updateUserAction, deleteUserAction, batchCreateUsersAction, toggleUserStatus, adminResetUserPassword, bulkPromoteStudentsSemesterAction } from "./actions";
+import { 
+  createUserAction, 
+  updateUserAction, 
+  deleteUserAction, 
+  batchCreateUsersAction, 
+  toggleUserStatus, 
+  adminResetUserPassword, 
+  bulkPromoteStudentsSemesterAction 
+} from "./actions";
 import { ToastContainer, ToastMessage } from "@/components/toast";
 import { 
   Users as UsersIcon, 
@@ -11,8 +19,6 @@ import {
   X, 
   Loader2, 
   GraduationCap, 
-  BookOpen, 
-  ShieldCheck, 
   FileSpreadsheet, 
   ChevronRight,
   ChevronLeft,
@@ -23,10 +29,8 @@ import {
   AlertCircle,
   KeyRound,
   RotateCcw,
-  Copy,
   Check,
-  ArrowRight,
-  Sparkles
+  ArrowRight
 } from "lucide-react";
 
 interface BranchOption {
@@ -48,7 +52,8 @@ interface UserItem {
   branch: string | null;
   current_semester: number | null;
   section: string | null;
-  designation: string | null;
+  designation?: string | null;
+  phone?: string | null;
   roll_number: string | null;
   created_at: string;
 }
@@ -58,13 +63,6 @@ interface UsersClientProps {
   branches: BranchOption[];
   semesters: SemesterOption[];
 }
-
-const DEFAULT_DESIGNATIONS = [
-  "Professor",
-  "Associate Professor",
-  "Distinguished Associate Professor",
-  "Assistant Professor"
-];
 
 // Validate 10-char roll number with college code '33' at position 3-4 (0-indexed 2-3)
 function isValidRollNumber(roll: string): boolean {
@@ -77,8 +75,8 @@ function isValidRollNumber(roll: string): boolean {
 export default function UsersClient({ initialUsers, branches, semesters }: UsersClientProps) {
   const [users, setUsers] = useState<UserItem[]>(initialUsers);
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [semesterFilter, setSemesterFilter] = useState<string>("all");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -108,25 +106,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [isPromoting, setIsPromoting] = useState(false);
 
   // Form State
-  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"student" | "faculty" | "admin">("student");
-  const [branch, setBranch] = useState(branches[0]?.code || "CIC");
-  const [semester, setSemester] = useState("1");
-  const [status, setStatus] = useState<"active" | "deactivated">("active");
-
-  // Student Roll Number & Section State
   const [rollNumber, setRollNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [branch, setBranch] = useState(branches[0]?.code || "CIC");
+  const [semester, setSemester] = useState("3");
   const [section, setSection] = useState("A");
   const [availableSections, setAvailableSections] = useState<string[]>(["A", "B"]);
   const [customSectionInput, setCustomSectionInput] = useState("");
   const [isAddingNewSection, setIsAddingNewSection] = useState(false);
-
-  // Faculty Designation State
-  const [designation, setDesignation] = useState("Assistant Professor");
-  const [availableDesignations, setAvailableDesignations] = useState<string[]>(DEFAULT_DESIGNATIONS);
-  const [customDesignationInput, setCustomDesignationInput] = useState("");
-  const [isAddingNewDesignation, setIsAddingNewDesignation] = useState(false);
+  const [status, setStatus] = useState<"active" | "deactivated">("active");
 
   const [loading, setLoading] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -134,7 +123,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // CSV State
-  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<Record<string, string>[]>([]);
   const [csvLoading, setCsvLoading] = useState(false);
 
@@ -161,45 +150,31 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }
   };
 
-  // Duplicate Checks
+  // Duplicate Check
   const isDuplicateRollNumber = useMemo(() => {
-    if (role !== "student" || !rollNumber) return false;
+    if (!rollNumber) return false;
     const upper = rollNumber.toUpperCase().trim();
     return users.some(
       (u) =>
         u.id !== editingUser?.id &&
-        u.role === "student" &&
         (u.roll_number?.toUpperCase() === upper || (u.email.includes("@") && u.email.split("@")[0].toUpperCase() === upper))
     );
-  }, [role, rollNumber, users, editingUser]);
+  }, [rollNumber, users, editingUser]);
 
-  const isDuplicateEmail = useMemo(() => {
-    if (role === "student") return false;
-    if (!email) return false;
-    const lower = email.toLowerCase().trim();
-    return users.some(
-      (u) => u.id !== editingUser?.id && u.email.toLowerCase().trim() === lower
-    );
-  }, [role, email, users, editingUser]);
-
-  // Roll Number validation status
   const isRollInvalid = useMemo(() => {
-    if (role !== "student") return false;
     if (!rollNumber) return false;
     return !isValidRollNumber(rollNumber);
-  }, [role, rollNumber]);
+  }, [rollNumber]);
 
   // Open Drawer in Create Mode
   const openCreateDrawer = () => {
     setEditingUser(null);
-    setEmail("");
     setName("");
-    setRole("student");
     setRollNumber("");
+    setEmail("");
     setBranch(branches[0]?.code || "CIC");
-    setSemester("1");
+    setSemester("3");
     setSection("A");
-    setDesignation("Assistant Professor");
     setStatus("active");
     setIsPasswordResetDone(false);
     setIsDrawerMounted(true);
@@ -213,20 +188,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   // Open Drawer in Edit Mode
   const openEditDrawer = (user: UserItem) => {
     setEditingUser(user);
-    setEmail(user.email);
     setName(user.name);
-    setRole(user.role);
-    setRollNumber(user.roll_number || (user.email.includes("@") ? user.email.split("@")[0].toUpperCase() : ""));
+    const resolvedRoll = user.roll_number || (user.email.includes("@") ? user.email.split("@")[0].toUpperCase() : "");
+    setRollNumber(resolvedRoll);
+    setEmail(user.email);
     setBranch(user.branch || branches[0]?.code || "CIC");
-    setSemester(user.current_semester ? user.current_semester.toString() : "1");
+    setSemester(user.current_semester ? user.current_semester.toString() : "3");
     setSection(user.section || "A");
-    setDesignation(user.designation || "Assistant Professor");
     setStatus(user.status);
     setIsPasswordResetDone(false);
 
-    if (user.designation && !availableDesignations.includes(user.designation)) {
-      setAvailableDesignations((prev) => [...prev, user.designation!]);
-    }
     if (user.section && !availableSections.includes(user.section)) {
       setAvailableSections((prev) => [...prev, user.section!]);
     }
@@ -261,13 +232,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         addToast(
           "success",
           "Password Reset Successful",
-          `Password for ${editingUser.name} has been reset to "Password@789".`
+          `Password for ${editingUser.name} has been reset to "${res.defaultPassword}".`
         );
-        if (navigator.clipboard) {
-          try {
-            await navigator.clipboard.writeText("Password@789");
-          } catch {}
-        }
       }
     } catch {
       addToast("error", "Error", "Failed to reset password.");
@@ -293,13 +259,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }, 400);
   };
 
-  // Role Counts for Stat Pills
-  const counts = useMemo(() => {
+  // Student Counts for Stat Badges
+  const stats = useMemo(() => {
     const total = users.length;
-    const students = users.filter((u) => u.role === "student").length;
-    const faculty = users.filter((u) => u.role === "faculty").length;
-    const admins = users.filter((u) => u.role === "admin").length;
-    return { total, students, faculty, admins };
+    const active = users.filter((u) => u.status === "active").length;
+    const deactivated = users.filter((u) => u.status === "deactivated").length;
+    return { total, active, deactivated };
   }, [users]);
 
   // Dynamic unique sections list
@@ -318,16 +283,15 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       const matchesSearch =
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
-        (u.roll_number && u.roll_number.toLowerCase().includes(q)) ||
-        (u.designation && u.designation.toLowerCase().includes(q));
-      const matchesRole = roleFilter === "all" ? true : u.role === roleFilter;
+        (u.roll_number && u.roll_number.toLowerCase().includes(q));
       const matchesBranch = branchFilter === "all" ? true : u.branch === branchFilter;
+      const matchesSemester = semesterFilter === "all" ? true : String(u.current_semester) === semesterFilter;
       const matchesSection = sectionFilter === "all" ? true : u.section === sectionFilter;
       const matchesStatus = statusFilter === "all" ? true : u.status === statusFilter;
 
-      return matchesSearch && matchesRole && matchesBranch && matchesSection && matchesStatus;
+      return matchesSearch && matchesBranch && matchesSemester && matchesSection && matchesStatus;
     });
-  }, [users, searchQuery, roleFilter, branchFilter, sectionFilter, statusFilter]);
+  }, [users, searchQuery, branchFilter, semesterFilter, sectionFilter, statusFilter]);
 
   // Paginated dataset
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
@@ -335,11 +299,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     const startIdx = (currentPage - 1) * pageSize;
     return filteredUsers.slice(startIdx, startIdx + pageSize);
   }, [filteredUsers, currentPage, pageSize]);
-
-  const handleRoleTabChange = (newRole: string) => {
-    setRoleFilter(newRole);
-    setCurrentPage(1);
-  };
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
@@ -359,20 +318,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }
   };
 
-  // Dynamic Designation Add Handler
-  const handleAddCustomDesignation = () => {
-    const trimmed = customDesignationInput.trim();
-    if (trimmed) {
-      if (!availableDesignations.includes(trimmed)) {
-        setAvailableDesignations((prev) => [...prev, trimmed]);
-      }
-      setDesignation(trimmed);
-      setCustomDesignationInput("");
-      setIsAddingNewDesignation(false);
-    }
-  };
-
-  // CSV Parser
+  // CSV Parser (strictly for student fields: name, roll_number, branch, semester, section)
   const parseCSV = (text: string) => {
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (lines.length < 2) return [];
@@ -384,7 +330,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       const line = lines[i];
       if (!line) continue;
 
-      // Handle quoted CSV fields
       const cells: string[] = [];
       let current = "";
       let inQuotes = false;
@@ -426,11 +371,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }
   };
 
-  // Form Submit (Create OR Edit)
+  // Form Submit (Create OR Edit Student)
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (role === "student" && rollNumber && !isValidRollNumber(rollNumber)) {
+    if (rollNumber && !isValidRollNumber(rollNumber)) {
       addToast("error", "Invalid Roll Number", "Please enter a valid 10-character college roll number in standard format (e.g. 23331A4745).");
       return;
     }
@@ -440,30 +385,24 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       return;
     }
 
-    if (isDuplicateEmail) {
-      addToast("error", "Duplicate Email", `A user with email ${email} already exists.`);
-      return;
-    }
-
     setLoading(true);
 
-    const semNum = role === "student" && semester ? parseInt(semester, 10) : null;
-    const branchVal = role === "student" ? branch : null;
-    const sectionVal = role === "student" ? section : null;
-    const designationVal = role === "faculty" ? designation : null;
-    const rollVal = role === "student" ? rollNumber : null;
-    const finalEmail = role === "student" && rollNumber ? `${rollNumber.toLowerCase()}@mvgrce.edu.in` : email.trim().toLowerCase();
+    const semNum = semester ? parseInt(semester, 10) : 3;
+    const branchVal = branch || "CIC";
+    const sectionVal = section ? section.toUpperCase().trim() : "A";
+    const rollVal = rollNumber.toUpperCase().trim();
+    const studentEmail = `${rollVal.toLowerCase()}@mvgrce.edu.in`;
 
     try {
       if (editingUser) {
-        // UPDATE Existing User
+        // UPDATE Existing Student
         const result = await updateUserAction(editingUser.id, {
-          name,
-          role,
+          name: name.trim(),
+          role: "student",
           branch: branchVal,
           semester: semNum,
           section: sectionVal,
-          designation: designationVal,
+          designation: null,
           rollNumber: rollVal,
           status,
         });
@@ -471,18 +410,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         if (result.error) {
           addToast("error", "Update Failed", result.error);
         } else {
-          addToast("success", "Profile Updated", `${name}'s account details have been modified.`);
+          addToast("success", "Student Updated", `${name}'s profile has been updated.`);
           setUsers((prev) =>
             prev.map((u) =>
               u.id === editingUser.id
                 ? {
                     ...u,
-                    name,
-                    role,
+                    name: name.trim(),
                     branch: branchVal,
                     current_semester: semNum,
                     section: sectionVal,
-                    designation: designationVal,
                     roll_number: rollVal,
                     status,
                   }
@@ -492,45 +429,46 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           closeDrawer();
         }
       } else {
-        // CREATE New User
+        // CREATE New Student
         const result = await createUserAction(
-          finalEmail,
-          name,
-          role,
+          studentEmail,
+          name.trim(),
+          "student",
           branchVal,
           semNum,
           sectionVal,
-          designationVal,
-          rollVal
+          null,
+          rollVal,
+          null
         );
 
         if (result.error) {
-          addToast("error", "Failed to create user", result.error);
+          addToast("error", "Failed to enroll student", result.error);
         } else {
           addToast(
             "success",
-            "User Created Successfully",
-            `${name} (${role.toUpperCase()}) account has been registered.`
+            "Student Enrolled Successfully",
+            `${name} (${rollVal}) has been enrolled in ${branchVal} Sem ${semNum} Section ${sectionVal}.`
           );
 
           if (result.user) {
             setUsers((prev) => [result.user as UserItem, ...prev]);
           }
 
-          setEmail("");
           setName("");
           setRollNumber("");
+          setEmail("");
           closeDrawer();
         }
       }
     } catch {
-      addToast("error", "Error", "An unexpected error occurred while saving user.");
+      addToast("error", "Error", "An unexpected error occurred while saving student.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Delete User Handler
+  // Delete Student Handler
   const handleDeleteConfirm = async () => {
     if (!deletingUser) return;
     setIsDeleteLoading(true);
@@ -540,71 +478,50 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       if (result.error) {
         addToast("error", "Delete Failed", result.error);
       } else {
-        addToast("success", "User Deleted", `${deletingUser.name}'s account was removed from the roster.`);
+        addToast("success", "Student Deleted", `${deletingUser.name}'s account was removed from the roster.`);
         setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
         setDeletingUser(null);
       }
     } catch {
-      addToast("error", "Error", "Failed to delete user account.");
+      addToast("error", "Error", "Failed to delete student account.");
     } finally {
       setIsDeleteLoading(false);
     }
   };
 
+  // Submit CSV Roster
   const handleCsvSubmit = async () => {
     if (csvPreview.length === 0) return;
     setCsvLoading(true);
 
     const formattedList = csvPreview
       .map((item) => {
-        const role = (item.role || "student").toLowerCase().trim() as "student" | "faculty" | "admin";
-        const rawRoll = item.roll_number || item.rollnumber || item.roll || (item.email?.includes("@") ? item.email.split("@")[0] : "");
+        const rawRoll = item.roll_number || item.rollnumber || item.roll || "";
         const roll = rawRoll ? rawRoll.toUpperCase().trim() : null;
+        if (!roll) return null;
 
-        if (role === "faculty") {
-          const facultyEmail = item.email ? item.email.trim().toLowerCase() : "";
-          return {
-            email: facultyEmail,
-            name: item.name ? item.name.trim() : "",
-            role: "faculty" as const,
-            branch: null,
-            semester: null,
-            section: null,
-            designation: item.designation ? item.designation.trim() : "Assistant Professor",
-            rollNumber: null,
-          };
-        } else if (role === "admin") {
-          const adminEmail = item.email ? item.email.trim().toLowerCase() : "";
-          return {
-            email: adminEmail,
-            name: item.name ? item.name.trim() : "",
-            role: "admin" as const,
-            branch: null,
-            semester: null,
-            section: null,
-            designation: null,
-            rollNumber: null,
-          };
-        } else {
-          // student
-          const studentEmail = roll ? `${roll.toLowerCase()}@mvgrce.edu.in` : (item.email ? item.email.trim().toLowerCase() : "");
-          const branchVal = item.branch ? item.branch.toUpperCase().trim() : (roll?.includes("47") ? "CIC" : roll?.includes("05") ? "CSD" : roll?.includes("42") ? "CSM" : "CIC");
-          const semVal = item.semester ? parseInt(item.semester, 10) : 3;
-          const secVal = item.section ? item.section.toUpperCase().trim() : (roll && parseInt(roll.slice(-2), 10) <= 36 ? "A" : "B");
+        const studentEmail = `${roll.toLowerCase()}@mvgrce.edu.in`;
+        const branchVal = item.branch ? item.branch.toUpperCase().trim() : (roll.includes("47") ? "CIC" : roll.includes("05") ? "CSD" : roll.includes("42") ? "CSM" : "CIC");
+        const semVal = item.semester ? parseInt(item.semester, 10) : 3;
+        const secVal = item.section ? item.section.toUpperCase().trim() : "A";
 
-          return {
-            email: studentEmail,
-            name: item.name ? item.name.trim() : "",
-            role: "student" as const,
-            branch: branchVal,
-            semester: isNaN(semVal) ? 3 : semVal,
-            section: secVal || "A",
-            designation: null,
-            rollNumber: roll,
-          };
-        }
+        return {
+          email: studentEmail,
+          name: item.name ? item.name.trim() : `Student ${roll}`,
+          role: "student" as const,
+          branch: branchVal,
+          semester: isNaN(semVal) ? 3 : semVal,
+          section: secVal || "A",
+          rollNumber: roll,
+        };
       })
-      .filter((u) => u.email && u.name);
+      .filter((u): u is NonNullable<typeof u> => u !== null && Boolean(u.rollNumber));
+
+    if (formattedList.length === 0) {
+      addToast("error", "Invalid CSV", "No valid student records with roll numbers found in CSV.");
+      setCsvLoading(false);
+      return;
+    }
 
     try {
       const result = await batchCreateUsersAction(formattedList);
@@ -613,13 +530,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       } else {
         addToast(
           "success",
-          "Batch Processing Complete",
-          `Successfully provisioned ${result.successCount ?? 0} users. (Failed: ${result.failCount ?? 0})`
+          "Batch Import Complete",
+          `Successfully enrolled ${result.successCount ?? 0} students. (Failed: ${result.failCount ?? 0})`
         );
         setCsvFile(null);
         setCsvPreview([]);
         closeCsvModal();
-        setTimeout(() => window.location.reload(), 1500);
+        setTimeout(() => window.location.reload(), 1200);
       }
     } catch {
       addToast("error", "Error", "Batch upload failed.");
@@ -704,7 +621,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         addToast(
           "info",
           "Status Updated",
-          `${userName}'s access has been set to ${newStatus.toUpperCase()}.`
+          `${userName}'s status has been set to ${newStatus.toUpperCase()}.`
         );
       } else {
         addToast("error", "Status Update Failed", result.error);
@@ -724,42 +641,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     return userName.slice(0, 2).toUpperCase();
   };
 
-  const getRoleStyle = (userRole: string) => {
-    switch (userRole.toLowerCase()) {
-      case "student":
-        return {
-          avatarBg: "bg-blue-50 text-blue-700 border-blue-200/80 font-bold",
-          badge: "bg-blue-50 text-blue-700 border border-blue-200/70 font-semibold",
-          label: "STUDENT",
-        };
-      case "faculty":
-        return {
-          avatarBg: "bg-emerald-50 text-emerald-700 border-emerald-200/80 font-bold",
-          badge: "bg-emerald-50 text-emerald-700 border border-emerald-200/70 font-semibold",
-          label: "FACULTY",
-        };
-      case "admin":
-        return {
-          avatarBg: "bg-slate-100 text-slate-800 border-slate-300 font-bold",
-          badge: "bg-slate-100 text-slate-800 border border-slate-300 font-semibold",
-          label: "ADMIN",
-        };
-      default:
-        return {
-          avatarBg: "bg-gray-100 text-gray-700 border-gray-200 font-bold",
-          badge: "bg-gray-100 text-gray-700 border border-gray-200 font-semibold",
-          label: userRole.toUpperCase(),
-        };
-    }
-  };
-
   return (
     <div className="space-y-6 relative pb-10 w-full">
       {/* Toast Alert Notifications Container */}
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       {/* ========================================================================= */}
-      {/* UNIFIED EXECUTIVE PAGE HEADER */}
+      {/* UNIFIED STUDENT ROSTER HEADER */}
       {/* ========================================================================= */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-surface p-6 sm:p-7 rounded-3xl border border-border shadow-xs">
         <div className="space-y-1.5">
@@ -769,10 +657,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">
-                User Management & Roster
+                Student Directory & Cohort Management
               </h1>
               <p className="text-xs sm:text-sm text-primary/60 font-normal leading-relaxed mt-0.5">
-                Provision students with verified roll numbers, faculty ranks, and department cohorts.
+                Enroll students with verified 10-digit roll numbers, auto-mapped institutional emails, and branch sections.
               </p>
             </div>
           </div>
@@ -781,20 +669,18 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           <div className="flex flex-wrap items-center gap-2 pt-1.5">
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-bg border border-border text-xs font-medium text-primary">
               <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-              Total: <span className="font-semibold">{counts.total}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-medium text-blue-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-              Students: <span className="font-semibold">{counts.students}</span>
+              Total Students: <span className="font-semibold">{stats.total}</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-medium text-emerald-700">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-              Faculty: <span className="font-semibold">{counts.faculty}</span>
+              Active: <span className="font-semibold">{stats.active}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-slate-100 border border-slate-300 text-xs font-medium text-slate-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-700" />
-              Admins: <span className="font-semibold">{counts.admins}</span>
-            </span>
+            {stats.deactivated > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-red-50 border border-red-200/60 text-xs font-medium text-red-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                Deactivated: <span className="font-semibold">{stats.deactivated}</span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -813,7 +699,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full border border-border bg-bg hover:bg-surface text-primary font-medium text-xs sm:text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
           >
             <Upload className="h-4 w-4 text-primary/70" />
-            <span>Batch Import</span>
+            <span>Batch Import (CSV)</span>
           </button>
 
           <button
@@ -821,7 +707,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
-            <span>Add User</span>
+            <span>Enroll Student</span>
           </button>
         </div>
       </div>
@@ -829,46 +715,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {/* ========================================================================= */}
       {/* FILTER & SEARCH TOOLBAR */}
       {/* ========================================================================= */}
-      <div className="bg-surface p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-4">
-        {/* Role Tabs */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3">
-          {[
-            { id: "all", label: "All Users", count: counts.total },
-            { id: "student", label: "Students", count: counts.students },
-            { id: "faculty", label: "Faculty", count: counts.faculty },
-            { id: "admin", label: "Administrators", count: counts.admins },
-          ].map((tab) => {
-            const isActive = roleFilter === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleRoleTabChange(tab.id)}
-                className={`px-4 py-2 rounded-full text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
-                  isActive
-                    ? "bg-primary text-white shadow-xs font-semibold"
-                    : "bg-bg text-primary/70 hover:text-primary hover:bg-border/60 font-normal"
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                    isActive ? "bg-white/20 text-white" : "bg-surface border border-border text-primary/60"
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search, Branch, Section & Status Filters */}
+      <div className="bg-surface p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           {/* Search Box */}
-          <div className="sm:col-span-5 relative">
+          <div className="sm:col-span-4 relative">
             <Search className="absolute left-4 top-3 h-4 w-4 text-primary/40" />
             <input
-              placeholder="Search by name, roll number, email, or designation..."
+              placeholder="Search by student name or roll number..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-11 pr-10 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 font-normal text-primary placeholder:text-primary/40 transition-all"
@@ -902,8 +755,27 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             </select>
           </div>
 
-          {/* Section Filter */}
+          {/* Semester Filter */}
           <div className="sm:col-span-2">
+            <select
+              value={semesterFilter}
+              onChange={(e) => {
+                setSemesterFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
+            >
+              <option value="all">All Semesters</option>
+              {semesters.map((s) => (
+                <option key={s.number} value={s.number.toString()}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Section Filter */}
+          <div className="sm:col-span-1.5">
             <select
               value={sectionFilter}
               onChange={(e) => {
@@ -912,17 +784,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               }}
               className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
             >
-              <option value="all">All Sections</option>
+              <option value="all">All Secs</option>
               {allKnownSections.map((sec) => (
                 <option key={sec} value={sec}>
-                  Section {sec}
+                  Sec {sec}
                 </option>
               ))}
             </select>
           </div>
 
           {/* Status Selector */}
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-1.5">
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -931,7 +803,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               }}
               className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
             >
-              <option value="all">All Statuses</option>
+              <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="deactivated">Deactivated</option>
             </select>
@@ -940,7 +812,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* IMMERSIVE ROSTER DIRECTORY TABLE */}
+      {/* STUDENT ROSTER DIRECTORY TABLE */}
       {/* ========================================================================= */}
       <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs w-full">
         {paginatedUsers.length > 0 ? (
@@ -948,10 +820,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="bg-bg/50 text-primary/50 font-semibold uppercase tracking-wider text-xs border-b border-border">
-                  <th className="py-3.5 pl-6 pr-4">User</th>
-                  <th className="py-3.5 px-4">Official Email</th>
-                  <th className="py-3.5 px-4">Role</th>
-                  <th className="py-3.5 px-4">Scope / Designation</th>
+                  <th className="py-3.5 pl-6 pr-4">Student</th>
+                  <th className="py-3.5 px-4">Roll Number</th>
+                  <th className="py-3.5 px-4">Institutional Email</th>
+                  <th className="py-3.5 px-4">Branch & Sem</th>
+                  <th className="py-3.5 px-4">Section</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
                 </tr>
@@ -959,80 +832,60 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <tbody className="divide-y divide-border">
                 {paginatedUsers.map((u) => {
                   const isToggling = togglingId === u.id;
-                  const roleStyle = getRoleStyle(u.role);
                   const initials = getInitials(u.name);
-                  const displayRoll = u.roll_number || (u.role === "student" && u.email.includes("@") ? u.email.split("@")[0].toUpperCase() : null);
+                  const displayRoll = u.roll_number || (u.email.includes("@") ? u.email.split("@")[0].toUpperCase() : "—");
 
                   return (
                     <tr key={u.id} className="hover:bg-bg/30 transition-colors group">
-                      {/* Name & Initials Avatar + Roll Number */}
+                      {/* Name & Initials Avatar */}
                       <td className="py-3.5 pl-6 pr-4">
                         <div className="flex items-center gap-3">
-                          <div
-                            className={`w-9 h-9 rounded-full border flex items-center justify-center text-xs shrink-0 ${roleStyle.avatarBg}`}
-                          >
+                          <div className="w-9 h-9 rounded-full border border-blue-200 bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs shrink-0">
                             {initials}
                           </div>
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-primary text-sm leading-snug group-hover:text-secondary transition-colors">
-                                {u.name}
-                              </h3>
-                              {displayRoll && (
-                                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-700">
-                                  {displayRoll}
-                                </span>
-                              )}
-                            </div>
+                            <h3 className="font-semibold text-primary text-sm leading-snug group-hover:text-secondary transition-colors">
+                              {u.name}
+                            </h3>
                             <span className="text-[11px] text-primary/50 font-normal block mt-0.5">
-                              Registered: {new Date(u.created_at).toLocaleDateString()}
+                              Enrolled: {new Date(u.created_at).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
+                      </td>
+
+                      {/* Roll Number Badge */}
+                      <td className="py-3.5 px-4">
+                        <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800">
+                          {displayRoll}
+                        </span>
                       </td>
 
                       {/* Email */}
                       <td className="py-3.5 px-4 text-primary/70 text-sm font-normal">
                         <div className="flex items-center gap-2">
                           <Mail className="h-3.5 w-3.5 text-primary/40 shrink-0" />
-                          <span className="truncate max-w-[220px] text-xs">{u.email}</span>
+                          <span className="truncate max-w-[220px] text-xs font-mono">{u.email}</span>
                         </div>
                       </td>
 
-                      {/* Role Badge */}
+                      {/* Branch & Semester */}
                       <td className="py-3.5 px-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${roleStyle.badge}`}>
-                          {roleStyle.label}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="px-2.5 py-0.5 rounded-full bg-bg border border-border text-xs font-semibold text-primary">
+                            {u.branch || "CIC"}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 text-[11px] font-medium text-secondary">
+                            Sem {u.current_semester || 3}
+                          </span>
+                        </div>
                       </td>
 
-                      {/* Scope / Designation */}
+                      {/* Section */}
                       <td className="py-3.5 px-4">
-                        {u.role === "student" ? (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {u.branch && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-bg border border-border text-xs font-medium text-primary">
-                                {u.branch}
-                              </span>
-                            )}
-                            {u.current_semester && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 text-[11px] font-medium text-secondary">
-                                Sem {u.current_semester}
-                              </span>
-                            )}
-                            <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[11px] font-medium text-primary">
-                              Sec {u.section || "A"}
-                            </span>
-                          </div>
-                        ) : u.role === "faculty" ? (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="px-3 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-800">
-                              {u.designation || "Assistant Professor"}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-primary/40 font-normal text-xs">— Department Administrator</span>
-                        )}
+                        <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+                          Sec {u.section || "A"}
+                        </span>
                       </td>
 
                       {/* Status */}
@@ -1050,12 +903,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         )}
                       </td>
 
-                      {/* Full CRUD Actions */}
+                      {/* Actions */}
                       <td className="py-3.5 pl-4 pr-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => openEditDrawer(u)}
-                            title="Edit User Profile"
+                            title="Edit Student Profile"
                             className="p-1.5 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg hover:border-primary/30 transition-all cursor-pointer shadow-2xs"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -1081,7 +934,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
                           <button
                             onClick={() => setDeletingUser(u)}
-                            title="Delete User"
+                            title="Delete Student"
                             className="p-1.5 rounded-full border border-red-200/60 bg-red-50/50 text-red-600 hover:bg-red-100/80 hover:border-red-300 transition-all cursor-pointer shadow-2xs"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1100,17 +953,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <UsersIcon className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-semibold text-primary text-sm">No Users Found</h3>
+              <h3 className="font-semibold text-primary text-sm">No Students Found</h3>
               <p className="text-xs text-primary/50 mt-0.5 max-w-sm mx-auto font-normal">
-                No registered accounts match your current filter criteria.
+                No enrolled students match your search or filter selection.
               </p>
             </div>
-            {(searchQuery || roleFilter !== "all" || branchFilter !== "all" || sectionFilter !== "all" || statusFilter !== "all") && (
+            {(searchQuery || branchFilter !== "all" || semesterFilter !== "all" || sectionFilter !== "all" || statusFilter !== "all") && (
               <button
                 onClick={() => {
                   setSearchQuery("");
-                  setRoleFilter("all");
                   setBranchFilter("all");
+                  setSemesterFilter("all");
                   setSectionFilter("all");
                   setStatusFilter("all");
                   setCurrentPage(1);
@@ -1123,9 +976,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           </div>
         )}
 
-        {/* ========================================================================= */}
         {/* PAGINATION CONTROLS */}
-        {/* ========================================================================= */}
         {filteredUsers.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-bg/20">
             <div className="flex items-center gap-3 text-xs font-normal text-primary/60">
@@ -1138,7 +989,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 <span className="text-primary font-semibold">
                   {Math.min(currentPage * pageSize, filteredUsers.length)}
                 </span>{" "}
-                of <span className="text-primary font-semibold">{filteredUsers.length}</span> accounts
+                of <span className="text-primary font-semibold">{filteredUsers.length}</span> students
               </span>
 
               <div className="flex items-center gap-1.5">
@@ -1204,7 +1055,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* CLEAN, MINIMALIST SLIDE-OVER RIGHT DRAWER */}
+      {/* STUDENT ENROLLMENT & EDIT SLIDE-OVER DRAWER */}
       {/* ========================================================================= */}
       {isDrawerMounted && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -1226,12 +1077,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 leading-tight">
-                    {editingUser ? "Edit User Profile" : "Add New User"}
+                    {editingUser ? "Edit Student Profile" : "Enroll New Student"}
                   </h3>
                   <p className="text-xs text-slate-500 font-normal mt-0.5">
                     {editingUser
                       ? `Updating details for ${editingUser.name}`
-                      : "Provision student, faculty, or admin access"}
+                      : "Add student with roll number and cohort section"}
                   </p>
                 </div>
 
@@ -1246,352 +1097,186 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
               {/* Form Body */}
               <form 
-                id="user-manage-form" 
+                id="student-manage-form" 
                 data-lenis-prevent
                 onSubmit={handleFormSubmit} 
                 className="px-6 py-5 space-y-5 flex-1 overflow-y-auto overscroll-contain"
               >
-                {/* 1. Account Role Segmented Control */}
+                {/* 1. Student Full Name */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Account Role
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-2xl">
-                    {(
-                      [
-                        { id: "student", label: "Student", icon: GraduationCap },
-                        { id: "faculty", label: "Faculty", icon: BookOpen },
-                        { id: "admin", label: "Admin", icon: ShieldCheck },
-                      ] as const
-                    ).map((r) => {
-                      const Icon = r.icon;
-                      const isSelected = role === r.id;
-                      return (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() => setRole(r.id)}
-                          className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-white text-slate-900 shadow-xs font-semibold"
-                              : "text-slate-600 hover:text-slate-900 font-medium"
-                          }`}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                          <span>{r.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. Full Name */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Full Name <span className="text-red-500">*</span>
+                    Student Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter full name"
+                    placeholder="e.g. Rahul Varma Datla"
                     className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
                   />
                 </div>
 
-                {/* 3. Student Identification (Roll Number -> Auto Email Sync) */}
-                {role === "student" && (
-                  <div className="space-y-3.5 pt-1 border-t border-slate-100">
-                    {/* Roll Number Input */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Roll Number <span className="text-red-500">*</span>
-                        </label>
-                        <span className="text-[11px] text-slate-400">e.g. 23331A4745</span>
-                      </div>
-                      <input
-                        type="text"
-                        required
-                        maxLength={10}
-                        value={rollNumber}
-                        onChange={(e) => handleRollNumberChange(e.target.value)}
-                        placeholder="Enter 10-character roll number"
-                        className={`w-full px-4 py-2.5 text-sm uppercase bg-white border rounded-full focus:outline-none transition-all ${
-                          isDuplicateRollNumber
-                            ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
-                            : isRollInvalid
-                            ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-900"
-                            : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
-                        }`}
-                      />
-
-                      {/* Duplicate Warning */}
-                      {isDuplicateRollNumber && (
-                        <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
-                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                          <span>the number already exists</span>
-                        </div>
-                      )}
-
-                      {/* Format Warning */}
-                      {!isDuplicateRollNumber && isRollInvalid && (
-                        <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium pt-0.5">
-                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                          <span>Please enter a valid 10-character college roll number (e.g. 23331A4745).</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Auto-Generated Email Display */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        College Email (Auto-Generated)
-                      </label>
-                      <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-full text-xs text-slate-700 flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">
-                          {rollNumber ? `${rollNumber.toLowerCase()}@mvgrce.edu.in` : "rollnumber@mvgrce.edu.in"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Branch & Semester Grid */}
-                    <div className="grid grid-cols-2 gap-3 pt-1">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Branch Specialization
-                        </label>
-                        <select
-                          value={branch}
-                          onChange={(e) => setBranch(e.target.value)}
-                          className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
-                        >
-                          {branches.map((b) => (
-                            <option key={b.code} value={b.code}>
-                              {b.code} - {b.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Semester
-                        </label>
-                        <select
-                          value={semester}
-                          onChange={(e) => setSemester(e.target.value)}
-                          className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
-                        >
-                          {semesters.map((s) => (
-                            <option key={s.number} value={s.number.toString()}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Section Selector */}
-                    <div className="space-y-2 pt-1">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Section Cohort
-                        </label>
-                        {!isAddingNewSection && (
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingNewSection(true)}
-                            className="text-xs font-medium text-slate-900 hover:underline cursor-pointer flex items-center gap-1"
-                          >
-                            <Plus className="h-3 w-3" />
-                            <span>Add Section</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        {availableSections.map((sec) => {
-                          const isSecSelected = section === sec;
-                          return (
-                            <button
-                              key={sec}
-                              type="button"
-                              onClick={() => setSection(sec)}
-                              className={`px-4 py-1.5 rounded-full text-xs border transition-all cursor-pointer ${
-                                isSecSelected
-                                  ? "bg-slate-900 text-white border-slate-900 font-medium"
-                                  : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-normal"
-                              }`}
-                            >
-                              Section {sec}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Inline Input for New Section */}
-                      {isAddingNewSection && (
-                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-slate-50 border border-slate-200 rounded-full animate-in fade-in">
-                          <input
-                            type="text"
-                            maxLength={3}
-                            placeholder="Enter section code"
-                            value={customSectionInput}
-                            onChange={(e) => setCustomSectionInput(e.target.value.toUpperCase())}
-                            className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-full uppercase font-medium text-slate-900 w-32 focus:outline-none focus:border-slate-800"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddCustomSection}
-                            disabled={!customSectionInput.trim()}
-                            className="px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
-                          >
-                            Add
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingNewSection(false)}
-                            className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 4. Faculty Configuration (No Department Specialization as requested) */}
-                {role === "faculty" && (
-                  <div className="space-y-3.5 pt-1 border-t border-slate-100">
-                    {/* Faculty Email */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Official College Email <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        disabled={!!editingUser}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter faculty institutional email"
-                        className={`w-full px-4 py-2.5 text-sm bg-white border rounded-full focus:outline-none transition-all ${
-                          isDuplicateEmail
-                            ? "border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
-                            : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
-                        } ${editingUser ? "opacity-60 cursor-not-allowed bg-slate-50" : ""}`}
-                      />
-                      {isDuplicateEmail && (
-                        <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
-                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                          <span>An account with this email already exists.</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Faculty Designation Selection */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Designation Rank
-                        </label>
-                        {!isAddingNewDesignation && (
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingNewDesignation(true)}
-                            className="text-xs font-medium text-slate-900 hover:underline cursor-pointer flex items-center gap-1"
-                          >
-                            <Plus className="h-3 w-3" />
-                            <span>Add Custom</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {availableDesignations.map((desig) => {
-                          const isDesigSelected = designation === desig;
-                          return (
-                            <button
-                              key={desig}
-                              type="button"
-                              onClick={() => setDesignation(desig)}
-                              className={`px-3.5 py-2 rounded-2xl text-xs text-left border transition-all cursor-pointer flex items-center justify-between ${
-                                isDesigSelected
-                                  ? "bg-slate-900 text-white border-slate-900 font-medium"
-                                  : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-normal"
-                              }`}
-                            >
-                              <span>{desig}</span>
-                              {isDesigSelected && <span className="h-1.5 w-1.5 rounded-full bg-white ml-2" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Inline Input for Custom Designation */}
-                      {isAddingNewDesignation && (
-                        <div className="flex items-center gap-2 mt-2 p-1.5 bg-slate-50 border border-slate-200 rounded-full animate-in fade-in">
-                          <input
-                            type="text"
-                            placeholder="Enter designation title"
-                            value={customDesignationInput}
-                            onChange={(e) => setCustomDesignationInput(e.target.value)}
-                            className="px-3.5 py-1 text-xs bg-white border border-slate-200 rounded-full font-medium text-slate-900 flex-1 focus:outline-none focus:border-slate-800"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddCustomDesignation}
-                            disabled={!customDesignationInput.trim()}
-                            className="px-3.5 py-1 bg-slate-900 text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
-                          >
-                            Add
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingNewDesignation(false)}
-                            className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 5. Admin Email */}
-                {role === "admin" && (
-                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                {/* 2. Roll Number Input */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Official Email <span className="text-red-500">*</span>
+                      College Roll Number <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="email"
-                      required
-                      disabled={!!editingUser}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter administrator email address"
-                      className={`w-full px-4 py-2.5 text-sm bg-white border rounded-full focus:outline-none transition-all ${
-                        isDuplicateEmail
-                          ? "border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
-                          : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
-                      } ${editingUser ? "opacity-60 cursor-not-allowed bg-slate-50" : ""}`}
-                    />
-                    {isDuplicateEmail && (
-                      <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                        <span>An account with this email already exists.</span>
-                      </div>
+                    <span className="text-[11px] text-slate-400">e.g. 23331A4745</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    maxLength={10}
+                    value={rollNumber}
+                    onChange={(e) => handleRollNumberChange(e.target.value)}
+                    placeholder="Enter 10-character roll number"
+                    className={`w-full px-4 py-2.5 text-sm uppercase bg-white border rounded-full focus:outline-none transition-all ${
+                      isDuplicateRollNumber
+                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
+                        : isRollInvalid
+                        ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-900"
+                        : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
+                    }`}
+                  />
+
+                  {/* Duplicate Warning */}
+                  {isDuplicateRollNumber && (
+                    <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>the number already exists</span>
+                    </div>
+                  )}
+
+                  {/* Format Warning */}
+                  {!isDuplicateRollNumber && isRollInvalid && (
+                    <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium pt-0.5">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>Please enter a valid 10-character college roll number (e.g. 23331A4745).</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Auto-Generated Institutional Email */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    College Email (Auto-Generated)
+                  </label>
+                  <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-full text-xs text-slate-700 flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate font-mono">
+                      {rollNumber ? `${rollNumber.toLowerCase()}@mvgrce.edu.in` : "rollnumber@mvgrce.edu.in"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. Branch & Semester Grid */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Branch
+                    </label>
+                    <select
+                      value={branch}
+                      onChange={(e) => setBranch(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+                    >
+                      {branches.map((b) => (
+                        <option key={b.code} value={b.code}>
+                          {b.code} - {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Semester
+                    </label>
+                    <select
+                      value={semester}
+                      onChange={(e) => setSemester(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+                    >
+                      {semesters.map((s) => (
+                        <option key={s.number} value={s.number.toString()}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 5. Section Selector */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Section Cohort
+                    </label>
+                    {!isAddingNewSection && (
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingNewSection(true)}
+                        className="text-xs font-medium text-slate-900 hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span>Add Section</span>
+                      </button>
                     )}
                   </div>
-                )}
 
-                {/* 6. Edit Mode: Account Status & Reset Password */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {availableSections.map((sec) => {
+                      const isSecSelected = section === sec;
+                      return (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => setSection(sec)}
+                          className={`px-4 py-1.5 rounded-full text-xs border transition-all cursor-pointer ${
+                            isSecSelected
+                              ? "bg-slate-900 text-white border-slate-900 font-medium"
+                              : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-normal"
+                          }`}
+                        >
+                          Section {sec}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Inline Input for New Section */}
+                  {isAddingNewSection && (
+                    <div className="flex items-center gap-2 mt-2 p-1.5 bg-slate-50 border border-slate-200 rounded-full animate-in fade-in">
+                      <input
+                        type="text"
+                        maxLength={3}
+                        placeholder="Enter section code"
+                        value={customSectionInput}
+                        onChange={(e) => setCustomSectionInput(e.target.value.toUpperCase())}
+                        className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-full uppercase font-medium text-slate-900 w-32 focus:outline-none focus:border-slate-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomSection}
+                        disabled={!customSectionInput.trim()}
+                        className="px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingNewSection(false)}
+                        className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 6. Edit Mode: Account Status & Password Reset */}
                 {editingUser && (
                   <div className="space-y-4 pt-3 border-t border-slate-100">
                     <div className="space-y-1.5">
@@ -1616,15 +1301,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           <span className="text-xs font-bold text-amber-950">Credential Recovery</span>
                         </div>
                         <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
-                          Admin Reset
+                          Default Reset
                         </span>
                       </div>
                       <p className="text-[11px] text-amber-900/85 font-normal leading-relaxed">
-                        If this user forgot their password, click below to immediately reset their password to{" "}
-                        <code className="px-1.5 py-0.5 rounded-md bg-white border border-amber-200 font-bold text-amber-950">
-                          Password@789
-                        </code>
-                        .
+                        If this student forgot their password, click below to immediately reset their password to their default college credential.
                       </p>
                       <div className="pt-1">
                         <button
@@ -1641,12 +1322,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           ) : isPasswordResetDone ? (
                             <>
                               <Check className="h-3.5 w-3.5 text-emerald-400" />
-                              <span>Password Reset to Password@789 (Copied)</span>
+                              <span>Password Reset Successful</span>
                             </>
                           ) : (
                             <>
                               <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
-                              <span>Reset Password to &ldquo;Password@789&rdquo;</span>
+                              <span>Reset Student Password</span>
                             </>
                           )}
                         </button>
@@ -1668,18 +1349,18 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 </button>
                 <button
                   type="submit"
-                  form="user-manage-form"
-                  disabled={loading || (role === "student" && (isRollInvalid || isDuplicateRollNumber)) || (role !== "student" && isDuplicateEmail)}
+                  form="student-manage-form"
+                  disabled={loading || isRollInvalid || isDuplicateRollNumber}
                   className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>{editingUser ? "Saving..." : "Creating..."}</span>
+                      <span>{editingUser ? "Saving..." : "Enrolling..."}</span>
                     </>
                   ) : (
                     <>
-                      <span>{editingUser ? "Save Changes" : "Create Account"}</span>
+                      <span>{editingUser ? "Save Changes" : "Enroll Student"}</span>
                       <ChevronRight className="h-4 w-4" />
                     </>
                   )}
@@ -1704,10 +1385,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
                 <Trash2 className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Delete User Account</h3>
+              <h3 className="text-base font-bold text-slate-900">Delete Student Account</h3>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
-              Are you sure you want to permanently delete <strong className="text-slate-900 font-semibold">{deletingUser.name}</strong> (<span className="text-slate-700 text-xs">{deletingUser.email}</span>)? This action cannot be undone.
+              Are you sure you want to permanently delete <strong className="text-slate-900 font-semibold">{deletingUser.name}</strong> (<span className="text-slate-700 text-xs">{deletingUser.roll_number || deletingUser.email}</span>)? This action cannot be undone.
             </p>
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
@@ -1739,7 +1420,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       )}
 
       {/* ========================================================================= */}
-      {/* BATCH IMPORT CSV MODAL */}
+      {/* BATCH IMPORT CSV MODAL (Clean Student-Only Columns) */}
       {/* ========================================================================= */}
       {isCsvMounted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1762,8 +1443,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   <FileSpreadsheet className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Batch Import Roster (CSV)</h3>
-                  <p className="text-xs text-slate-500 font-normal mt-0.5">Bulk provision student and faculty accounts</p>
+                  <h3 className="text-base font-bold text-slate-900">Batch Import Student Roster (CSV)</h3>
+                  <p className="text-xs text-slate-500 font-normal mt-0.5">Bulk enroll student accounts directly from a spreadsheet</p>
                 </div>
               </div>
               <button
@@ -1779,7 +1460,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-slate-400 transition-colors bg-slate-50">
                 <Upload className="h-7 w-7 text-slate-400 mx-auto mb-2" />
                 <label className="text-xs font-semibold text-slate-800 hover:underline cursor-pointer block">
-                  Select or drag CSV file
+                  Select or drag Student CSV file
                   <input
                     type="file"
                     accept=".csv"
@@ -1787,59 +1468,63 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     className="hidden"
                   />
                 </label>
-                <div className="flex items-center justify-center gap-2 mt-2">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-2">
                   <span className="text-[11px] text-slate-500 font-normal">
-                    Supported columns: name, role, roll_number, branch, semester, section, designation
+                    Required columns: <strong className="text-slate-700 font-semibold">name, roll_number, branch, semester, section</strong>
                   </span>
                   <button
                     type="button"
                     onClick={() => {
-                      const sampleCsv = `name,role,roll_number,email,branch,semester,section,designation
-Aswin Sai Palakonda,student,23331A4745,,CIC,3,A,
-Sneha Reddy K.,student,23331A4718,,CIC,3,B,
-Dr. P. Satyanarayana,faculty,,faculty.psn@mvgrce.edu.in,,,Professor
-V. Lakshmi Lavanya,faculty,,faculty.vll@mvgrce.edu.in,,,Assistant Professor`;
+                      const sampleCsv = `name,roll_number,branch,semester,section
+Aswin Sai Palakonda,23331A4745,CIC,3,A
+Sneha Reddy K.,23331A4718,CIC,3,B
+Rahul Varma Datla,23331A4701,CIC,3,A`;
                       const blob = new Blob([sampleCsv], { type: "text/csv;charset=utf-8;" });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
-                      a.download = "de_elearn_users_sample_template.csv";
+                      a.download = "student_roster_sample_template.csv";
                       a.click();
                     }}
-                    className="text-[11px] font-semibold text-blue-600 hover:underline cursor-pointer ml-1"
+                    className="text-[11px] font-semibold text-blue-600 hover:underline cursor-pointer"
                   >
-                    (Download Sample CSV)
+                    (Download Clean Sample CSV)
                   </button>
                 </div>
               </div>
 
-
               {csvPreview.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-xs font-semibold text-slate-800">
-                    Preview Data ({csvPreview.length} entries parsed):
+                    Preview Student Records ({csvPreview.length} entries parsed):
                   </span>
                   <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-2xl">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 font-semibold text-slate-500 border-b border-slate-200">
                         <tr>
-                          <th className="p-2.5">Email / Roll</th>
-                          <th className="p-2.5">Name</th>
-                          <th className="p-2.5">Role</th>
-                          <th className="p-2.5">Scope/Designation</th>
+                          <th className="p-2.5">Roll Number</th>
+                          <th className="p-2.5">Student Name</th>
+                          <th className="p-2.5">Branch</th>
+                          <th className="p-2.5">Semester</th>
+                          <th className="p-2.5">Section</th>
+                          <th className="p-2.5">Auto-Generated Email</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {csvPreview.slice(0, 10).map((row, i) => (
-                          <tr key={i} className="hover:bg-slate-50/50">
-                            <td className="p-2.5 font-normal text-slate-800">{row.email || row.roll_number}</td>
-                            <td className="p-2.5 text-slate-800 font-normal">{row.name}</td>
-                            <td className="p-2.5 font-medium uppercase">{row.role || "student"}</td>
-                            <td className="p-2.5 font-normal">
-                              {row.role === "faculty" ? (row.designation || "Assistant Professor") : `${row.branch || "-"} Sec ${row.section || "A"}`}
-                            </td>
-                          </tr>
-                        ))}
+                        {csvPreview.slice(0, 10).map((row, i) => {
+                          const roll = (row.roll_number || row.roll || "").toUpperCase().trim();
+                          const autoEmail = roll ? `${roll.toLowerCase()}@mvgrce.edu.in` : "—";
+                          return (
+                            <tr key={i} className="hover:bg-slate-50/50">
+                              <td className="p-2.5 font-bold text-slate-900 font-mono">{roll || "—"}</td>
+                              <td className="p-2.5 text-slate-800 font-medium">{row.name || "—"}</td>
+                              <td className="p-2.5 text-slate-700">{row.branch || "CIC"}</td>
+                              <td className="p-2.5 text-slate-700">Sem {row.semester || "3"}</td>
+                              <td className="p-2.5 text-slate-700">Sec {row.section || "A"}</td>
+                              <td className="p-2.5 text-slate-500 font-mono text-[11px]">{autoEmail}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1865,7 +1550,7 @@ V. Lakshmi Lavanya,faculty,,faculty.vll@mvgrce.edu.in,,,Assistant Professor`;
                 {csvLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Processing Roster...
+                    Enrolling Students...
                   </>
                 ) : (
                   "Execute Import"
@@ -1918,32 +1603,12 @@ V. Lakshmi Lavanya,faculty,,faculty.vll@mvgrce.edu.in,,,Assistant Professor`;
               </button>
             </div>
 
-            {/* Modal Form Content */}
-            <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-              {/* Branch Scope */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Academic Branch Scope
-                </label>
-                <select
-                  value={promoteBranch}
-                  onChange={(e) => setPromoteBranch(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer font-medium"
-                >
-                  <option value="ALL">All Branches (CIC, CSD, CSM)</option>
-                  {branches.map((b) => (
-                    <option key={b.code} value={b.code}>
-                      {b.code} ({b.name})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Semester Transition Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-center">
+            <div className="space-y-4">
+              {/* Promotion Direction Selector */}
+              <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                    Current Semester (From)
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                    From Semester
                   </label>
                   <select
                     value={promoteFromSem}
@@ -1952,82 +1617,71 @@ V. Lakshmi Lavanya,faculty,,faculty.vll@mvgrce.edu.in,,,Assistant Professor`;
                       setPromoteFromSem(from);
                       setPromoteToSem(Math.min(8, from + 1));
                     }}
-                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer font-medium"
+                    className="w-full px-3 py-2 text-sm font-semibold bg-white border border-slate-200 rounded-full text-slate-900 focus:outline-none cursor-pointer"
                   >
-                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                      <option key={num} value={num}>
-                        Semester {num}
+                    {semesters.map((s) => (
+                      <option key={s.number} value={s.number}>
+                        {s.name}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                    Target Semester (To)
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                    To Semester
                   </label>
                   <select
                     value={promoteToSem}
                     onChange={(e) => setPromoteToSem(parseInt(e.target.value, 10))}
-                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer font-medium"
+                    className="w-full px-3 py-2 text-sm font-semibold bg-white border border-slate-200 rounded-full text-slate-900 focus:outline-none cursor-pointer"
                   >
-                    {[2, 3, 4, 5, 6, 7, 8].map((num) => (
-                      <option key={num} value={num}>
-                        Semester {num}
+                    {semesters.map((s) => (
+                      <option key={s.number} value={s.number}>
+                        {s.name}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Live Preview Box */}
-              <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wide flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                    Target Cohort Preview
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-200/60 text-blue-900 font-bold text-xs">
-                    {matchingPromoteStudents.length} Students Found
-                  </span>
+              {/* Branch Filter Selector */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Target Branch Cohort
+                </label>
+                <select
+                  value={promoteBranch}
+                  onChange={(e) => setPromoteBranch(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full text-slate-900 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Department Branches</option>
+                  {branches.map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.code} - {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cohort Impact Preview */}
+              <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                    {matchingPromoteStudents.length}
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-blue-950 block">Eligible Students Found</span>
+                    <span className="text-[11px] text-blue-800/80 font-normal">
+                      Will be promoted to Semester {promoteToSem}
+                    </span>
+                  </div>
                 </div>
-
-                <p className="text-xs text-blue-800/80 leading-relaxed font-normal">
-                  Advancing students from <strong>Semester {promoteFromSem}</strong> to <strong>Semester {promoteToSem}</strong> in{" "}
-                  <strong>{promoteBranch === "ALL" ? "All Departments" : `${promoteBranch} Department`}</strong>.
-                </p>
-
-                {matchingPromoteStudents.length > 0 ? (
-                  <div className="max-h-32 overflow-y-auto border border-blue-200/60 rounded-xl bg-white p-2 space-y-1 divide-y divide-slate-100">
-                    {matchingPromoteStudents.slice(0, 15).map((s) => (
-                      <div key={s.id} className="flex items-center justify-between text-[11px] pt-1 first:pt-0">
-                        <span className="font-bold text-slate-900">{s.roll_number || s.name}</span>
-                        <span className="text-slate-500 font-normal inline-flex items-center gap-1">
-                          <span>{s.branch}</span>
-                          <span>•</span>
-                          <span>Sec {s.section || "A"}</span>
-                          <span>•</span>
-                          <span>Sem {s.current_semester}</span>
-                          <ArrowRight className="h-2.5 w-2.5 text-blue-600 shrink-0" />
-                          <span className="font-semibold text-blue-700">Sem {promoteToSem}</span>
-                        </span>
-                      </div>
-                    ))}
-                    {matchingPromoteStudents.length > 15 && (
-                      <div className="text-[10px] text-blue-600 text-center pt-1 font-semibold">
-                        + {matchingPromoteStudents.length - 15} more enrolled students
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-                    No active students currently enrolled in <strong>Semester {promoteFromSem}</strong> for {promoteBranch === "ALL" ? "any branch" : promoteBranch}.
-                  </div>
-                )}
+                <ArrowRight className="h-4 w-4 text-blue-600" />
               </div>
             </div>
 
-            {/* Modal Footer */}
+            {/* Modal Actions */}
             <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 shrink-0">
               <button
                 type="button"
@@ -2041,15 +1695,18 @@ V. Lakshmi Lavanya,faculty,,faculty.vll@mvgrce.edu.in,,,Assistant Professor`;
                 type="button"
                 onClick={handlePromoteConfirm}
                 disabled={isPromoting || matchingPromoteStudents.length === 0}
-                className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isPromoting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Promoting Cohort...
+                    <span>Promoting Cohort...</span>
                   </>
                 ) : (
-                  `Promote ${matchingPromoteStudents.length} Students to Sem ${promoteToSem}`
+                  <>
+                    <GraduationCap className="h-4 w-4" />
+                    <span>Confirm Promotion</span>
+                  </>
                 )}
               </button>
             </div>

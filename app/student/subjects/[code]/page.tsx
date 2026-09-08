@@ -1,17 +1,16 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import Link from "next/link";
 import { 
   FileText, 
   Search, 
-  ArrowRight,
+  ArrowRight, 
   ArrowLeft, 
   BookOpen, 
-  ChevronRight,
-  Layers,
-  Sparkles,
-  User,
-  ShieldCheck
+  ChevronRight, 
+  Layers, 
+  Sparkles, 
+  User, 
+  ShieldCheck 
 } from "lucide-react";
 
 import { getActiveExamLockout } from "@/utils/exam-lockout";
@@ -22,100 +21,6 @@ interface PageProps {
   searchParams: Promise<{ q?: string; type?: string }>;
 }
 
-const FALLBACK_SUBJECT_CATALOG: Record<string, { title: string; branch: string; semester: number; materials: any[] }> = {
-  "R23MATT101": {
-    title: "LINEAR ALGEBRA & CALCULUS",
-    branch: "CIC",
-    semester: 1,
-    materials: [
-      {
-        id: "mock-mat-la-1",
-        title: "Unit 1: Matrices, Rank of Matrix & System of Linear Equations",
-        type: "Notes",
-        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Matrices", "Rank", "Linear Equations"],
-      },
-      {
-        id: "mock-mat-la-2",
-        title: "Unit 2: Eigenvalues, Eigenvectors & Cayley-Hamilton Theorem",
-        type: "Lecture Slides",
-        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Eigenvalues", "Cayley-Hamilton"],
-      },
-    ],
-  },
-  "R23SE701": {
-    title: "Software Engineering",
-    branch: "CIC",
-    semester: 7,
-    materials: [
-      {
-        id: "mock-mat-se-1",
-        title: "Unit 1: Software Process Models, Agile Methodologies & Scrum Framework",
-        type: "Notes",
-        created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Agile", "Scrum", "Process Models"],
-      },
-      {
-        id: "mock-mat-se-2",
-        title: "Unit 2: Requirements Engineering & SRS Documentation Standards",
-        type: "Lecture Slides",
-        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["SRS", "Requirements", "Use Cases"],
-      },
-    ],
-  },
-  "23CIC301": {
-    title: "Database Management Systems (DBMS)",
-    branch: "CIC",
-    semester: 3,
-    materials: [
-      {
-        id: "mock-mat-1",
-        title: "Unit 1: Relational Data Models, ER Diagrams, and Schema Normalization",
-        type: "Notes",
-        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Relational Model", "ER Diagrams", "BCNF"],
-      },
-      {
-        id: "mock-mat-8",
-        title: "Unit 2: SQL Advanced Queries, Nested Joins, and Trigger Stored Procedures",
-        type: "Lecture Slides",
-        created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["SQL", "Triggers", "Indexing"],
-      },
-      {
-        id: "mock-mat-9",
-        title: "Unit 3: Transaction Processing, ACID Properties, and Concurrency Control",
-        type: "Notes",
-        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["Transactions", "ACID", "2PL Locking"],
-      },
-      {
-        id: "mock-mat-14",
-        title: "DBMS Lab Manual: MySQL & PostgreSQL Hands-on Practice",
-        type: "Lab Manuals",
-        created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["MySQL", "PostgreSQL", "DDL/DML"],
-      },
-    ],
-  },
-  "23CIC302": {
-    title: "Cloud Infrastructure & Distributed Systems",
-    branch: "CIC",
-    semester: 3,
-    materials: [
-      {
-        id: "mock-mat-2",
-        title: "Cloud Infrastructure & Distributed Computing - Complete Lab Manual",
-        type: "Lab Manuals",
-        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        tags: ["AWS", "Docker", "Kubernetes"],
-      },
-    ],
-  },
-};
-
 export default async function SubjectDetailPage(props: PageProps) {
   const params = await props.params;
   const searchParams = await props.searchParams;
@@ -124,19 +29,8 @@ export default async function SubjectDetailPage(props: PageProps) {
   const query = (searchParams.q || "").trim();
   const selectedType = (searchParams.type || "").trim();
 
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, profile, supabase } = await getCachedUserProfile();
   if (!user) return null;
-
-  // Get student profile (branch, semester, section)
-  const { data: profile } = await supabase
-    .from("users")
-    .select("branch, current_semester, section, name")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .maybeSingle();
 
   const studentBranch = profile?.branch || "CIC";
 
@@ -154,14 +48,25 @@ export default async function SubjectDetailPage(props: PageProps) {
     .eq("code", code)
     .maybeSingle();
 
-  const fallbackData = FALLBACK_SUBJECT_CATALOG[code] || FALLBACK_SUBJECT_CATALOG["23CIC301"];
-  const subject = dbSubject || dbAnySubject || {
-    code: code,
-    title: fallbackData.title,
-    branch: studentBranch,
-    semester: fallbackData.semester,
-    regulation: "R23",
-  };
+  const subject = dbSubject || dbAnySubject;
+
+  if (!subject) {
+    return (
+      <div className="p-8 max-w-xl mx-auto space-y-4">
+        <Link 
+          href="/student/subjects" 
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs transition-all shadow-sm"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Return to Subjects</span>
+        </Link>
+        <div role="alert" className="p-6 bg-white border border-slate-200 rounded-3xl shadow-xs text-center space-y-2">
+          <p className="text-sm font-bold text-slate-900">Subject Not Found</p>
+          <p className="text-xs text-slate-500 font-normal">No curriculum course found for code &quot;{code}&quot;.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Check if subject's semester and subject code is in active Exam Lockout
   const examLockout = await getActiveExamLockout(subject.semester || 3, studentBranch, code);
@@ -186,13 +91,7 @@ export default async function SubjectDetailPage(props: PageProps) {
     .eq("state", "published")
     .order("created_at", { ascending: false });
 
-  // Prioritize real uploaded materials from database
-  let rawMaterials: any[] = [];
-  if (dbMaterials && dbMaterials.length > 0) {
-    rawMaterials = dbMaterials;
-  } else {
-    rawMaterials = fallbackData.materials;
-  }
+  let rawMaterials: any[] = dbMaterials || [];
 
   // Normalize category mapping
   const normalizeType = (t: string) => {

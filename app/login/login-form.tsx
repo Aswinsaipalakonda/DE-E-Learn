@@ -29,7 +29,11 @@ export default function LoginForm() {
 
       const result = await login(formData);
       if (result?.error) {
-        setError(result.error);
+        const rawErr = result.error as unknown;
+        const errorMsg = typeof rawErr === "string" 
+          ? rawErr 
+          : (typeof (rawErr as Record<string, unknown>)?.message === "string" ? (rawErr as Record<string, unknown>).message as string : "Invalid login credentials. Please check your email and password.");
+        setError(errorMsg);
         setLoading(false);
       } else if (result?.success && result.redirectTo) {
         // Activate clean white kinetic text loading animation

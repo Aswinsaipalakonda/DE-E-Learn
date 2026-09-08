@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import MaterialsList, { SubjectItem } from "./materials-list";
@@ -44,56 +44,13 @@ interface RawMaterial {
   material_files: FileItem[];
 }
 
-const DEFAULT_SUBJECTS: SubjectItem[] = [
-  { code: "23CIC301", title: "Database Management Systems", branch: "CIC", semester: 3 },
-  { code: "23CIC302", title: "Cloud Infrastructure & Distributed Systems", branch: "CIC", semester: 3 },
-  { code: "23CIC303", title: "Big Data Processing with Apache Spark", branch: "CIC", semester: 3 },
-  { code: "23CIC304", title: "Operating Systems & Linux Kernel Architecture", branch: "CIC", semester: 3 },
-  { code: "23CIC305", title: "Computer Networks & IoT Protocols", branch: "CIC", semester: 3 },
-  { code: "23CSD501", title: "Data Warehousing & Dimensional Mining", branch: "CSD", semester: 5 },
-  { code: "23CSM101", title: "Machine Learning with Python", branch: "CSM", semester: 1 },
-];
+const DEFAULT_SUBJECTS: SubjectItem[] = [];
 
-const FALLBACK_FACULTY_INVENTORY: RawMaterial[] = [
-  {
-    id: "mock-mat-1",
-    title: "Database Management Systems (DBMS) - Unit 1 Relational Models",
-    type: "Lecture Notes",
-    state: "published",
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    branch: "CIC",
-    semester: 3,
-    views: 0,
-    downloads: 0,
-    engagementLogs: [],
-    material_files: [
-      {
-        id: "f-1",
-        file_name: "DBMS_Unit1_Relational_Models.pdf",
-        size: 3450000,
-        mime_type: "application/pdf",
-        version: 1,
-        storage_ref: "#",
-      },
-      {
-        id: "f-2",
-        file_name: "ER_Diagrams_Practice_Set.pdf",
-        size: 1200000,
-        mime_type: "application/pdf",
-        version: 1,
-        storage_ref: "#",
-      },
-    ],
-  },
-];
+const FALLBACK_FACULTY_INVENTORY: RawMaterial[] = [];
 
 export default async function FacultyMaterialsPage() {
   const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, supabase } = await getCachedUserProfile();
   if (!user) redirect("/login");
 
   // Fetch materials, activity events, subjects, and student users in parallel

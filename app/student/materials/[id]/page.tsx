@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { 
@@ -24,77 +24,13 @@ interface MaterialFileItem {
   storage_ref: string;
 }
 
-const FALLBACK_MATERIALS: Record<string, any> = {
-  "mock-mat-1": {
-    id: "mock-mat-1",
-    title: "Database Management Systems (DBMS) - Unit 1 Relational Models",
-    description: "Comprehensive lecture notes covering relational data model foundations, ER to relational schema mapping, tuple and domain relational calculus, and Boyce-Codd Normal Form (BCNF) decomposition rules.",
-    type: "Notes",
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC301",
-    branch: "CIC",
-    semester: 3,
-    state: "published",
-    facultyName: "Dr. P. Satyanarayana",
-    subjectTitle: "Database Management Systems",
-    material_files: [
-      {
-        id: "file-1",
-        file_name: "DBMS_Unit1_Relational_Models.pdf",
-        size: 3450000,
-        mime_type: "application/pdf",
-        storage_ref: "#",
-      },
-      {
-        id: "file-2",
-        file_name: "ER_Diagrams_Practice_Set.pdf",
-        size: 1200000,
-        mime_type: "application/pdf",
-        storage_ref: "#",
-      },
-    ],
-  },
-  "mock-mat-2": {
-    id: "mock-mat-2",
-    title: "Cloud Infrastructure & Distributed Computing - Lab Manual",
-    description: "Official departmental lab manual with step-by-step setup guides for Docker container orchestration, Kubernetes cluster provisioning, and AWS Elastic Compute Cloud instances.",
-    type: "Lab Manuals",
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    subject: "23CIC302",
-    branch: "CIC",
-    semester: 3,
-    state: "published",
-    facultyName: "Dr. K. Srinivas Rao",
-    subjectTitle: "Cloud Infrastructure & Distributed Systems",
-    material_files: [
-      {
-        id: "file-3",
-        file_name: "Cloud_Lab_Manual_2026.pdf",
-        size: 4200000,
-        mime_type: "application/pdf",
-        storage_ref: "#",
-      },
-    ],
-  },
-};
-
 export default async function MaterialDetailsPage(props: PageProps) {
   const params = await props.params;
   const id = params.id;
 
   const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Authenticate user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, profile, supabase } = await getCachedUserProfile();
   if (!user) return null;
-
-  // Resolve user role
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role")
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
-    .maybeSingle();
 
   const userRole = profile?.role || user.user_metadata?.role || "student";
   const isFaculty = userRole === "faculty";
@@ -138,8 +74,7 @@ export default async function MaterialDetailsPage(props: PageProps) {
     } catch {}
   }
 
-  // Resilient fallback for preview and sample items
-  const material = dbMaterial || FALLBACK_MATERIALS[id] || FALLBACK_MATERIALS["mock-mat-1"];
+  const material = dbMaterial;
 
   if (!material) {
     return (
@@ -208,8 +143,14 @@ export default async function MaterialDetailsPage(props: PageProps) {
   const isBookmarked = savedBookmarkIds !== null
     ? savedBookmarkIds.includes(id)
     : !!bookmark;
-  const facultyName = material.users?.name || material.facultyName || "Faculty Member";
-  const files: MaterialFileItem[] = material.material_files || [];
+
+  const facultyUser = Array.isArray(material.users) ? material.users[0] : (material.users as { name?: string } | null);
+  const facultyName = facultyUser?.name || "Faculty Member";
+
+  const subjectItem = Array.isArray(material.subjects) ? material.subjects[0] : (material.subjects as { title?: string; code?: string } | null);
+  const subjectCode = subjectItem?.code || material.subject || "Subject";
+  const subjectTitle = subjectItem?.title || "Department Subject";
+  const files: MaterialFileItem[] = (material.material_files as unknown as MaterialFileItem[]) || [];
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">
@@ -233,7 +174,7 @@ export default async function MaterialDetailsPage(props: PageProps) {
                 {material.type}
               </span>
               <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
-                {material.subjects?.code || material.subject || "23CIC301"}
+                {subjectCode}
               </span>
               <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700">
                 Sem {material.semester || 3}
@@ -245,7 +186,7 @@ export default async function MaterialDetailsPage(props: PageProps) {
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-500 font-normal flex items-center gap-2 flex-wrap">
-              <span>{material.subjects?.title || material.subjectTitle || "Department Subject"}</span>
+              <span>{subjectTitle}</span>
               <span>•</span>
               <span>Uploaded by {facultyName}</span>
               <span>•</span>

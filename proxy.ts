@@ -26,26 +26,36 @@ const PROTECTED_PREFIXES = [
   "/change-password",
 ];
 
-// High-speed local JWT session parser (0.05ms execution)
+// High-speed local JWT session parser (handles chunked cookies sb-*-auth-token.0, .1 in 0.05ms)
 function parseLocalSession(request: NextRequest): { email: string; role: string; expired: boolean } | null {
   try {
     const cookies = request.cookies.getAll();
-    const tokenCookie = cookies.find((c) => c.name.includes("-auth-token"));
-    if (!tokenCookie || !tokenCookie.value) return null;
+    const authCookies = cookies.filter((c) => c.name.includes("-auth-token"));
+    if (!authCookies.length) return null;
 
-    let rawVal = tokenCookie.value;
-    if (rawVal.startsWith("base64-")) {
-      rawVal = Buffer.from(rawVal.slice(7), "base64").toString("utf-8");
+    authCookies.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    let combinedVal = authCookies.map((c) => c.value).join("");
+
+    if (combinedVal.startsWith("base64-")) {
+      combinedVal = Buffer.from(combinedVal.slice(7), "base64").toString("utf-8");
     }
 
     let parsed: any;
     try {
-      parsed = JSON.parse(rawVal);
+      parsed = JSON.parse(combinedVal);
     } catch {
-      parsed = rawVal;
+      parsed = combinedVal;
     }
 
-    const accessToken = parsed?.access_token || (typeof parsed === "string" ? parsed : null);
+    let accessToken: string | null = null;
+    if (Array.isArray(parsed)) {
+      accessToken = parsed[0];
+    } else if (parsed && typeof parsed === "object" && parsed.access_token) {
+      accessToken = parsed.access_token;
+    } else if (typeof parsed === "string") {
+      accessToken = parsed;
+    }
+
     if (!accessToken || typeof accessToken !== "string") return null;
 
     const parts = accessToken.split(".");
@@ -54,7 +64,7 @@ function parseLocalSession(request: NextRequest): { email: string; role: string;
     const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
     const isExpired = !!(payload.exp && payload.exp * 1000 < Date.now());
 
-    let role = (payload.user_metadata?.role as string) || "";
+    let role = (payload.user_metadata?.role as string) || (payload.role as string) || "";
     const email = (payload.email as string) || "";
     if (!role) {
       if (email.startsWith("admin")) role = "admin";

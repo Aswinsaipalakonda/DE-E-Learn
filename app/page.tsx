@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,32 +20,11 @@ export const metadata = {
 };
 
 export default async function LandingPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  // Retrieve authenticated session user
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, profile } = await getCachedUserProfile();
 
   // If user is already authenticated, redirect directly to their respective role dashboard
   if (user) {
-    let role = user.user_metadata?.role;
-    
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .or(`id.eq.${user.id},email.eq.${user.email}`)
-      .single();
-
-    if (profile?.role) {
-      role = profile.role;
-    }
-
-    if (!role) {
-      if (user.email?.startsWith("admin")) role = "admin";
-      else if (user.email?.startsWith("faculty") || user.email?.startsWith("testfaculty")) role = "faculty";
-      else role = "student";
-    }
-
+    const role = profile?.role || user.user_metadata?.role || (user.email?.startsWith("admin") ? "admin" : user.email?.startsWith("faculty") ? "faculty" : "student");
     redirect(`/${role}`);
   }
 
