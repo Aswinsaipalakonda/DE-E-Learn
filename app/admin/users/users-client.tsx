@@ -30,20 +30,33 @@ import {
   KeyRound,
   RotateCcw,
   Check,
-  ArrowRight
+  ArrowRight,
+  Phone,
+  Briefcase,
+  ShieldCheck,
+  BookOpen,
+  Filter,
+  CheckCircle2,
+  Copy,
+  Sparkles,
+  UserCheck,
+  UserX,
+  Layers,
+  HelpCircle,
+  Download
 } from "lucide-react";
 
-interface BranchOption {
+export interface BranchOption {
   code: string;
   name: string;
 }
 
-interface SemesterOption {
+export interface SemesterOption {
   number: number;
   name: string;
 }
 
-interface UserItem {
+export interface UserItem {
   id: string;
   email: string;
   name: string;
@@ -52,8 +65,8 @@ interface UserItem {
   branch: string | null;
   current_semester: number | null;
   section: string | null;
-  designation?: string | null;
-  phone?: string | null;
+  designation: string | null;
+  phone: string | null;
   roll_number: string | null;
   created_at: string;
 }
@@ -63,6 +76,17 @@ interface UsersClientProps {
   branches: BranchOption[];
   semesters: SemesterOption[];
 }
+
+const COMMON_DESIGNATIONS = [
+  "Professor & Head of Department",
+  "Professor",
+  "Associate Professor",
+  "Senior Assistant Professor",
+  "Assistant Professor",
+  "Adjunct Faculty",
+  "Visiting Professor",
+  "Lab Instructor / Technical Assistant",
+];
 
 // Validate 10-char roll number with college code '33' at position 3-4 (0-indexed 2-3)
 function isValidRollNumber(roll: string): boolean {
@@ -74,28 +98,59 @@ function isValidRollNumber(roll: string): boolean {
 
 export default function UsersClient({ initialUsers, branches, semesters }: UsersClientProps) {
   const [users, setUsers] = useState<UserItem[]>(initialUsers);
+
+  // Tab State: 'all' | 'faculty' | 'student' | 'admin'
+  const [activeTab, setActiveTab] = useState<"all" | "faculty" | "student" | "admin">("all");
+
+  // Filters State
   const [searchQuery, setSearchQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState<string>("all");
   const [semesterFilter, setSemesterFilter] = useState<string>("all");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
+  const [designationFilter, setDesignationFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Slide-over Right Drawer Animation State
+  // Slide-over Right Drawer State
   const [isDrawerMounted, setIsDrawerMounted] = useState(false);
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+
+  // Form State
+  const [formRole, setFormRole] = useState<"student" | "faculty" | "admin">("faculty");
+  const [name, setName] = useState("");
+  const [rollNumber, setRollNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [designation, setDesignation] = useState("Assistant Professor");
+  const [customDesignation, setCustomDesignation] = useState("");
+  const [branch, setBranch] = useState<string>("ALL");
+  const [semester, setSemester] = useState("3");
+  const [section, setSection] = useState("A");
+  const [availableSections, setAvailableSections] = useState<string[]>(["A", "B"]);
+  const [status, setStatus] = useState<"active" | "deactivated">("active");
+  const [formLoading, setFormLoading] = useState(false);
+
+  // Password Reset in Drawer
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetPasswordResult, setResetPasswordResult] = useState<string | null>(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
 
   // Delete Confirmation Modal State
   const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
 
-  // CSV Modal Animation State
+  // CSV Modal State
   const [isCsvMounted, setIsCsvMounted] = useState(false);
   const [isCsvVisible, setIsCsvVisible] = useState(false);
+  const [csvImportType, setCsvImportType] = useState<"faculty" | "student">("faculty");
+  const [csvRawText, setCsvRawText] = useState("");
+  const [csvPreview, setCsvPreview] = useState<Record<string, string>[]>([]);
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [csvErrors, setCsvErrors] = useState<string[]>([]);
 
   // Batch Semester Promotion Modal State
   const [isPromoteModalMounted, setIsPromoteModalMounted] = useState(false);
@@ -105,27 +160,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [promoteBranch, setPromoteBranch] = useState("ALL");
   const [isPromoting, setIsPromoting] = useState(false);
 
-  // Form State
-  const [name, setName] = useState("");
-  const [rollNumber, setRollNumber] = useState("");
-  const [email, setEmail] = useState("");
-  const [branch, setBranch] = useState(branches[0]?.code || "CIC");
-  const [semester, setSemester] = useState("3");
-  const [section, setSection] = useState("A");
-  const [availableSections, setAvailableSections] = useState<string[]>(["A", "B"]);
-  const [customSectionInput, setCustomSectionInput] = useState("");
-  const [isAddingNewSection, setIsAddingNewSection] = useState(false);
-  const [status, setStatus] = useState<"active" | "deactivated">("active");
-
-  const [loading, setLoading] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [isPasswordResetDone, setIsPasswordResetDone] = useState(false);
+  // Status Toggling State
   const [togglingId, setTogglingId] = useState<string | null>(null);
-
-  // CSV State
-  const [, setCsvFile] = useState<File | null>(null);
-  const [csvPreview, setCsvPreview] = useState<Record<string, string>[]>([]);
-  const [csvLoading, setCsvLoading] = useState(false);
 
   // Toast Notifications State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -139,44 +175,65 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Roll Number change handler (auto-generates official college email)
+  // Counts Calculation
+  const counts = useMemo(() => {
+    const total = users.length;
+    const faculty = users.filter((u) => u.role === "faculty").length;
+    const student = users.filter((u) => u.role === "student").length;
+    const admin = users.filter((u) => u.role === "admin").length;
+    const active = users.filter((u) => u.status === "active").length;
+    const deactivated = users.filter((u) => u.status === "deactivated").length;
+    return { total, faculty, student, admin, active, deactivated };
+  }, [users]);
+
+  // Unique designations in dataset
+  const allKnownDesignations = useMemo(() => {
+    const dSet = new Set<string>(COMMON_DESIGNATIONS);
+    users.forEach((u) => {
+      if (u.designation) dSet.add(u.designation);
+    });
+    return Array.from(dSet);
+  }, [users]);
+
+  // Dynamic unique sections list
+  const allKnownSections = useMemo(() => {
+    const secSet = new Set<string>(availableSections);
+    users.forEach((u) => {
+      if (u.section) secSet.add(u.section);
+    });
+    return Array.from(secSet).sort();
+  }, [availableSections, users]);
+
+  // Student Roll Number change handler (auto-generates official college email)
   const handleRollNumberChange = (val: string) => {
     const upper = val.toUpperCase().trim();
     setRollNumber(upper);
-    if (upper) {
+    if (formRole === "student" && upper) {
       setEmail(`${upper.toLowerCase()}@mvgrce.edu.in`);
-    } else {
-      setEmail("");
+      // Auto deduce branch if standard roll number
+      if (upper.includes("47")) setBranch("CIC");
+      else if (upper.includes("05")) setBranch("CSD");
+      else if (upper.includes("42")) setBranch("CSM");
     }
   };
 
-  // Duplicate Check
-  const isDuplicateRollNumber = useMemo(() => {
-    if (!rollNumber) return false;
-    const upper = rollNumber.toUpperCase().trim();
-    return users.some(
-      (u) =>
-        u.id !== editingUser?.id &&
-        (u.roll_number?.toUpperCase() === upper || (u.email.includes("@") && u.email.split("@")[0].toUpperCase() === upper))
-    );
-  }, [rollNumber, users, editingUser]);
-
-  const isRollInvalid = useMemo(() => {
-    if (!rollNumber) return false;
-    return !isValidRollNumber(rollNumber);
-  }, [rollNumber]);
-
   // Open Drawer in Create Mode
-  const openCreateDrawer = () => {
+  const openCreateDrawer = (defaultRole?: "student" | "faculty" | "admin") => {
+    const initialRole = defaultRole || (activeTab === "faculty" ? "faculty" : activeTab === "student" ? "student" : activeTab === "admin" ? "admin" : "faculty");
     setEditingUser(null);
+    setFormRole(initialRole);
     setName("");
     setRollNumber("");
     setEmail("");
-    setBranch(branches[0]?.code || "CIC");
+    setPhone("");
+    setDesignation("Assistant Professor");
+    setCustomDesignation("");
+    setBranch("ALL");
     setSemester("3");
     setSection("A");
     setStatus("active");
-    setIsPasswordResetDone(false);
+    setResetPasswordResult(null);
+    setCopiedPassword(false);
     setIsDrawerMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -188,20 +245,36 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   // Open Drawer in Edit Mode
   const openEditDrawer = (user: UserItem) => {
     setEditingUser(user);
+    setFormRole(user.role);
     setName(user.name);
-    const resolvedRoll = user.roll_number || (user.email.includes("@") ? user.email.split("@")[0].toUpperCase() : "");
-    setRollNumber(resolvedRoll);
     setEmail(user.email);
-    setBranch(user.branch || branches[0]?.code || "CIC");
+    setPhone(user.phone || "");
+    const resolvedRoll = user.roll_number || (user.role === "student" && user.email.includes("@") ? user.email.split("@")[0].toUpperCase() : "");
+    setRollNumber(resolvedRoll);
+    setBranch(user.branch || "ALL");
     setSemester(user.current_semester ? user.current_semester.toString() : "3");
     setSection(user.section || "A");
     setStatus(user.status);
-    setIsPasswordResetDone(false);
+
+    if (user.designation) {
+      if (COMMON_DESIGNATIONS.includes(user.designation)) {
+        setDesignation(user.designation);
+        setCustomDesignation("");
+      } else {
+        setDesignation("Other");
+        setCustomDesignation(user.designation);
+      }
+    } else {
+      setDesignation("Assistant Professor");
+      setCustomDesignation("");
+    }
 
     if (user.section && !availableSections.includes(user.section)) {
       setAvailableSections((prev) => [...prev, user.section!]);
     }
 
+    setResetPasswordResult(null);
+    setCopiedPassword(false);
     setIsDrawerMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -215,8 +288,120 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setTimeout(() => {
       setIsDrawerMounted(false);
       setEditingUser(null);
-      setIsPasswordResetDone(false);
-    }, 450);
+      setResetPasswordResult(null);
+    }, 300);
+  };
+
+  // Form Submit Handler
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      addToast("error", "Validation Error", "Full Name is required.");
+      return;
+    }
+
+    if (formRole === "student") {
+      if (!rollNumber.trim()) {
+        addToast("error", "Validation Error", "Roll Number is required for students.");
+        return;
+      }
+      if (!isValidRollNumber(rollNumber.trim())) {
+        addToast("error", "Validation Error", "Please enter a valid 10-digit MVGR roll number (e.g., 22331A4701).");
+        return;
+      }
+    }
+
+    if (!email.trim() || !email.includes("@")) {
+      addToast("error", "Validation Error", "A valid institutional email address is required.");
+      return;
+    }
+
+    setFormLoading(true);
+    try {
+      const selectedDesignation = designation === "Other" ? customDesignation.trim() : designation;
+      const selectedBranch = branch === "ALL" ? null : branch;
+      const parsedSemester = formRole === "student" ? parseInt(semester, 10) : null;
+      const formattedRoll = formRole === "student" ? rollNumber.toUpperCase().trim() : null;
+
+      if (editingUser) {
+        // UPDATE EXISTING USER
+        const res = await updateUserAction(editingUser.id, {
+          name: name.trim(),
+          role: formRole,
+          branch: selectedBranch,
+          semester: parsedSemester,
+          section: formRole === "student" ? section : null,
+          designation: formRole === "faculty" ? selectedDesignation : null,
+          phone: phone.trim() || null,
+          rollNumber: formattedRoll,
+          status,
+        });
+
+        if (res.error) {
+          addToast("error", "Update Failed", res.error);
+        } else {
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === editingUser.id
+                ? {
+                    ...u,
+                    name: name.trim(),
+                    role: formRole,
+                    branch: selectedBranch,
+                    current_semester: parsedSemester,
+                    section: formRole === "student" ? section : null,
+                    designation: formRole === "faculty" ? selectedDesignation : null,
+                    phone: phone.trim() || null,
+                    roll_number: formattedRoll,
+                    status,
+                  }
+                : u
+            )
+          );
+          addToast("success", "User Updated", `${name} has been successfully updated.`);
+          closeDrawer();
+        }
+      } else {
+        // CREATE NEW USER
+        const res = await createUserAction(
+          email.trim(),
+          name.trim(),
+          formRole,
+          selectedBranch,
+          parsedSemester,
+          formRole === "student" ? section : null,
+          formRole === "faculty" ? selectedDesignation : null,
+          formattedRoll,
+          phone.trim() || null
+        );
+
+        if (res.error) {
+          addToast("error", "Creation Failed", res.error);
+        } else {
+          const newUser: UserItem = {
+            id: res.user?.id || Math.random().toString(),
+            email: email.trim().toLowerCase(),
+            name: name.trim(),
+            role: formRole,
+            status: "active",
+            branch: selectedBranch,
+            current_semester: parsedSemester,
+            section: formRole === "student" ? section : null,
+            designation: formRole === "faculty" ? selectedDesignation : null,
+            phone: phone.trim() || null,
+            roll_number: formattedRoll,
+            created_at: new Date().toISOString(),
+          };
+          setUsers((prev) => [newUser, ...prev]);
+          addToast("success", "User Created", `New ${formRole} account created for ${name}.`);
+          closeDrawer();
+        }
+      }
+    } catch {
+      addToast("error", "Error", "An unexpected error occurred while saving the user.");
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   // Reset Password Handler
@@ -228,22 +413,228 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       if (res.error) {
         addToast("error", "Password Reset Failed", res.error);
       } else {
-        setIsPasswordResetDone(true);
+        setResetPasswordResult(res.defaultPassword || "Password@789");
         addToast(
           "success",
-          "Password Reset Successful",
+          "Password Reset",
           `Password for ${editingUser.name} has been reset to "${res.defaultPassword}".`
         );
       }
     } catch {
-      addToast("error", "Error", "Failed to reset password.");
+      addToast("error", "Error", "Failed to reset user password.");
     } finally {
       setIsResettingPassword(false);
     }
   };
 
-  // CSV Modal Open / Close Handlers
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedPassword(true);
+    setTimeout(() => setCopiedPassword(false), 2000);
+  };
+
+  // Toggle Status Handler
+  const handleToggleStatus = async (user: UserItem) => {
+    setTogglingId(user.id);
+    try {
+      const res = await toggleUserStatus(user.id, user.status);
+      if (res.error) {
+        addToast("error", "Status Update Failed", res.error);
+      } else {
+        const nextStatus = user.status === "active" ? "deactivated" : "active";
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, status: nextStatus } : u))
+        );
+        addToast(
+          "info",
+          "Status Changed",
+          `Account for ${user.name} is now ${nextStatus}.`
+        );
+      }
+    } catch {
+      addToast("error", "Error", "Failed to update user status.");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  // Delete User Handler
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+    setIsDeleteLoading(true);
+    try {
+      const res = await deleteUserAction(deletingUser.id, deletingUser.email);
+      if (res.error) {
+        addToast("error", "Delete Failed", res.error);
+      } else {
+        setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
+        addToast("success", "User Deleted", `User ${deletingUser.name} has been removed.`);
+        setDeletingUser(null);
+      }
+    } catch {
+      addToast("error", "Error", "Failed to delete user account.");
+    } finally {
+      setIsDeleteLoading(false);
+    }
+  };
+
+  // CSV Parsing & Preview Handler
+  const handleCsvTextChange = (text: string) => {
+    setCsvRawText(text);
+    setCsvErrors([]);
+    if (!text.trim()) {
+      setCsvPreview([]);
+      return;
+    }
+
+    const lines = text.trim().split("\n").filter((l) => l.trim().length > 0);
+    if (lines.length <= 1) {
+      setCsvPreview([]);
+      return;
+    }
+
+    const header = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/[\r\s_]/g, ""));
+    const previewList: Record<string, string>[] = [];
+    const errors: string[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(",").map((c) => c.trim().replace(/\r/g, ""));
+      if (cols.length === 0 || cols.every((c) => !c)) continue;
+
+      const row: Record<string, string> = {};
+      header.forEach((h, idx) => {
+        row[h] = cols[idx] || "";
+      });
+
+      if (csvImportType === "faculty") {
+        const rowName = row["name"] || row["facultyname"] || cols[0] || "";
+        const rowEmail = row["email"] || row["emailaddress"] || cols[1] || "";
+        const rowDesig = row["designation"] || row["desig"] || cols[2] || "Assistant Professor";
+        const rowPhone = row["phone"] || row["phonenumber"] || row["mobile"] || cols[3] || "";
+        const rowBranch = row["branch"] || row["department"] || cols[4] || "";
+
+        if (!rowName) errors.push(`Row ${i}: Missing Faculty Name`);
+        if (!rowEmail || !rowEmail.includes("@")) errors.push(`Row ${i}: Invalid or missing Email (${rowEmail || "empty"})`);
+
+        previewList.push({
+          name: rowName,
+          email: rowEmail,
+          designation: rowDesig,
+          phone: rowPhone,
+          branch: rowBranch,
+        });
+      } else {
+        // Student Import
+        const rowName = row["name"] || row["studentname"] || cols[0] || "";
+        const rowRoll = (row["rollnumber"] || row["rollno"] || row["roll"] || cols[1] || "").toUpperCase();
+        const rowBranch = row["branch"] || cols[2] || "CIC";
+        const rowSem = row["semester"] || row["sem"] || cols[3] || "3";
+        const rowSec = row["section"] || row["sec"] || cols[4] || "A";
+
+        if (!rowName) errors.push(`Row ${i}: Missing Student Name`);
+        if (!rowRoll) errors.push(`Row ${i}: Missing Roll Number`);
+        else if (!isValidRollNumber(rowRoll)) errors.push(`Row ${i}: Invalid 10-char roll number (${rowRoll})`);
+
+        previewList.push({
+          name: rowName,
+          rollNumber: rowRoll,
+          email: rowRoll ? `${rowRoll.toLowerCase()}@mvgrce.edu.in` : "",
+          branch: rowBranch,
+          semester: rowSem,
+          section: rowSec,
+        });
+      }
+    }
+
+    setCsvPreview(previewList);
+    setCsvErrors(errors);
+  };
+
+  // CSV Batch Upload Submit
+  const handleCsvImportSubmit = async () => {
+    if (csvPreview.length === 0) {
+      addToast("error", "Validation Error", "No valid records to import.");
+      return;
+    }
+
+    setCsvLoading(true);
+    try {
+      const payload = csvPreview.map((row) => {
+        if (csvImportType === "faculty") {
+          return {
+            name: row.name,
+            email: row.email.toLowerCase().trim(),
+            role: "faculty" as const,
+            designation: row.designation || "Assistant Professor",
+            phone: row.phone || null,
+            branch: row.branch || null,
+            semester: null,
+            section: null,
+            rollNumber: null,
+          };
+        } else {
+          return {
+            name: row.name,
+            email: row.email ? row.email.toLowerCase().trim() : `${row.rollNumber.toLowerCase()}@mvgrce.edu.in`,
+            role: "student" as const,
+            designation: null,
+            phone: null,
+            branch: row.branch || "CIC",
+            semester: parseInt(row.semester, 10) || 3,
+            section: row.section || "A",
+            rollNumber: row.rollNumber.toUpperCase().trim(),
+          };
+        }
+      });
+
+      const res = await batchCreateUsersAction(payload);
+      if (res.error) {
+        addToast("error", "Batch Import Failed", res.error);
+        return;
+      }
+      if (res.successCount > 0) {
+        addToast(
+          "success",
+          "Batch Import Complete",
+          `Successfully imported ${res.successCount} ${csvImportType === "faculty" ? "faculty members" : "students"}.`
+        );
+        // Refresh local users list
+        const newItems: UserItem[] = payload.slice(0, res.successCount).map((p) => ({
+          id: Math.random().toString(),
+          email: p.email,
+          name: p.name,
+          role: p.role,
+          status: "active",
+          branch: p.branch,
+          current_semester: p.semester,
+          section: p.section,
+          designation: p.designation,
+          phone: p.phone,
+          roll_number: p.rollNumber,
+          created_at: new Date().toISOString(),
+        }));
+        setUsers((prev) => [...newItems, ...prev]);
+        closeCsvModal();
+      }
+
+      if (res.failCount > 0) {
+        addToast(
+          "error",
+          "Import Warnings",
+          `${res.failCount} records failed. First error: ${res.errors[0] || "Unknown"}`
+        );
+      }
+    } catch {
+      addToast("error", "Error", "Failed to execute batch import.");
+    } finally {
+      setCsvLoading(false);
+    }
+  };
+
   const openCsvModal = () => {
+    setCsvRawText("");
+    setCsvPreview([]);
+    setCsvErrors([]);
     setIsCsvMounted(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -256,337 +647,19 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setIsCsvVisible(false);
     setTimeout(() => {
       setIsCsvMounted(false);
-    }, 400);
+      setCsvRawText("");
+      setCsvPreview([]);
+    }, 300);
   };
 
-  // Student Counts for Stat Badges
-  const stats = useMemo(() => {
-    const total = users.length;
-    const active = users.filter((u) => u.status === "active").length;
-    const deactivated = users.filter((u) => u.status === "deactivated").length;
-    return { total, active, deactivated };
-  }, [users]);
-
-  // Dynamic unique sections list
-  const allKnownSections = useMemo(() => {
-    const secSet = new Set<string>(availableSections);
-    users.forEach((u) => {
-      if (u.section) secSet.add(u.section);
-    });
-    return Array.from(secSet).sort();
-  }, [availableSections, users]);
-
-  // Filtered dataset
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        (u.roll_number && u.roll_number.toLowerCase().includes(q));
-      const matchesBranch = branchFilter === "all" ? true : u.branch === branchFilter;
-      const matchesSemester = semesterFilter === "all" ? true : String(u.current_semester) === semesterFilter;
-      const matchesSection = sectionFilter === "all" ? true : u.section === sectionFilter;
-      const matchesStatus = statusFilter === "all" ? true : u.status === statusFilter;
-
-      return matchesSearch && matchesBranch && matchesSemester && matchesSection && matchesStatus;
-    });
-  }, [users, searchQuery, branchFilter, semesterFilter, sectionFilter, statusFilter]);
-
-  // Paginated dataset
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
-  const paginatedUsers = useMemo(() => {
-    const startIdx = (currentPage - 1) * pageSize;
-    return filteredUsers.slice(startIdx, startIdx + pageSize);
-  }, [filteredUsers, currentPage, pageSize]);
-
-  const handleSearchChange = (val: string) => {
-    setSearchQuery(val);
-    setCurrentPage(1);
-  };
-
-  // Dynamic Section Add Handler
-  const handleAddCustomSection = () => {
-    const trimmed = customSectionInput.trim().toUpperCase();
-    if (trimmed) {
-      if (!availableSections.includes(trimmed)) {
-        setAvailableSections((prev) => [...prev, trimmed]);
-      }
-      setSection(trimmed);
-      setCustomSectionInput("");
-      setIsAddingNewSection(false);
-    }
-  };
-
-  // CSV Parser (strictly for student fields: name, roll_number, branch, semester, section)
-  const parseCSV = (text: string) => {
-    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/^["']|["']$/g, ""));
-    const result: Record<string, string>[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line) continue;
-
-      const cells: string[] = [];
-      let current = "";
-      let inQuotes = false;
-
-      for (let j = 0; j < line.length; j++) {
-        const char = line[j];
-        if (char === '"' || char === "'") {
-          inQuotes = !inQuotes;
-        } else if (char === "," && !inQuotes) {
-          cells.push(current.trim().replace(/^["']|["']$/g, ""));
-          current = "";
-        } else {
-          current += char;
-        }
-      }
-      cells.push(current.trim().replace(/^["']|["']$/g, ""));
-
-      const obj: Record<string, string> = {};
-      headers.forEach((header, idx) => {
-        obj[header] = cells[idx] || "";
-      });
-      result.push(obj);
-    }
-    return result;
-  };
-
-  const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setCsvFile(file);
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        const parsed = parseCSV(text);
-        setCsvPreview(parsed);
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  // Form Submit (Create OR Edit Student)
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (rollNumber && !isValidRollNumber(rollNumber)) {
-      addToast("error", "Invalid Roll Number", "Please enter a valid 10-character college roll number in standard format (e.g. 23331A4745).");
-      return;
-    }
-
-    if (isDuplicateRollNumber) {
-      addToast("error", "the number already exists", `A student with roll number ${rollNumber} already exists in the roster.`);
-      return;
-    }
-
-    setLoading(true);
-
-    const semNum = semester ? parseInt(semester, 10) : 3;
-    const branchVal = branch || "CIC";
-    const sectionVal = section ? section.toUpperCase().trim() : "A";
-    const rollVal = rollNumber.toUpperCase().trim();
-    const studentEmail = `${rollVal.toLowerCase()}@mvgrce.edu.in`;
-
-    try {
-      if (editingUser) {
-        // UPDATE Existing Student
-        const result = await updateUserAction(editingUser.id, {
-          name: name.trim(),
-          role: "student",
-          branch: branchVal,
-          semester: semNum,
-          section: sectionVal,
-          designation: null,
-          rollNumber: rollVal,
-          status,
-        });
-
-        if (result.error) {
-          addToast("error", "Update Failed", result.error);
-        } else {
-          addToast("success", "Student Updated", `${name}'s profile has been updated.`);
-          setUsers((prev) =>
-            prev.map((u) =>
-              u.id === editingUser.id
-                ? {
-                    ...u,
-                    name: name.trim(),
-                    branch: branchVal,
-                    current_semester: semNum,
-                    section: sectionVal,
-                    roll_number: rollVal,
-                    status,
-                  }
-                : u
-            )
-          );
-          closeDrawer();
-        }
-      } else {
-        // CREATE New Student
-        const result = await createUserAction(
-          studentEmail,
-          name.trim(),
-          "student",
-          branchVal,
-          semNum,
-          sectionVal,
-          null,
-          rollVal,
-          null
-        );
-
-        if (result.error) {
-          addToast("error", "Failed to enroll student", result.error);
-        } else {
-          addToast(
-            "success",
-            "Student Enrolled Successfully",
-            `${name} (${rollVal}) has been enrolled in ${branchVal} Sem ${semNum} Section ${sectionVal}.`
-          );
-
-          if (result.user) {
-            setUsers((prev) => [result.user as UserItem, ...prev]);
-          }
-
-          setName("");
-          setRollNumber("");
-          setEmail("");
-          closeDrawer();
-        }
-      }
-    } catch {
-      addToast("error", "Error", "An unexpected error occurred while saving student.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Delete Student Handler
-  const handleDeleteConfirm = async () => {
-    if (!deletingUser) return;
-    setIsDeleteLoading(true);
-
-    try {
-      const result = await deleteUserAction(deletingUser.id, deletingUser.email);
-      if (result.error) {
-        addToast("error", "Delete Failed", result.error);
-      } else {
-        addToast("success", "Student Deleted", `${deletingUser.name}'s account was removed from the roster.`);
-        setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
-        setDeletingUser(null);
-      }
-    } catch {
-      addToast("error", "Error", "Failed to delete student account.");
-    } finally {
-      setIsDeleteLoading(false);
-    }
-  };
-
-  // Submit CSV Roster
-  const handleCsvSubmit = async () => {
-    if (csvPreview.length === 0) return;
-    setCsvLoading(true);
-
-    const formattedList = csvPreview
-      .map((item) => {
-        const rawRoll = item.roll_number || item.rollnumber || item.roll || "";
-        const roll = rawRoll ? rawRoll.toUpperCase().trim() : null;
-        if (!roll) return null;
-
-        const studentEmail = `${roll.toLowerCase()}@mvgrce.edu.in`;
-        const branchVal = item.branch ? item.branch.toUpperCase().trim() : (roll.includes("47") ? "CIC" : roll.includes("05") ? "CSD" : roll.includes("42") ? "CSM" : "CIC");
-        const semVal = item.semester ? parseInt(item.semester, 10) : 3;
-        const secVal = item.section ? item.section.toUpperCase().trim() : "A";
-
-        return {
-          email: studentEmail,
-          name: item.name ? item.name.trim() : `Student ${roll}`,
-          role: "student" as const,
-          branch: branchVal,
-          semester: isNaN(semVal) ? 3 : semVal,
-          section: secVal || "A",
-          rollNumber: roll,
-        };
-      })
-      .filter((u): u is NonNullable<typeof u> => u !== null && Boolean(u.rollNumber));
-
-    if (formattedList.length === 0) {
-      addToast("error", "Invalid CSV", "No valid student records with roll numbers found in CSV.");
-      setCsvLoading(false);
-      return;
-    }
-
-    try {
-      const result = await batchCreateUsersAction(formattedList);
-      if (result.error) {
-        addToast("error", "Batch Import Failed", result.error);
-      } else {
-        addToast(
-          "success",
-          "Batch Import Complete",
-          `Successfully enrolled ${result.successCount ?? 0} students. (Failed: ${result.failCount ?? 0})`
-        );
-        setCsvFile(null);
-        setCsvPreview([]);
-        closeCsvModal();
-        setTimeout(() => window.location.reload(), 1200);
-      }
-    } catch {
-      addToast("error", "Error", "Batch upload failed.");
-    } finally {
-      setCsvLoading(false);
-    }
-  };
-
-  // Batch Promotion Handlers
-  const matchingPromoteStudents = useMemo(() => {
-    return users.filter((u) => {
-      if (u.role !== "student") return false;
-      if (u.current_semester !== promoteFromSem) return false;
-      if (promoteBranch !== "ALL" && u.branch !== promoteBranch) return false;
-      return true;
-    });
-  }, [users, promoteFromSem, promoteBranch]);
-
-  const openPromoteModal = () => {
-    setIsPromoteModalMounted(true);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setIsPromoteModalVisible(true);
-      });
-    });
-  };
-
-  const closePromoteModal = () => {
-    setIsPromoteModalVisible(false);
-    setTimeout(() => {
-      setIsPromoteModalMounted(false);
-    }, 400);
-  };
-
-  const handlePromoteConfirm = async () => {
-    if (matchingPromoteStudents.length === 0) {
-      addToast("error", "No Students Found", "There are no students matching the selected branch and semester criteria.");
-      return;
-    }
+  // Bulk Promote Students
+  const handleBulkPromote = async () => {
     setIsPromoting(true);
     try {
       const res = await bulkPromoteStudentsSemesterAction(promoteFromSem, promoteToSem, promoteBranch);
       if (res.error) {
         addToast("error", "Promotion Failed", res.error);
       } else {
-        addToast(
-          "success",
-          "Cohort Promoted Successfully",
-          `${matchingPromoteStudents.length} students advanced from Semester ${promoteFromSem} to Semester ${promoteToSem}.`
-        );
         setUsers((prev) =>
           prev.map((u) => {
             if (
@@ -599,1063 +672,793 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             return u;
           })
         );
-        closePromoteModal();
+        addToast(
+          "success",
+          "Promotion Complete",
+          `Promoted students from Semester ${promoteFromSem} to Semester ${promoteToSem}.`
+        );
+        setIsPromoteModalVisible(false);
+        setTimeout(() => setIsPromoteModalMounted(false), 300);
       }
     } catch {
-      addToast("error", "Error", "An unexpected error occurred during cohort promotion.");
+      addToast("error", "Error", "Failed to bulk promote students.");
     } finally {
       setIsPromoting(false);
     }
   };
 
-  const handleStatusToggle = async (userId: string, currentStatus: string, userName: string) => {
-    setTogglingId(userId);
-    const newStatus = currentStatus === "active" ? "deactivated" : "active";
-
-    try {
-      const result = await toggleUserStatus(userId, currentStatus);
-      if (result.success) {
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, status: newStatus as "active" | "deactivated" } : u))
-        );
-        addToast(
-          "info",
-          "Status Updated",
-          `${userName}'s status has been set to ${newStatus.toUpperCase()}.`
-        );
-      } else {
-        addToast("error", "Status Update Failed", result.error);
+  // Filtered dataset
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      // 1. Role Tab Filter
+      if (activeTab !== "all" && u.role !== activeTab) {
+        return false;
       }
-    } catch {
-      addToast("error", "Error", "Failed to update account status.");
-    } finally {
-      setTogglingId(null);
-    }
-  };
 
-  const getInitials = (userName: string) => {
-    const parts = userName.trim().split(" ");
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return userName.slice(0, 2).toUpperCase();
+      // 2. Search Query (Name, Email, Roll Number, Designation, Phone, Branch)
+      const q = searchQuery.toLowerCase().trim();
+      if (q) {
+        const matchesName = u.name.toLowerCase().includes(q);
+        const matchesEmail = u.email.toLowerCase().includes(q);
+        const matchesRoll = u.roll_number ? u.roll_number.toLowerCase().includes(q) : false;
+        const matchesDesig = u.designation ? u.designation.toLowerCase().includes(q) : false;
+        const matchesPhone = u.phone ? u.phone.includes(q) : false;
+        const matchesBranch = u.branch ? u.branch.toLowerCase().includes(q) : false;
+
+        if (!matchesName && !matchesEmail && !matchesRoll && !matchesDesig && !matchesPhone && !matchesBranch) {
+          return false;
+        }
+      }
+
+      // 3. Branch Filter
+      if (branchFilter !== "all") {
+        if (u.branch !== branchFilter) return false;
+      }
+
+      // 4. Semester Filter (for students)
+      if (semesterFilter !== "all") {
+        if (String(u.current_semester) !== semesterFilter) return false;
+      }
+
+      // 5. Section Filter (for students)
+      if (sectionFilter !== "all") {
+        if (u.section !== sectionFilter) return false;
+      }
+
+      // 6. Designation Filter (for faculty)
+      if (designationFilter !== "all") {
+        if (u.designation !== designationFilter) return false;
+      }
+
+      // 7. Status Filter
+      if (statusFilter !== "all") {
+        if (u.status !== statusFilter) return false;
+      }
+
+      return true;
+    });
+  }, [users, activeTab, searchQuery, branchFilter, semesterFilter, sectionFilter, designationFilter, statusFilter]);
+
+  // Paginated dataset
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const paginatedUsers = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize;
+    return filteredUsers.slice(startIdx, startIdx + pageSize);
+  }, [filteredUsers, currentPage, pageSize]);
+
+  const hasActiveFilters = searchQuery !== "" || branchFilter !== "all" || semesterFilter !== "all" || sectionFilter !== "all" || designationFilter !== "all" || statusFilter !== "all";
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setBranchFilter("all");
+    setSemesterFilter("all");
+    setSectionFilter("all");
+    setDesignationFilter("all");
+    setStatusFilter("all");
+    setCurrentPage(1);
   };
 
   return (
-    <div className="space-y-6 relative pb-10 w-full">
-      {/* Toast Alert Notifications Container */}
+    <div className="space-y-6 w-full pb-10">
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       {/* ========================================================================= */}
-      {/* UNIFIED STUDENT ROSTER HEADER */}
+      {/* 1. EXECUTIVE HEADER & ACTIONS */}
       {/* ========================================================================= */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-surface p-6 sm:p-7 rounded-3xl border border-border shadow-xs">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-primary text-white shadow-xs">
-              <UsersIcon className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">
-                Student Directory & Cohort Management
-              </h1>
-              <p className="text-xs sm:text-sm text-primary/60 font-normal leading-relaxed mt-0.5">
-                Enroll students with verified 10-digit roll numbers, auto-mapped institutional emails, and branch sections.
-              </p>
-            </div>
+      <div className="p-6 sm:p-7 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+        <div className="space-y-1.5 max-w-xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/70 text-xs font-semibold text-blue-800 mb-0.5">
+            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+            <span>Identity & Roster Administration</span>
           </div>
-
-          {/* Stat Counter Badges */}
-          <div className="flex flex-wrap items-center gap-2 pt-1.5">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-bg border border-border text-xs font-medium text-primary">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-              Total Students: <span className="font-semibold">{stats.total}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-xs font-medium text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-              Active: <span className="font-semibold">{stats.active}</span>
-            </span>
-            {stats.deactivated > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-red-50 border border-red-200/60 text-xs font-medium text-red-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
-                Deactivated: <span className="font-semibold">{stats.deactivated}</span>
-              </span>
-            )}
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            User Directory & Governance
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
+            Manage student cohorts, faculty educators, and departmental administrators with real-time provisioning.
+          </p>
         </div>
 
-        {/* Header Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center shrink-0">
-          <button
-            onClick={openPromoteModal}
-            className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full border border-blue-200 bg-blue-50/90 hover:bg-blue-100 text-blue-800 font-medium text-xs sm:text-sm transition-all shadow-2xs hover:shadow-xs cursor-pointer"
-          >
-            <GraduationCap className="h-4 w-4 text-blue-700" />
-            <span>Promote Cohort</span>
-          </button>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {activeTab === "student" && counts.student > 0 && (
+            <button
+              onClick={() => {
+                setIsPromoteModalMounted(true);
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    setIsPromoteModalVisible(true);
+                  });
+                });
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+            >
+              <GraduationCap className="h-4 w-4 text-blue-600" />
+              <span>Promote Cohort</span>
+            </button>
+          )}
 
           <button
             onClick={openCsvModal}
-            className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full border border-border bg-bg hover:bg-surface text-primary font-medium text-xs sm:text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
           >
-            <Upload className="h-4 w-4 text-primary/70" />
+            <Upload className="h-4 w-4 text-slate-700" />
             <span>Batch Import (CSV)</span>
           </button>
 
           <button
-            onClick={openCreateDrawer}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-medium text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer"
+            onClick={() => openCreateDrawer()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
-            <span>Enroll Student</span>
+            <span>Enroll User</span>
           </button>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* FILTER & SEARCH TOOLBAR */}
+      {/* 2. ROLE TABS & QUICK METRICS */}
       {/* ========================================================================= */}
-      <div className="bg-surface p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          {/* Search Box */}
-          <div className="sm:col-span-4 relative">
-            <Search className="absolute left-4 top-3 h-4 w-4 text-primary/40" />
-            <input
-              placeholder="Search by student name or roll number..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-11 pr-10 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/40 font-normal text-primary placeholder:text-primary/40 transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => handleSearchChange("")}
-                className="absolute right-3.5 top-3 text-primary/40 hover:text-primary p-0.5 rounded-full hover:bg-border cursor-pointer"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Navigation Role Tabs */}
+        <div className="inline-flex p-1.5 rounded-2xl bg-slate-100/90 border border-slate-200/80 gap-1 self-start">
+          <button
+            onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === "all"
+                ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            <UsersIcon className="h-4 w-4 text-slate-600" />
+            <span>All Users</span>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "all" ? "bg-slate-100 text-slate-800" : "bg-slate-200/70 text-slate-600"
+            }`}>
+              {counts.total}
+            </span>
+          </button>
 
-          {/* Branch Filter */}
-          <div className="sm:col-span-3">
-            <select
-              value={branchFilter}
-              onChange={(e) => {
-                setBranchFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
-            >
-              <option value="all">All Branches</option>
-              {branches.map((b) => (
-                <option key={b.code} value={b.code}>
-                  {b.code} ({b.name})
-                </option>
-              ))}
-            </select>
-          </div>
+          <button
+            onClick={() => { setActiveTab("faculty"); setCurrentPage(1); }}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === "faculty"
+                ? "bg-white text-violet-900 shadow-xs border border-slate-200/80"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            <Briefcase className="h-4 w-4 text-violet-600" />
+            <span>Faculty</span>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "faculty" ? "bg-violet-100 text-violet-800" : "bg-slate-200/70 text-slate-600"
+            }`}>
+              {counts.faculty}
+            </span>
+          </button>
 
-          {/* Semester Filter */}
-          <div className="sm:col-span-2">
-            <select
-              value={semesterFilter}
-              onChange={(e) => {
-                setSemesterFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
-            >
-              <option value="all">All Semesters</option>
-              {semesters.map((s) => (
-                <option key={s.number} value={s.number.toString()}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <button
+            onClick={() => { setActiveTab("student"); setCurrentPage(1); }}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === "student"
+                ? "bg-white text-blue-900 shadow-xs border border-slate-200/80"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            <GraduationCap className="h-4 w-4 text-blue-600" />
+            <span>Students</span>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "student" ? "bg-blue-100 text-blue-800" : "bg-slate-200/70 text-slate-600"
+            }`}>
+              {counts.student}
+            </span>
+          </button>
 
-          {/* Section Filter */}
-          <div className="sm:col-span-1.5">
-            <select
-              value={sectionFilter}
-              onChange={(e) => {
-                setSectionFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
-            >
-              <option value="all">All Secs</option>
-              {allKnownSections.map((sec) => (
-                <option key={sec} value={sec}>
-                  Sec {sec}
-                </option>
-              ))}
-            </select>
-          </div>
+          <button
+            onClick={() => { setActiveTab("admin"); setCurrentPage(1); }}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === "admin"
+                ? "bg-white text-amber-900 shadow-xs border border-slate-200/80"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4 text-amber-600" />
+            <span>Admins</span>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "admin" ? "bg-amber-100 text-amber-800" : "bg-slate-200/70 text-slate-600"
+            }`}>
+              {counts.admin}
+            </span>
+          </button>
+        </div>
 
-          {/* Status Selector */}
-          <div className="sm:col-span-1.5">
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full px-4 py-2.5 text-sm font-normal bg-bg border border-border rounded-full text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40 cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="deactivated">Deactivated</option>
-            </select>
-          </div>
+        {/* Status Indicators */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 shrink-0">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>Active: {counts.active}</span>
+          </span>
+          {counts.deactivated > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700">
+              <span className="w-2 h-2 rounded-full bg-slate-400" />
+              <span>Deactivated: {counts.deactivated}</span>
+            </span>
+          )}
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* STUDENT ROSTER DIRECTORY TABLE */}
+      {/* 3. FILTERS & SEARCH TOOLBAR */}
       {/* ========================================================================= */}
-      <div className="bg-surface rounded-3xl border border-border overflow-hidden shadow-xs w-full">
-        {paginatedUsers.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-bg/50 text-primary/50 font-semibold uppercase tracking-wider text-xs border-b border-border">
-                  <th className="py-3.5 pl-6 pr-4">Student</th>
-                  <th className="py-3.5 px-4">Roll Number</th>
-                  <th className="py-3.5 px-4">Institutional Email</th>
-                  <th className="py-3.5 px-4">Branch & Sem</th>
-                  <th className="py-3.5 px-4">Section</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {paginatedUsers.map((u) => {
-                  const isToggling = togglingId === u.id;
-                  const initials = getInitials(u.name);
-                  const displayRoll = u.roll_number || (u.email.includes("@") ? u.email.split("@")[0].toUpperCase() : "—");
+      <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-wrap items-center gap-3">
+        {/* Search Input */}
+        <div className="relative flex-1 min-w-[240px]">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            placeholder={
+              activeTab === "faculty"
+                ? "Search faculty name, designation, email, phone..."
+                : activeTab === "student"
+                ? "Search student name, roll number, email..."
+                : "Search by name, roll number, email, designation..."
+            }
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
-                  return (
-                    <tr key={u.id} className="hover:bg-bg/30 transition-colors group">
-                      {/* Name & Initials Avatar */}
-                      <td className="py-3.5 pl-6 pr-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full border border-blue-200 bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs shrink-0">
-                            {initials}
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="font-semibold text-primary text-sm leading-snug group-hover:text-secondary transition-colors">
-                              {u.name}
-                            </h3>
-                            <span className="text-[11px] text-primary/50 font-normal block mt-0.5">
-                              Enrolled: {new Date(u.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
+        {/* Branch / Department Filter */}
+        <div className="shrink-0">
+          <select
+            value={branchFilter}
+            onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+          >
+            <option value="all">All Branches / Depts</option>
+            {branches.map((b) => (
+              <option key={b.code} value={b.code}>
+                {b.code} - {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-                      {/* Roll Number Badge */}
-                      <td className="py-3.5 px-4">
-                        <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800">
-                          {displayRoll}
-                        </span>
-                      </td>
-
-                      {/* Email */}
-                      <td className="py-3.5 px-4 text-primary/70 text-sm font-normal">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-3.5 w-3.5 text-primary/40 shrink-0" />
-                          <span className="truncate max-w-[220px] text-xs font-mono">{u.email}</span>
-                        </div>
-                      </td>
-
-                      {/* Branch & Semester */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="px-2.5 py-0.5 rounded-full bg-bg border border-border text-xs font-semibold text-primary">
-                            {u.branch || "CIC"}
-                          </span>
-                          <span className="px-2.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 text-[11px] font-medium text-secondary">
-                            Sem {u.current_semester || 3}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Section */}
-                      <td className="py-3.5 px-4">
-                        <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
-                          Sec {u.section || "A"}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3.5 px-4">
-                        {u.status === "active" ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200/70">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                            Deactivated
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 pl-4 pr-6 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => openEditDrawer(u)}
-                            title="Edit Student Profile"
-                            className="p-1.5 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg hover:border-primary/30 transition-all cursor-pointer shadow-2xs"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-
-                          <button
-                            onClick={() => handleStatusToggle(u.id, u.status, u.name)}
-                            disabled={isToggling}
-                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer disabled:opacity-50 ${
-                              u.status === "active"
-                                ? "bg-surface hover:bg-red-50 text-primary/70 hover:text-red-700 border-border hover:border-red-200/80 shadow-2xs"
-                                : "bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border-emerald-200/80 shadow-2xs"
-                            }`}
-                          >
-                            {isToggling ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
-                            ) : u.status === "active" ? (
-                              "Deactivate"
-                            ) : (
-                              "Activate"
-                            )}
-                          </button>
-
-                          <button
-                            onClick={() => setDeletingUser(u)}
-                            title="Delete Student"
-                            className="p-1.5 rounded-full border border-red-200/60 bg-red-50/50 text-red-600 hover:bg-red-100/80 hover:border-red-300 transition-all cursor-pointer shadow-2xs"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="py-20 text-center space-y-2.5">
-            <div className="w-12 h-12 mx-auto rounded-full bg-bg border border-border flex items-center justify-center text-primary/40">
-              <UsersIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-primary text-sm">No Students Found</h3>
-              <p className="text-xs text-primary/50 mt-0.5 max-w-sm mx-auto font-normal">
-                No enrolled students match your search or filter selection.
-              </p>
-            </div>
-            {(searchQuery || branchFilter !== "all" || semesterFilter !== "all" || sectionFilter !== "all" || statusFilter !== "all") && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setBranchFilter("all");
-                  setSemesterFilter("all");
-                  setSectionFilter("all");
-                  setStatusFilter("all");
-                  setCurrentPage(1);
-                }}
-                className="px-4 py-2 rounded-full bg-bg hover:bg-border text-xs font-medium text-primary transition-all cursor-pointer"
-              >
-                Clear Filters
-              </button>
-            )}
+        {/* Designation Filter (visible for Faculty or All) */}
+        {(activeTab === "faculty" || activeTab === "all") && (
+          <div className="shrink-0">
+            <select
+              value={designationFilter}
+              onChange={(e) => { setDesignationFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="all">All Designations</option>
+              {allKnownDesignations.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
-        {/* PAGINATION CONTROLS */}
-        {filteredUsers.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-bg/20">
-            <div className="flex items-center gap-3 text-xs font-normal text-primary/60">
-              <span>
-                Showing{" "}
-                <span className="text-primary font-semibold">
-                  {Math.min((currentPage - 1) * pageSize + 1, filteredUsers.length)}
-                </span>{" "}
-                to{" "}
-                <span className="text-primary font-semibold">
-                  {Math.min(currentPage * pageSize, filteredUsers.length)}
-                </span>{" "}
-                of <span className="text-primary font-semibold">{filteredUsers.length}</span> students
-              </span>
+        {/* Semester Filter (visible for Students or All) */}
+        {(activeTab === "student" || activeTab === "all") && (
+          <div className="shrink-0">
+            <select
+              value={semesterFilter}
+              onChange={(e) => { setSemesterFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="all">All Semesters</option>
+              {semesters.map((s) => (
+                <option key={s.number} value={s.number.toString()}>
+                  Sem {s.number}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
-              <div className="flex items-center gap-1.5">
-                <label htmlFor="pageSizeSelect" className="text-primary/50">Rows:</label>
+        {/* Section Filter (visible for Students or All) */}
+        {(activeTab === "student" || activeTab === "all") && (
+          <div className="shrink-0">
+            <select
+              value={sectionFilter}
+              onChange={(e) => { setSectionFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="all">All Sections</option>
+              {allKnownSections.map((sec) => (
+                <option key={sec} value={sec}>
+                  Section {sec}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Status Filter */}
+        <div className="shrink-0">
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active Accounts</option>
+            <option value="deactivated">Deactivated Accounts</option>
+          </select>
+        </div>
+
+        {/* Clear Filters Button */}
+        {hasActiveFilters && (
+          <button
+            onClick={clearAllFilters}
+            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer shrink-0"
+          >
+            Clear Filters
+          </button>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4. MAIN USERS DIRECTORY TABLE */}
+      {/* ========================================================================= */}
+      <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-xs">
+        {filteredUsers.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto text-slate-400">
+              <UsersIcon className="h-7 w-7" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800">
+              {activeTab === "faculty" ? "No Faculty Members Found" : activeTab === "student" ? "No Students Found" : "No Users Found"}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
+              {hasActiveFilters
+                ? "No users match your active filter criteria. Try clearing search or filters."
+                : `No accounts are currently registered under this role tab.`}
+            </p>
+            {hasActiveFilters ? (
+              <button
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all mt-2 cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Reset Filters</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => openCreateDrawer()}
+                className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all mt-2 cursor-pointer"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>Enroll New User</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3.5 px-5">User & Contact</th>
+                    <th className="py-3.5 px-4">Role & Designation</th>
+                    <th className="py-3.5 px-4">Department / Scope</th>
+                    <th className="py-3.5 px-4">Identifier / Phone</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+                  {paginatedUsers.map((u) => {
+                    const initials = u.name
+                      ? u.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()
+                      : "U";
+
+                    const roleColor =
+                      u.role === "admin"
+                        ? "bg-amber-100 text-amber-800 border-amber-200/80"
+                        : u.role === "faculty"
+                        ? "bg-violet-100 text-violet-800 border-violet-200/80"
+                        : "bg-blue-100 text-blue-800 border-blue-200/80";
+
+                    const avatarColor =
+                      u.role === "admin"
+                        ? "bg-gradient-to-br from-amber-500 to-rose-500 text-white"
+                        : u.role === "faculty"
+                        ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white"
+                        : "bg-gradient-to-br from-blue-500 to-cyan-500 text-white";
+
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/60 transition-colors group">
+                        {/* 1. Name & Email */}
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${avatarColor}`}>
+                              {initials}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-900 block truncate leading-snug">
+                                {u.name}
+                              </span>
+                              <span className="text-slate-500 text-xs block truncate font-normal">
+                                {u.email}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 2. Role & Designation */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-1">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${roleColor}`}>
+                              {u.role}
+                            </span>
+                            {u.role === "faculty" && u.designation && (
+                              <span className="text-xs text-slate-700 block font-medium">
+                                {u.designation}
+                              </span>
+                            )}
+                            {u.role === "student" && (
+                              <span className="text-xs text-slate-600 block">
+                                {u.current_semester ? `Sem ${u.current_semester}` : ""}{u.section ? ` • Sec ${u.section}` : ""}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 3. Department / Scope */}
+                        <td className="py-3.5 px-4">
+                          {u.branch ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold">
+                              <Layers className="h-3 w-3 text-slate-500" />
+                              <span>{u.branch}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">
+                              {u.role === "admin" ? "System Wide" : "Data Engineering (All)"}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 4. Identifier / Phone */}
+                        <td className="py-3.5 px-4">
+                          {u.role === "student" ? (
+                            <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                              {u.roll_number || "-"}
+                            </span>
+                          ) : u.phone ? (
+                            <div className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-medium">
+                              <Phone className="h-3 w-3 text-slate-400" />
+                              <span>{u.phone}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        {/* 5. Status Toggle */}
+                        <td className="py-3.5 px-4">
+                          <button
+                            onClick={() => handleToggleStatus(u)}
+                            disabled={togglingId === u.id}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                              u.status === "active"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/80 hover:bg-emerald-100"
+                                : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                            }`}
+                            title="Click to toggle status"
+                          >
+                            {togglingId === u.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <span className={`w-1.5 h-1.5 rounded-full ${u.status === "active" ? "bg-emerald-500" : "bg-slate-400"}`} />
+                            )}
+                            <span className="capitalize">{u.status}</span>
+                          </button>
+                        </td>
+
+                        {/* 6. Actions */}
+                        <td className="py-3.5 px-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => openEditDrawer(u)}
+                              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+                              title="Edit user profile"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingUser(u)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                              title="Delete user"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Toolbar */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <span>Showing</span>
                 <select
-                  id="pageSizeSelect"
                   value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(parseInt(e.target.value, 10));
-                    setCurrentPage(1);
-                  }}
-                  className="px-2.5 py-0.5 text-xs font-medium bg-surface border border-border rounded-full text-primary focus:outline-none cursor-pointer"
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-semibold text-slate-800 focus:outline-none"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
                 </select>
+                <span>of <strong>{filteredUsers.length}</strong> total records</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-100 transition-all cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="px-3 py-1 font-semibold text-slate-800">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-100 transition-all cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
-                aria-label="Previous Page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                .map((p, idx, arr) => {
-                  const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
-                  return (
-                    <div key={p} className="flex items-center gap-1.5">
-                      {showEllipsis && <span className="px-1 text-xs text-primary/40 font-normal">...</span>}
-                      <button
-                        onClick={() => setCurrentPage(p)}
-                        className={`w-8 h-8 rounded-full text-xs transition-all cursor-pointer ${
-                          currentPage === p
-                            ? "bg-primary text-white shadow-2xs font-semibold"
-                            : "bg-surface border border-border text-primary/70 hover:text-primary hover:bg-bg font-normal"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    </div>
-                  );
-                })}
-
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-full border border-border bg-surface text-primary/70 hover:text-primary hover:bg-bg disabled:opacity-40 disabled:hover:bg-surface transition-all cursor-pointer disabled:cursor-not-allowed"
-                aria-label="Next Page"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          </>
         )}
       </div>
 
       {/* ========================================================================= */}
-      {/* STUDENT ENROLLMENT & EDIT SLIDE-OVER DRAWER */}
+      {/* 5. SLIDE-OVER RIGHT DRAWER (CREATE & EDIT USER) */}
       {/* ========================================================================= */}
       {isDrawerMounted && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex justify-end overflow-hidden">
+          {/* Backdrop */}
           <div
-            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            onClick={closeDrawer}
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 ${
               isDrawerVisible ? "opacity-100" : "opacity-0"
             }`}
-            onClick={() => !loading && closeDrawer()}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div
-              data-lenis-prevent
-              className={`w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
-                isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
-              }`}
-            >
-              {/* Header */}
-              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 leading-tight">
-                    {editingUser ? "Edit Student Profile" : "Enroll New Student"}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-normal mt-0.5">
-                    {editingUser
-                      ? `Updating details for ${editingUser.name}`
-                      : "Add student with roll number and cohort section"}
-                  </p>
-                </div>
+          {/* Drawer Panel */}
+          <div
+            className={`relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col z-10 transition-transform duration-300 transform ${
+              isDrawerVisible ? "translate-x-0" : "translate-x-full"
+            }`}
+          >
+            {/* Drawer Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/75">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">
+                  {editingUser ? "Account Configuration" : "New Enrollment"}
+                </span>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {editingUser ? `Edit ${editingUser.name}` : "Enroll New User"}
+                </h2>
+              </div>
+              <button
+                onClick={closeDrawer}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-                <button
-                  onClick={closeDrawer}
-                  disabled={loading}
-                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+            {/* Drawer Form Body */}
+            <form onSubmit={handleSaveUser} className="flex-1 overflow-y-auto p-6 space-y-5">
+              {/* Role Selection Switch (only in create mode or editable) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Account Role
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormRole("faculty");
+                      if (!rollNumber) setEmail("");
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      formRole === "faculty"
+                        ? "bg-violet-50 text-violet-800 border-violet-300 ring-2 ring-violet-500/20"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    Faculty
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormRole("student");
+                      if (rollNumber) setEmail(`${rollNumber.toLowerCase()}@mvgrce.edu.in`);
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      formRole === "student"
+                        ? "bg-blue-50 text-blue-800 border-blue-300 ring-2 ring-blue-500/20"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    Student
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormRole("admin");
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      formRole === "admin"
+                        ? "bg-amber-50 text-amber-800 border-amber-300 ring-2 ring-amber-500/20"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    Admin
+                  </button>
+                </div>
               </div>
 
-              {/* Form Body */}
-              <form 
-                id="student-manage-form" 
-                data-lenis-prevent
-                onSubmit={handleFormSubmit} 
-                className="px-6 py-5 space-y-5 flex-1 overflow-y-auto overscroll-contain"
-              >
-                {/* 1. Student Full Name */}
+              {/* STUDENT SPECIFIC: Roll Number */}
+              {formRole === "student" && (
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Student Full Name <span className="text-red-500">*</span>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Student Roll Number <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Rahul Varma Datla"
-                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
-                  />
-                </div>
-
-                {/* 2. Roll Number Input */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      College Roll Number <span className="text-red-500">*</span>
-                    </label>
-                    <span className="text-[11px] text-slate-400">e.g. 23331A4745</span>
-                  </div>
                   <input
                     type="text"
                     required
                     maxLength={10}
                     value={rollNumber}
                     onChange={(e) => handleRollNumberChange(e.target.value)}
-                    placeholder="Enter 10-character roll number"
-                    className={`w-full px-4 py-2.5 text-sm uppercase bg-white border rounded-full focus:outline-none transition-all ${
-                      isDuplicateRollNumber
-                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
-                        : isRollInvalid
-                        ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-900"
-                        : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
-                    }`}
+                    placeholder="e.g. 22331A4701"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-mono font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all uppercase"
                   />
-
-                  {/* Duplicate Warning */}
-                  {isDuplicateRollNumber && (
-                    <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      <span>the number already exists</span>
-                    </div>
-                  )}
-
-                  {/* Format Warning */}
-                  {!isDuplicateRollNumber && isRollInvalid && (
-                    <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium pt-0.5">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      <span>Please enter a valid 10-character college roll number (e.g. 23331A4745).</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Auto-Generated Institutional Email */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    College Email (Auto-Generated)
-                  </label>
-                  <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-full text-xs text-slate-700 flex items-center gap-2">
-                    <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate font-mono">
-                      {rollNumber ? `${rollNumber.toLowerCase()}@mvgrce.edu.in` : "rollnumber@mvgrce.edu.in"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* 4. Branch & Semester Grid */}
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Branch
-                    </label>
-                    <select
-                      value={branch}
-                      onChange={(e) => setBranch(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
-                    >
-                      {branches.map((b) => (
-                        <option key={b.code} value={b.code}>
-                          {b.code} - {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Semester
-                    </label>
-                    <select
-                      value={semester}
-                      onChange={(e) => setSemester(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
-                    >
-                      {semesters.map((s) => (
-                        <option key={s.number} value={s.number.toString()}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* 5. Section Selector */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Section Cohort
-                    </label>
-                    {!isAddingNewSection && (
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingNewSection(true)}
-                        className="text-xs font-medium text-slate-900 hover:underline cursor-pointer flex items-center gap-1"
-                      >
-                        <Plus className="h-3 w-3" />
-                        <span>Add Section</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {availableSections.map((sec) => {
-                      const isSecSelected = section === sec;
-                      return (
-                        <button
-                          key={sec}
-                          type="button"
-                          onClick={() => setSection(sec)}
-                          className={`px-4 py-1.5 rounded-full text-xs border transition-all cursor-pointer ${
-                            isSecSelected
-                              ? "bg-slate-900 text-white border-slate-900 font-medium"
-                              : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-normal"
-                          }`}
-                        >
-                          Section {sec}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Inline Input for New Section */}
-                  {isAddingNewSection && (
-                    <div className="flex items-center gap-2 mt-2 p-1.5 bg-slate-50 border border-slate-200 rounded-full animate-in fade-in">
-                      <input
-                        type="text"
-                        maxLength={3}
-                        placeholder="Enter section code"
-                        value={customSectionInput}
-                        onChange={(e) => setCustomSectionInput(e.target.value.toUpperCase())}
-                        className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-full uppercase font-medium text-slate-900 w-32 focus:outline-none focus:border-slate-800"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCustomSection}
-                        disabled={!customSectionInput.trim()}
-                        className="px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
-                      >
-                        Add
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingNewSection(false)}
-                        className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* 6. Edit Mode: Account Status & Password Reset */}
-                {editingUser && (
-                  <div className="space-y-4 pt-3 border-t border-slate-100">
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Account Status
-                      </label>
-                      <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value as "active" | "deactivated")}
-                        className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
-                      >
-                        <option value="active">Active (Access Enabled)</option>
-                        <option value="deactivated">Deactivated (Locked Out)</option>
-                      </select>
-                    </div>
-
-                    {/* Reset Password Card */}
-                    <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/90 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <KeyRound className="h-4 w-4 text-amber-700" />
-                          <span className="text-xs font-bold text-amber-950">Credential Recovery</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
-                          Default Reset
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-amber-900/85 font-normal leading-relaxed">
-                        If this student forgot their password, click below to immediately reset their password to their default college credential.
-                      </p>
-                      <div className="pt-1">
-                        <button
-                          type="button"
-                          onClick={handleResetPassword}
-                          disabled={isResettingPassword}
-                          className="w-full py-2.5 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs hover:shadow-md cursor-pointer disabled:opacity-50"
-                        >
-                          {isResettingPassword ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              <span>Resetting Password...</span>
-                            </>
-                          ) : isPasswordResetDone ? (
-                            <>
-                              <Check className="h-3.5 w-3.5 text-emerald-400" />
-                              <span>Password Reset Successful</span>
-                            </>
-                          ) : (
-                            <>
-                              <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
-                              <span>Reset Student Password</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </form>
-
-              {/* Drawer Footer */}
-              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={closeDrawer}
-                  disabled={loading}
-                  className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  form="student-manage-form"
-                  disabled={loading || isRollInvalid || isDuplicateRollNumber}
-                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm rounded-full shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>{editingUser ? "Saving..." : "Enrolling..."}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>{editingUser ? "Save Changes" : "Enroll Student"}</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* DELETE CONFIRMATION MODAL */}
-      {/* ========================================================================= */}
-      {deletingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => !isDeleteLoading && setDeletingUser(null)}
-          />
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 relative z-10 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-3 text-red-600">
-              <div className="p-2.5 rounded-full bg-red-50 border border-red-200">
-                <Trash2 className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900">Delete Student Account</h3>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
-              Are you sure you want to permanently delete <strong className="text-slate-900 font-semibold">{deletingUser.name}</strong> (<span className="text-slate-700 text-xs">{deletingUser.roll_number || deletingUser.email}</span>)? This action cannot be undone.
-            </p>
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingUser(null)}
-                disabled={isDeleteLoading}
-                className="px-5 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteConfirm}
-                disabled={isDeleteLoading}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isDeleteLoading ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Confirm Delete"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* BATCH IMPORT CSV MODAL (Clean Student-Only Columns) */}
-      {/* ========================================================================= */}
-      {isCsvMounted && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-              isCsvVisible ? "opacity-100" : "opacity-0"
-            }`}
-            onClick={() => !csvLoading && closeCsvModal()}
-          />
-          <div
-            data-lenis-prevent
-            className={`bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-2xl p-6 space-y-5 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
-              isCsvVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-slate-100 text-slate-700">
-                  <FileSpreadsheet className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Batch Import Student Roster (CSV)</h3>
-                  <p className="text-xs text-slate-500 font-normal mt-0.5">Bulk enroll student accounts directly from a spreadsheet</p>
-                </div>
-              </div>
-              <button
-                onClick={closeCsvModal}
-                disabled={csvLoading}
-                className="p-2 text-slate-400 hover:text-slate-700 rounded-full cursor-pointer hover:bg-slate-100"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div data-lenis-prevent className="space-y-4 overflow-y-auto flex-1 pr-1 overscroll-contain">
-              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-slate-400 transition-colors bg-slate-50">
-                <Upload className="h-7 w-7 text-slate-400 mx-auto mb-2" />
-                <label className="text-xs font-semibold text-slate-800 hover:underline cursor-pointer block">
-                  Select or drag Student CSV file
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleCsvChange}
-                    className="hidden"
-                  />
-                </label>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-2">
-                  <span className="text-[11px] text-slate-500 font-normal">
-                    Required columns: <strong className="text-slate-700 font-semibold">name, roll_number, branch, semester, section</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sampleCsv = `name,roll_number,branch,semester,section
-Aswin Sai Palakonda,23331A4745,CIC,3,A
-Sneha Reddy K.,23331A4718,CIC,3,B
-Rahul Varma Datla,23331A4701,CIC,3,A`;
-                      const blob = new Blob([sampleCsv], { type: "text/csv;charset=utf-8;" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "student_roster_sample_template.csv";
-                      a.click();
-                    }}
-                    className="text-[11px] font-semibold text-blue-600 hover:underline cursor-pointer"
-                  >
-                    (Download Clean Sample CSV)
-                  </button>
-                </div>
-              </div>
-
-              {csvPreview.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-800">
-                    Preview Student Records ({csvPreview.length} entries parsed):
-                  </span>
-                  <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-2xl">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 font-semibold text-slate-500 border-b border-slate-200">
-                        <tr>
-                          <th className="p-2.5">Roll Number</th>
-                          <th className="p-2.5">Student Name</th>
-                          <th className="p-2.5">Branch</th>
-                          <th className="p-2.5">Semester</th>
-                          <th className="p-2.5">Section</th>
-                          <th className="p-2.5">Auto-Generated Email</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {csvPreview.slice(0, 10).map((row, i) => {
-                          const roll = (row.roll_number || row.roll || "").toUpperCase().trim();
-                          const autoEmail = roll ? `${roll.toLowerCase()}@mvgrce.edu.in` : "—";
-                          return (
-                            <tr key={i} className="hover:bg-slate-50/50">
-                              <td className="p-2.5 font-bold text-slate-900 font-mono">{roll || "—"}</td>
-                              <td className="p-2.5 text-slate-800 font-medium">{row.name || "—"}</td>
-                              <td className="p-2.5 text-slate-700">{row.branch || "CIC"}</td>
-                              <td className="p-2.5 text-slate-700">Sem {row.semester || "3"}</td>
-                              <td className="p-2.5 text-slate-700">Sec {row.section || "A"}</td>
-                              <td className="p-2.5 text-slate-500 font-mono text-[11px]">{autoEmail}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 shrink-0">
-              <button
-                type="button"
-                onClick={closeCsvModal}
-                disabled={csvLoading}
-                className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCsvSubmit}
-                disabled={csvLoading || csvPreview.length === 0}
-                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {csvLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Enrolling Students...
-                  </>
-                ) : (
-                  "Execute Import"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* BATCH SEMESTER PROMOTION MODAL */}
-      {/* ========================================================================= */}
-      {isPromoteModalMounted && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-              isPromoteModalVisible ? "opacity-100" : "opacity-0"
-            }`}
-            onClick={() => !isPromoting && closePromoteModal()}
-          />
-          <div
-            data-lenis-prevent
-            className={`bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-xl p-6 sm:p-7 space-y-5 max-h-[90vh] flex flex-col relative z-10 transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain ${
-              isPromoteModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200">
-                  <GraduationCap className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
-                    Batch Semester Promotion
-                  </h3>
-                  <p className="text-xs text-slate-500 font-normal mt-0.5">
-                    Advance enrolled students to their next curriculum term
+                  <p className="text-[11px] text-slate-500">
+                    10-digit autonomous roll number. Email will auto-sync with this ID.
                   </p>
                 </div>
-              </div>
-              <button
-                onClick={closePromoteModal}
-                disabled={isPromoting}
-                className="p-2 text-slate-400 hover:text-slate-700 rounded-full cursor-pointer hover:bg-slate-100"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+              )}
 
-            <div className="space-y-4">
-              {/* Promotion Direction Selector */}
-              <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-                    From Semester
-                  </label>
-                  <select
-                    value={promoteFromSem}
-                    onChange={(e) => {
-                      const from = parseInt(e.target.value, 10);
-                      setPromoteFromSem(from);
-                      setPromoteToSem(Math.min(8, from + 1));
-                    }}
-                    className="w-full px-3 py-2 text-sm font-semibold bg-white border border-slate-200 rounded-full text-slate-900 focus:outline-none cursor-pointer"
-                  >
-                    {semesters.map((s) => (
-                      <option key={s.number} value={s.number}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-                    To Semester
-                  </label>
-                  <select
-                    value={promoteToSem}
-                    onChange={(e) => setPromoteToSem(parseInt(e.target.value, 10))}
-                    className="w-full px-3 py-2 text-sm font-semibold bg-white border border-slate-200 rounded-full text-slate-900 focus:outline-none cursor-pointer"
-                  >
-                    {semesters.map((s) => (
-                      <option key={s.number} value={s.number}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Full Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={formRole === "faculty" ? "e.g. Dr. P. Srinivasa Rao" : "e.g. John Doe"}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                />
               </div>
 
-              {/* Branch Filter Selector */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Target Branch Cohort
+              {/* Email Address */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Institutional Email <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={formRole === "student" && !!rollNumber && !editingUser}
+                  placeholder="e.g. faculty@mvgrce.edu.in"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all disabled:opacity-75"
+                />
+              </div>
+
+              {/* FACULTY SPECIFIC: Designation */}
+              {formRole === "faculty" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Faculty Academic Rank / Designation
+                  </label>
+                  <select
+                    value={designation}
+                    onChange={(e) => setDesignation(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all cursor-pointer"
+                  >
+                    {COMMON_DESIGNATIONS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                    <option value="Other">Other / Custom Designation...</option>
+                  </select>
+
+                  {designation === "Other" && (
+                    <input
+                      type="text"
+                      required
+                      value={customDesignation}
+                      onChange={(e) => setCustomDesignation(e.target.value)}
+                      placeholder="Enter custom designation title"
+                      className="w-full mt-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Contact Phone (Faculty & Admin) */}
+              {(formRole === "faculty" || formRole === "admin") && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Contact Phone Number (Optional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. 9491494021"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                  />
+                </div>
+              )}
+
+              {/* Department / Branch Scope */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  {formRole === "faculty" ? "Primary Department / Branch Assignment" : "Branch Specialization"}
                 </label>
                 <select
-                  value={promoteBranch}
-                  onChange={(e) => setPromoteBranch(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full text-slate-900 focus:outline-none cursor-pointer"
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
                 >
-                  <option value="ALL">All Department Branches</option>
+                  <option value="ALL">Department Wide / All Branches</option>
                   {branches.map((b) => (
                     <option key={b.code} value={b.code}>
                       {b.code} - {b.name}
@@ -1664,50 +1467,462 @@ Rahul Varma Datla,23331A4701,CIC,3,A`;
                 </select>
               </div>
 
-              {/* Cohort Impact Preview */}
-              <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                    {matchingPromoteStudents.length}
+              {/* STUDENT SPECIFIC: Semester & Section */}
+              {formRole === "student" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Semester
+                    </label>
+                    <select
+                      value={semester}
+                      onChange={(e) => setSemester(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                    >
+                      {semesters.map((s) => (
+                        <option key={s.number} value={s.number.toString()}>
+                          Semester {s.number}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div>
-                    <span className="text-xs font-bold text-blue-950 block">Eligible Students Found</span>
-                    <span className="text-[11px] text-blue-800/80 font-normal">
-                      Will be promoted to Semester {promoteToSem}
-                    </span>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Section
+                    </label>
+                    <select
+                      value={section}
+                      onChange={(e) => setSection(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                    >
+                      {allKnownSections.map((sec) => (
+                        <option key={sec} value={sec}>
+                          Section {sec}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-blue-600" />
+              )}
+
+              {/* Account Status */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Account Status
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStatus("active")}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      status === "active"
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-500/20"
+                        : "bg-slate-50 text-slate-600 border-slate-200"
+                    }`}
+                  >
+                    Active Account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatus("deactivated")}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      status === "deactivated"
+                        ? "bg-slate-200 text-slate-800 border-slate-400 ring-2 ring-slate-500/20"
+                        : "bg-slate-50 text-slate-600 border-slate-200"
+                    }`}
+                  >
+                    Deactivated
+                  </button>
+                </div>
               </div>
+
+              {/* PASSWORD MANAGEMENT (Edit Mode Only) */}
+              {editingUser && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 block">
+                        Admin Password Management
+                      </span>
+                      <span className="text-[11px] text-slate-500 block">
+                        Reset user password to default (&quot;Password@789&quot;).
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleResetPassword}
+                      disabled={isResettingPassword}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                    >
+                      {isResettingPassword ? "Resetting..." : "Reset Password"}
+                    </button>
+                  </div>
+
+                  {resetPasswordResult && (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs text-emerald-900 font-semibold">
+                      <span>Temporary Password: <strong className="font-mono">{resetPasswordResult}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(resetPasswordResult)}
+                        className="inline-flex items-center gap-1 text-[11px] text-emerald-700 hover:text-emerald-900 font-bold ml-2"
+                      >
+                        {copiedPassword ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        <span>{copiedPassword ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={closeDrawer}
+                  className="px-4 py-2.5 rounded-full border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={formLoading}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-60"
+                >
+                  {formLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  <span>{editingUser ? "Save Changes" : "Create Account"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. BATCH CSV IMPORT MODAL */}
+      {/* ========================================================================= */}
+      {isCsvMounted && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={closeCsvModal}
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 ${
+              isCsvVisible ? "opacity-100" : "opacity-0"
+            }`}
+          />
+
+          <div
+            className={`relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 z-10 overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 transform ${
+              isCsvVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            }`}
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/75">
+              <div className="space-y-0.5">
+                <h3 className="text-lg font-bold text-slate-900">
+                  Batch Roster Import (CSV)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Bulk provision faculty educators or student cohorts using structured CSV data.
+                </p>
+              </div>
+              <button
+                onClick={closeCsvModal}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 shrink-0">
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              {/* Import Type Switcher */}
+              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCsvImportType("faculty");
+                    handleCsvTextChange(csvRawText);
+                  }}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    csvImportType === "faculty"
+                      ? "bg-white text-violet-900 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Import Faculty Directory
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCsvImportType("student");
+                    handleCsvTextChange(csvRawText);
+                  }}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    csvImportType === "student"
+                      ? "bg-white text-blue-900 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Import Student Cohort
+                </button>
+              </div>
+
+              {/* Sample Template Helper */}
+              <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/60 text-xs text-blue-900 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold">
+                    {csvImportType === "faculty" ? "Expected Faculty CSV Headers:" : "Expected Student CSV Headers:"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample =
+                        csvImportType === "faculty"
+                          ? "Name,Email,Designation,Phone,Branch\nDr. P. Srinivasa Rao,psr.cse@mvgrce.edu.in,Professor,9491494021,CIC\nMrs. B. Sowjanya,sowjanyabodasingi@mvgrce.edu.in,Assistant Professor,8500192192,CSD"
+                          : "Name,RollNumber,Branch,Semester,Section\nAswin Sai,22331A4701,CIC,3,A\nRahul Sharma,22331A0502,CSD,3,B";
+                      handleCsvTextChange(sample);
+                    }}
+                    className="text-[11px] font-bold text-blue-700 hover:text-blue-900 underline"
+                  >
+                    Paste Sample Template
+                  </button>
+                </div>
+                <code className="block p-2 rounded-xl bg-white border border-blue-200 font-mono text-[11px] text-slate-800 break-all">
+                  {csvImportType === "faculty"
+                    ? "Name,Email,Designation,Phone,Branch"
+                    : "Name,RollNumber,Branch,Semester,Section"}
+                </code>
+              </div>
+
+              {/* Raw CSV Textarea */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Paste Raw CSV Data or Drop Content
+                </label>
+                <textarea
+                  rows={5}
+                  value={csvRawText}
+                  onChange={(e) => handleCsvTextChange(e.target.value)}
+                  placeholder={
+                    csvImportType === "faculty"
+                      ? "Name,Email,Designation,Phone,Branch\nMr. S. Paparao,surapaparao@mvgrce.edu.in,Assistant Professor,9491494021,CIC"
+                      : "Name,RollNumber,Branch,Semester,Section\nAswin Sai,22331A4701,CIC,3,A"
+                  }
+                  className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                />
+              </div>
+
+              {/* Parsing Errors */}
+              {csvErrors.length > 0 && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+                  <span className="font-bold block">Validation Warnings ({csvErrors.length}):</span>
+                  <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                    {csvErrors.slice(0, 4).map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                    {csvErrors.length > 4 && <li>...and {csvErrors.length - 4} more warnings</li>}
+                  </ul>
+                </div>
+              )}
+
+              {/* Preview Table */}
+              {csvPreview.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800">
+                      Parsed Preview ({csvPreview.length} records ready to import):
+                    </span>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 sticky top-0">
+                        <tr className="border-b border-slate-200">
+                          <th className="p-2">Name</th>
+                          <th className="p-2">{csvImportType === "faculty" ? "Email" : "Roll No"}</th>
+                          <th className="p-2">{csvImportType === "faculty" ? "Designation" : "Branch"}</th>
+                          <th className="p-2">{csvImportType === "faculty" ? "Phone" : "Sem / Sec"}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {csvPreview.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="p-2 font-medium text-slate-900">{row.name}</td>
+                            <td className="p-2 font-mono text-slate-600">{csvImportType === "faculty" ? row.email : row.rollNumber}</td>
+                            <td className="p-2 text-slate-600">{csvImportType === "faculty" ? row.designation : row.branch}</td>
+                            <td className="p-2 text-slate-600">{csvImportType === "faculty" ? row.phone : `Sem ${row.semester} (${row.section})`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/75 flex items-center justify-end gap-2.5">
               <button
                 type="button"
-                onClick={closePromoteModal}
-                disabled={isPromoting}
-                className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
+                onClick={closeCsvModal}
+                className="px-4 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handlePromoteConfirm}
-                disabled={isPromoting || matchingPromoteStudents.length === 0}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                onClick={handleCsvImportSubmit}
+                disabled={csvLoading || csvPreview.length === 0}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
               >
-                {isPromoting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Promoting Cohort...</span>
-                  </>
-                ) : (
-                  <>
-                    <GraduationCap className="h-4 w-4" />
-                    <span>Confirm Promotion</span>
-                  </>
-                )}
+                {csvLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                <span>Import {csvPreview.length} {csvImportType === "faculty" ? "Faculty" : "Students"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 7. BATCH SEMESTER PROMOTION MODAL */}
+      {/* ========================================================================= */}
+      {isPromoteModalMounted && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => {
+              setIsPromoteModalVisible(false);
+              setTimeout(() => setIsPromoteModalMounted(false), 300);
+            }}
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 ${
+              isPromoteModalVisible ? "opacity-100" : "opacity-0"
+            }`}
+          />
+
+          <div
+            className={`relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 z-10 overflow-hidden p-6 space-y-5 transition-all duration-300 transform ${
+              isPromoteModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            }`}
+          >
+            <div className="space-y-1">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 mb-2">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">
+                Bulk Promote Student Cohort
+              </h3>
+              <p className="text-xs text-slate-500">
+                Advance all enrolled students from one semester level to the next.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">From Semester</label>
+                  <select
+                    value={promoteFromSem}
+                    onChange={(e) => setPromoteFromSem(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
+                  >
+                    {semesters.map((s) => (
+                      <option key={s.number} value={s.number}>Sem {s.number}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">To Semester</label>
+                  <select
+                    value={promoteToSem}
+                    onChange={(e) => setPromoteToSem(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
+                  >
+                    {semesters.map((s) => (
+                      <option key={s.number} value={s.number}>Sem {s.number}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Target Branch</label>
+                <select
+                  value={promoteBranch}
+                  onChange={(e) => setPromoteBranch(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
+                >
+                  <option value="ALL">All Branches (CIC, CSD, CSM)</option>
+                  {branches.map((b) => (
+                    <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPromoteModalVisible(false);
+                  setTimeout(() => setIsPromoteModalMounted(false), 300);
+                }}
+                className="px-4 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkPromote}
+                disabled={isPromoting}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs disabled:opacity-50"
+              >
+                {isPromoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <GraduationCap className="h-4 w-4" />}
+                <span>Promote Students</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 8. DELETE USER CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setDeletingUser(null)}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
+          />
+
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 z-10 p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mx-auto">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-slate-900">
+                Delete User Account?
+              </h3>
+              <p className="text-xs text-slate-500">
+                Are you sure you want to permanently delete <strong>{deletingUser.name}</strong> ({deletingUser.email})? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingUser(null)}
+                className="px-4 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteUser}
+                disabled={isDeleteLoading}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                {isDeleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                <span>Delete Account</span>
               </button>
             </div>
           </div>

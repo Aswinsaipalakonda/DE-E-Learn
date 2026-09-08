@@ -11,6 +11,7 @@ export interface CachedUserProfile {
   current_semester?: number | null;
   section?: string | null;
   designation?: string | null;
+  phone?: string | null;
   roll_number?: string | null;
   status?: string;
 }
@@ -121,7 +122,7 @@ export const getCachedUserProfile = cache(async (): Promise<{ user: any; profile
   try {
     const { data: dbProfile } = await supabase
       .from("users")
-      .select("id, name, email, role, branch, current_semester, section, designation, roll_number, status")
+      .select("id, name, email, role, branch, current_semester, section, designation, phone, roll_number, status")
       .or(`id.eq.${user.id},email.eq.${user.email}`)
       .single();
 
@@ -152,6 +153,7 @@ export const getCachedUserProfile = cache(async (): Promise<{ user: any; profile
     current_semester: fallbackRole === "student" ? 3 : null,
     section: fallbackRole === "student" ? "A" : null,
     designation: fallbackRole === "faculty" ? "Assistant Professor" : null,
+    phone: null,
     roll_number: fallbackRoll,
     status: "active",
   };

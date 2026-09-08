@@ -94,7 +94,9 @@ export async function createUserAction(
     name: name.trim(),
     role,
     status: "active",
-    branch: role === "student" ? (branch || (formattedRollNumber?.includes("47") ? "CIC" : formattedRollNumber?.includes("05") ? "CSD" : formattedRollNumber?.includes("42") ? "CSM" : null)) : null,
+    branch: role === "student" 
+      ? (branch || (formattedRollNumber?.includes("47") ? "CIC" : formattedRollNumber?.includes("05") ? "CSD" : formattedRollNumber?.includes("42") ? "CSM" : null))
+      : (branch || null),
     current_semester: role === "student" ? (semester || 3) : null,
     section: role === "student" ? (section ? section.toUpperCase().trim() : "A") : null,
     designation: role === "faculty" ? (designation ? designation.trim() : "Assistant Professor") : null,
@@ -169,7 +171,7 @@ export async function updateUserAction(
     name: updates.name.trim(),
     role: updates.role,
     status: updates.status,
-    branch: isStudent ? (updates.branch || null) : null,
+    branch: isStudent ? (updates.branch || null) : (updates.branch || null),
     current_semester: isStudent ? (updates.semester || null) : null,
     section: isStudent ? (updates.section ? updates.section.toUpperCase().trim() : "A") : null,
     designation: isFaculty ? (updates.designation ? updates.designation.trim() : "Assistant Professor") : null,
@@ -374,7 +376,9 @@ export async function batchCreateUsersAction(
   const adminClient = createServerClient(cookieStore);
 
   const { data: { user } } = await adminClient.auth.getUser();
-  if (!user) return { error: "Unauthorized" };
+  if (!user) {
+    return { successCount: 0, failCount: usersList.length, errors: ["Unauthorized: please log in."], error: "Unauthorized" };
+  }
 
   const { data: profile } = await adminClient
     .from("users")
@@ -383,7 +387,7 @@ export async function batchCreateUsersAction(
     .single();
 
   if (!profile || profile.role !== "admin") {
-    return { error: "Permission denied." };
+    return { successCount: 0, failCount: usersList.length, errors: ["Permission denied. Admin privileges required."], error: "Permission denied." };
   }
 
   const statelessClient = createStatelessClient(supabaseUrl, supabaseAnonKey, {
@@ -441,7 +445,9 @@ export async function batchCreateUsersAction(
         name: item.name.trim(),
         role: item.role,
         status: "active",
-        branch: isStudent ? (item.branch || (formattedRoll?.includes("47") ? "CIC" : formattedRoll?.includes("05") ? "CSD" : formattedRoll?.includes("42") ? "CSM" : "CIC")) : null,
+        branch: isStudent 
+          ? (item.branch || (formattedRoll?.includes("47") ? "CIC" : formattedRoll?.includes("05") ? "CSD" : formattedRoll?.includes("42") ? "CSM" : "CIC")) 
+          : (item.branch || null),
         current_semester: isStudent ? (item.semester || 3) : null,
         section: isStudent ? (item.section ? item.section.toUpperCase().trim() : "A") : null,
         designation: isFaculty ? (item.designation ? item.designation.trim() : "Assistant Professor") : null,
