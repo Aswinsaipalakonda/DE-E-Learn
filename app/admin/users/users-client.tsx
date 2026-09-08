@@ -19,7 +19,6 @@ import {
   X, 
   Loader2, 
   GraduationCap, 
-  FileSpreadsheet, 
   ChevronRight,
   ChevronLeft,
   Mail,
@@ -34,16 +33,9 @@ import {
   Phone,
   Briefcase,
   ShieldCheck,
-  BookOpen,
-  Filter,
-  CheckCircle2,
-  Copy,
-  Sparkles,
-  UserCheck,
-  UserX,
   Layers,
-  HelpCircle,
-  Download
+  Sparkles,
+  Copy
 } from "lucide-react";
 
 export interface BranchOption {
@@ -131,6 +123,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   const [semester, setSemester] = useState("3");
   const [section, setSection] = useState("A");
   const [availableSections, setAvailableSections] = useState<string[]>(["A", "B"]);
+  const [customSectionInput, setCustomSectionInput] = useState("");
+  const [isAddingNewSection, setIsAddingNewSection] = useState(false);
   const [status, setStatus] = useState<"active" | "deactivated">("active");
   const [formLoading, setFormLoading] = useState(false);
 
@@ -204,13 +198,29 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     return Array.from(secSet).sort();
   }, [availableSections, users]);
 
+  // Duplicate Check for roll number
+  const isDuplicateRollNumber = useMemo(() => {
+    if (!rollNumber || formRole !== "student") return false;
+    const upper = rollNumber.toUpperCase().trim();
+    return users.some(
+      (u) =>
+        u.id !== editingUser?.id &&
+        u.role === "student" &&
+        (u.roll_number?.toUpperCase() === upper || (u.email.includes("@") && u.email.split("@")[0].toUpperCase() === upper))
+    );
+  }, [rollNumber, users, editingUser, formRole]);
+
+  const isRollInvalid = useMemo(() => {
+    if (!rollNumber || formRole !== "student") return false;
+    return !isValidRollNumber(rollNumber);
+  }, [rollNumber, formRole]);
+
   // Student Roll Number change handler (auto-generates official college email)
   const handleRollNumberChange = (val: string) => {
     const upper = val.toUpperCase().trim();
     setRollNumber(upper);
     if (formRole === "student" && upper) {
       setEmail(`${upper.toLowerCase()}@mvgrce.edu.in`);
-      // Auto deduce branch if standard roll number
       if (upper.includes("47")) setBranch("CIC");
       else if (upper.includes("05")) setBranch("CSD");
       else if (upper.includes("42")) setBranch("CSM");
@@ -289,7 +299,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       setIsDrawerMounted(false);
       setEditingUser(null);
       setResetPasswordResult(null);
-    }, 300);
+    }, 400);
+  };
+
+  const handleAddCustomSection = () => {
+    const val = customSectionInput.trim().toUpperCase();
+    if (val && !availableSections.includes(val)) {
+      setAvailableSections((prev) => [...prev, val].sort());
+      setSection(val);
+      setCustomSectionInput("");
+      setIsAddingNewSection(false);
+    }
   };
 
   // Form Submit Handler
@@ -324,7 +344,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       const formattedRoll = formRole === "student" ? rollNumber.toUpperCase().trim() : null;
 
       if (editingUser) {
-        // UPDATE EXISTING USER
         const res = await updateUserAction(editingUser.id, {
           name: name.trim(),
           role: formRole,
@@ -362,7 +381,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           closeDrawer();
         }
       } else {
-        // CREATE NEW USER
         const res = await createUserAction(
           email.trim(),
           name.trim(),
@@ -524,7 +542,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           branch: rowBranch,
         });
       } else {
-        // Student Import
         const rowName = row["name"] || row["studentname"] || cols[0] || "";
         const rowRoll = (row["rollnumber"] || row["rollno"] || row["roll"] || cols[1] || "").toUpperCase();
         const rowBranch = row["branch"] || cols[2] || "CIC";
@@ -598,7 +615,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           "Batch Import Complete",
           `Successfully imported ${res.successCount} ${csvImportType === "faculty" ? "faculty members" : "students"}.`
         );
-        // Refresh local users list
         const newItems: UserItem[] = payload.slice(0, res.successCount).map((p) => ({
           id: Math.random().toString(),
           email: p.email,
@@ -690,12 +706,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   // Filtered dataset
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
-      // 1. Role Tab Filter
       if (activeTab !== "all" && u.role !== activeTab) {
         return false;
       }
 
-      // 2. Search Query (Name, Email, Roll Number, Designation, Phone, Branch)
       const q = searchQuery.toLowerCase().trim();
       if (q) {
         const matchesName = u.name.toLowerCase().includes(q);
@@ -710,29 +724,24 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         }
       }
 
-      // 3. Branch Filter
-      if (branchFilter !== "all") {
-        if (u.branch !== branchFilter) return false;
+      if (branchFilter !== "all" && u.branch !== branchFilter) {
+        return false;
       }
 
-      // 4. Semester Filter (for students)
-      if (semesterFilter !== "all") {
-        if (String(u.current_semester) !== semesterFilter) return false;
+      if (semesterFilter !== "all" && String(u.current_semester) !== semesterFilter) {
+        return false;
       }
 
-      // 5. Section Filter (for students)
-      if (sectionFilter !== "all") {
-        if (u.section !== sectionFilter) return false;
+      if (sectionFilter !== "all" && u.section !== sectionFilter) {
+        return false;
       }
 
-      // 6. Designation Filter (for faculty)
-      if (designationFilter !== "all") {
-        if (u.designation !== designationFilter) return false;
+      if (designationFilter !== "all" && u.designation !== designationFilter) {
+        return false;
       }
 
-      // 7. Status Filter
-      if (statusFilter !== "all") {
-        if (u.status !== statusFilter) return false;
+      if (statusFilter !== "all" && u.status !== statusFilter) {
+        return false;
       }
 
       return true;
@@ -767,7 +776,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {/* ========================================================================= */}
       <div className="p-6 sm:p-7 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-5">
         <div className="space-y-1.5 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/70 text-xs font-semibold text-blue-800 mb-0.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800 mb-0.5">
             <Sparkles className="h-3.5 w-3.5 text-blue-600" />
             <span>Identity & Roster Administration</span>
           </div>
@@ -775,7 +784,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             User Directory & Governance
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
-            Manage student cohorts, faculty educators, and departmental administrators with real-time provisioning.
+            Manage faculty educators, student cohorts, and departmental administrators with real-time provisioning.
           </p>
         </div>
 
@@ -791,7 +800,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   });
                 });
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all cursor-pointer"
             >
               <GraduationCap className="h-4 w-4 text-blue-600" />
               <span>Promote Cohort</span>
@@ -800,7 +809,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
           <button
             onClick={openCsvModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all cursor-pointer"
           >
             <Upload className="h-4 w-4 text-slate-700" />
             <span>Batch Import (CSV)</span>
@@ -808,7 +817,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
           <button
             onClick={() => openCreateDrawer()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium transition-all shadow-xs cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
             <span>Enroll User</span>
@@ -817,75 +826,67 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. ROLE TABS & QUICK METRICS */}
+      {/* 2. ROLE TABS & STATUS INDICATORS */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Navigation Role Tabs */}
-        <div className="inline-flex p-1.5 rounded-2xl bg-slate-100/90 border border-slate-200/80 gap-1 self-start">
+        <div className="inline-flex p-1.5 rounded-full bg-slate-100 border border-slate-200 gap-1 self-start">
           <button
             onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "all"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-semibold"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <UsersIcon className="h-4 w-4 text-slate-600" />
+            <UsersIcon className="h-3.5 w-3.5 text-slate-600" />
             <span>All Users</span>
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-              activeTab === "all" ? "bg-slate-100 text-slate-800" : "bg-slate-200/70 text-slate-600"
-            }`}>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
               {counts.total}
             </span>
           </button>
 
           <button
             onClick={() => { setActiveTab("faculty"); setCurrentPage(1); }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "faculty"
-                ? "bg-white text-violet-900 shadow-xs border border-slate-200/80"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-semibold"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Briefcase className="h-4 w-4 text-violet-600" />
+            <Briefcase className="h-3.5 w-3.5 text-slate-700" />
             <span>Faculty</span>
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-              activeTab === "faculty" ? "bg-violet-100 text-violet-800" : "bg-slate-200/70 text-slate-600"
-            }`}>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
               {counts.faculty}
             </span>
           </button>
 
           <button
             onClick={() => { setActiveTab("student"); setCurrentPage(1); }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "student"
-                ? "bg-white text-blue-900 shadow-xs border border-slate-200/80"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-semibold"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <GraduationCap className="h-4 w-4 text-blue-600" />
+            <GraduationCap className="h-3.5 w-3.5 text-blue-600" />
             <span>Students</span>
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-              activeTab === "student" ? "bg-blue-100 text-blue-800" : "bg-slate-200/70 text-slate-600"
-            }`}>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
               {counts.student}
             </span>
           </button>
 
           <button
             onClick={() => { setActiveTab("admin"); setCurrentPage(1); }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "admin"
-                ? "bg-white text-amber-900 shadow-xs border border-slate-200/80"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-semibold"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <ShieldCheck className="h-4 w-4 text-amber-600" />
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
             <span>Admins</span>
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-              activeTab === "admin" ? "bg-amber-100 text-amber-800" : "bg-slate-200/70 text-slate-600"
-            }`}>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
               {counts.admin}
             </span>
           </button>
@@ -894,12 +895,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         {/* Status Indicators */}
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 shrink-0">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span>Active: {counts.active}</span>
           </span>
           {counts.deactivated > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700">
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
               <span>Deactivated: {counts.deactivated}</span>
             </span>
           )}
@@ -909,10 +910,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       {/* ========================================================================= */}
       {/* 3. FILTERS & SEARCH TOOLBAR */}
       {/* ========================================================================= */}
-      <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-wrap items-center gap-3">
+      <div className="p-4 sm:p-4.5 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-wrap items-center gap-3">
         {/* Search Input */}
         <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
@@ -924,12 +925,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 ? "Search student name, roll number, email..."
                 : "Search by name, roll number, email, designation..."
             }
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+            className="w-full pl-11 pr-10 py-2.5 rounded-full bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all font-normal"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -941,9 +942,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           <select
             value={branchFilter}
             onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
-            className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+            className="px-4 py-2.5 rounded-full bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-normal focus:bg-white focus:outline-none focus:border-slate-800 transition-all cursor-pointer"
           >
-            <option value="all">All Branches / Depts</option>
+            <option value="all">All Branches</option>
             {branches.map((b) => (
               <option key={b.code} value={b.code}>
                 {b.code} - {b.name}
@@ -958,7 +959,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             <select
               value={designationFilter}
               onChange={(e) => { setDesignationFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-full bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-normal focus:bg-white focus:outline-none focus:border-slate-800 transition-all cursor-pointer"
             >
               <option value="all">All Designations</option>
               {allKnownDesignations.map((d) => (
@@ -976,7 +977,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             <select
               value={semesterFilter}
               onChange={(e) => { setSemesterFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-full bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-normal focus:bg-white focus:outline-none focus:border-slate-800 transition-all cursor-pointer"
             >
               <option value="all">All Semesters</option>
               {semesters.map((s) => (
@@ -994,7 +995,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             <select
               value={sectionFilter}
               onChange={(e) => { setSectionFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-full bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-normal focus:bg-white focus:outline-none focus:border-slate-800 transition-all cursor-pointer"
             >
               <option value="all">All Sections</option>
               {allKnownSections.map((sec) => (
@@ -1011,11 +1012,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
+            className="px-4 py-2.5 rounded-full bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-normal focus:bg-white focus:outline-none focus:border-slate-800 transition-all cursor-pointer"
           >
             <option value="all">All Status</option>
             <option value="active">Active Accounts</option>
-            <option value="deactivated">Deactivated Accounts</option>
+            <option value="deactivated">Deactivated</option>
           </select>
         </div>
 
@@ -1023,7 +1024,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         {hasActiveFilters && (
           <button
             onClick={clearAllFilters}
-            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer shrink-0"
+            className="px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer shrink-0"
           >
             Clear Filters
           </button>
@@ -1044,8 +1045,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
               {hasActiveFilters
-                ? "No users match your active filter criteria. Try clearing search or filters."
-                : `No accounts are currently registered under this role tab.`}
+                ? "No users match your active search or filter selection."
+                : `No enrolled accounts exist in this directory.`}
             </p>
             {hasActiveFilters ? (
               <button
@@ -1090,26 +1091,27 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           .toUpperCase()
                       : "U";
 
-                    const roleColor =
+                    // Clean, professional styling for badges and avatars without generic AI purple
+                    const roleBadgeStyle =
                       u.role === "admin"
-                        ? "bg-amber-100 text-amber-800 border-amber-200/80"
+                        ? "bg-amber-50 text-amber-800 border-amber-200/80"
                         : u.role === "faculty"
-                        ? "bg-violet-100 text-violet-800 border-violet-200/80"
-                        : "bg-blue-100 text-blue-800 border-blue-200/80";
+                        ? "bg-slate-100 text-slate-800 border-slate-200/90 font-semibold"
+                        : "bg-blue-50 text-blue-800 border-blue-200/80";
 
-                    const avatarColor =
+                    const avatarStyle =
                       u.role === "admin"
-                        ? "bg-gradient-to-br from-amber-500 to-rose-500 text-white"
+                        ? "bg-amber-600 text-white"
                         : u.role === "faculty"
-                        ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white"
-                        : "bg-gradient-to-br from-blue-500 to-cyan-500 text-white";
+                        ? "bg-slate-900 text-white"
+                        : "bg-blue-600 text-white";
 
                     return (
                       <tr key={u.id} className="hover:bg-slate-50/60 transition-colors group">
                         {/* 1. Name & Email */}
                         <td className="py-3.5 px-5">
                           <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${avatarColor}`}>
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${avatarStyle}`}>
                               {initials}
                             </div>
                             <div className="min-w-0">
@@ -1126,7 +1128,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         {/* 2. Role & Designation */}
                         <td className="py-3.5 px-4">
                           <div className="space-y-1">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${roleColor}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${roleBadgeStyle}`}>
                               {u.role}
                             </span>
                             {u.role === "faculty" && u.designation && (
@@ -1145,13 +1147,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         {/* 3. Department / Scope */}
                         <td className="py-3.5 px-4">
                           {u.branch ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-medium">
                               <Layers className="h-3 w-3 text-slate-500" />
                               <span>{u.branch}</span>
                             </span>
                           ) : (
-                            <span className="text-slate-400 text-xs italic">
-                              {u.role === "admin" ? "System Wide" : "Data Engineering (All)"}
+                            <span className="text-slate-500 text-xs font-normal">
+                              {u.role === "admin" ? "System Administrator" : "Data Engineering (All)"}
                             </span>
                           )}
                         </td>
@@ -1159,11 +1161,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         {/* 4. Identifier / Phone */}
                         <td className="py-3.5 px-4">
                           {u.role === "student" ? (
-                            <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            <span className="font-mono text-xs font-semibold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
                               {u.roll_number || "-"}
                             </span>
                           ) : u.phone ? (
-                            <div className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-medium">
+                            <div className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-normal">
                               <Phone className="h-3 w-3 text-slate-400" />
                               <span>{u.phone}</span>
                             </div>
@@ -1177,7 +1179,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           <button
                             onClick={() => handleToggleStatus(u)}
                             disabled={togglingId === u.id}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
                               u.status === "active"
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200/80 hover:bg-emerald-100"
                                 : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
@@ -1198,14 +1200,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => openEditDrawer(u)}
-                              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+                              className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
                               title="Edit user profile"
                             >
                               <Pencil className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => setDeletingUser(u)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                              className="p-1.5 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
                               title="Delete user"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -1226,7 +1228,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 <select
                   value={pageSize}
                   onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                  className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-semibold text-slate-800 focus:outline-none"
+                  className="px-2.5 py-1 rounded-full bg-white border border-slate-200 font-semibold text-slate-800 focus:outline-none cursor-pointer"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -1239,7 +1241,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-100 transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="p-1.5 rounded-full bg-white border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-100 transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -1249,7 +1251,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-100 transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="p-1.5 rounded-full bg-white border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-100 transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -1260,340 +1262,410 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       </div>
 
       {/* ========================================================================= */}
-      {/* 5. SLIDE-OVER RIGHT DRAWER (CREATE & EDIT USER) */}
+      {/* 5. SLIDE-OVER RIGHT DRAWER (BEFORE UI + FULL SMOOTH SCROLLING) */}
       {/* ========================================================================= */}
       {isDrawerMounted && (
-        <div className="fixed inset-0 z-50 flex justify-end overflow-hidden">
+        <div className="fixed inset-0 z-50 overflow-hidden">
           {/* Backdrop */}
           <div
-            onClick={closeDrawer}
-            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 ${
+            onClick={() => !formLoading && closeDrawer()}
+            className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isDrawerVisible ? "opacity-100" : "opacity-0"
             }`}
           />
 
-          {/* Drawer Panel */}
-          <div
-            className={`relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col z-10 transition-transform duration-300 transform ${
-              isDrawerVisible ? "translate-x-0" : "translate-x-full"
-            }`}
-          >
-            {/* Drawer Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/75">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">
-                  {editingUser ? "Account Configuration" : "New Enrollment"}
-                </span>
-                <h2 className="text-xl font-bold text-slate-900">
-                  {editingUser ? `Edit ${editingUser.name}` : "Enroll New User"}
-                </h2>
-              </div>
-              <button
-                onClick={closeDrawer}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Drawer Form Body */}
-            <form onSubmit={handleSaveUser} className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Role Selection Switch (only in create mode or editable) */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Account Role
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormRole("faculty");
-                      if (!rollNumber) setEmail("");
-                    }}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      formRole === "faculty"
-                        ? "bg-violet-50 text-violet-800 border-violet-300 ring-2 ring-violet-500/20"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                    }`}
-                  >
-                    Faculty
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormRole("student");
-                      if (rollNumber) setEmail(`${rollNumber.toLowerCase()}@mvgrce.edu.in`);
-                    }}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      formRole === "student"
-                        ? "bg-blue-50 text-blue-800 border-blue-300 ring-2 ring-blue-500/20"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                    }`}
-                  >
-                    Student
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormRole("admin");
-                    }}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      formRole === "admin"
-                        ? "bg-amber-50 text-amber-800 border-amber-300 ring-2 ring-amber-500/20"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                    }`}
-                  >
-                    Admin
-                  </button>
+          {/* Slide-Over Panel Container */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div
+              data-lenis-prevent
+              className={`w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between transform transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overscroll-contain h-full ${
+                isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+              }`}
+            >
+              {/* Drawer Header (Fixed at Top) */}
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 leading-tight">
+                    {editingUser
+                      ? editingUser.role === "faculty"
+                        ? "Edit Faculty Profile"
+                        : editingUser.role === "admin"
+                        ? "Edit Administrator Profile"
+                        : "Edit Student Profile"
+                      : "Enroll New User"}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-normal mt-0.5">
+                    {editingUser
+                      ? `Updating details for ${editingUser.name}`
+                      : "Add credentials and departmental scope"}
+                  </p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={closeDrawer}
+                  disabled={formLoading}
+                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              {/* STUDENT SPECIFIC: Roll Number */}
-              {formRole === "student" && (
+              {/* Drawer Form Body (Smoothly Scrollable with full Lenis prevent) */}
+              <form 
+                id="user-manage-form" 
+                data-lenis-prevent
+                onSubmit={handleSaveUser} 
+                className="px-6 py-5 space-y-5 flex-1 overflow-y-auto overscroll-contain"
+              >
+                {/* 1. Account Role Switcher */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Student Roll Number <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Account Role
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormRole("faculty");
+                        if (!rollNumber) setEmail("");
+                      }}
+                      className={`py-2 px-3 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                        formRole === "faculty"
+                          ? "bg-slate-900 text-white font-semibold shadow-xs"
+                          : "bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      Faculty
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormRole("student");
+                        if (rollNumber) setEmail(`${rollNumber.toLowerCase()}@mvgrce.edu.in`);
+                      }}
+                      className={`py-2 px-3 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                        formRole === "student"
+                          ? "bg-slate-900 text-white font-semibold shadow-xs"
+                          : "bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      Student
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormRole("admin");
+                      }}
+                      className={`py-2 px-3 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                        formRole === "admin"
+                          ? "bg-slate-900 text-white font-semibold shadow-xs"
+                          : "bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      Admin
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. STUDENT SPECIFIC: Roll Number */}
+                {formRole === "student" && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        College Roll Number <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-[11px] text-slate-400">e.g. 23331A4745</span>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      maxLength={10}
+                      value={rollNumber}
+                      onChange={(e) => handleRollNumberChange(e.target.value)}
+                      placeholder="Enter 10-character roll number"
+                      className={`w-full px-4 py-2.5 text-sm uppercase bg-white border rounded-full focus:outline-none transition-all ${
+                        isDuplicateRollNumber
+                          ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 text-red-700"
+                          : isRollInvalid
+                          ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-900"
+                          : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
+                      }`}
+                    />
+
+                    {isDuplicateRollNumber && (
+                      <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium pt-0.5">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        <span>the number already exists</span>
+                      </div>
+                    )}
+
+                    {!isDuplicateRollNumber && isRollInvalid && (
+                      <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium pt-0.5">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        <span>Please enter a valid 10-character college roll number.</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 3. Full Name */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    maxLength={10}
-                    value={rollNumber}
-                    onChange={(e) => handleRollNumberChange(e.target.value)}
-                    placeholder="e.g. 22331A4701"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-mono font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all uppercase"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={formRole === "faculty" ? "e.g. Dr. P. Srinivasa Rao" : "e.g. Rahul Varma"}
+                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
                   />
-                  <p className="text-[11px] text-slate-500">
-                    10-digit autonomous roll number. Email will auto-sync with this ID.
-                  </p>
                 </div>
-              )}
 
-              {/* Full Name */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Full Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={formRole === "faculty" ? "e.g. Dr. P. Srinivasa Rao" : "e.g. John Doe"}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* Email Address */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Institutional Email <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={formRole === "student" && !!rollNumber && !editingUser}
-                  placeholder="e.g. faculty@mvgrce.edu.in"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all disabled:opacity-75"
-                />
-              </div>
-
-              {/* FACULTY SPECIFIC: Designation */}
-              {formRole === "faculty" && (
+                {/* 4. Institutional Email */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Faculty Academic Rank / Designation
-                  </label>
-                  <select
-                    value={designation}
-                    onChange={(e) => setDesignation(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all cursor-pointer"
-                  >
-                    {COMMON_DESIGNATIONS.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                    <option value="Other">Other / Custom Designation...</option>
-                  </select>
-
-                  {designation === "Other" && (
-                    <input
-                      type="text"
-                      required
-                      value={customDesignation}
-                      onChange={(e) => setCustomDesignation(e.target.value)}
-                      placeholder="Enter custom designation title"
-                      className="w-full mt-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* Contact Phone (Faculty & Admin) */}
-              {(formRole === "faculty" || formRole === "admin") && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Contact Phone Number (Optional)
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Institutional Email <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. 9491494021"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={formRole === "student" && !!rollNumber && !editingUser}
+                    placeholder="e.g. faculty@mvgrce.edu.in"
+                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 font-normal transition-all disabled:opacity-75 disabled:bg-slate-50"
                   />
                 </div>
-              )}
 
-              {/* Department / Branch Scope */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {formRole === "faculty" ? "Primary Department / Branch Assignment" : "Branch Specialization"}
-                </label>
-                <select
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
-                >
-                  <option value="ALL">Department Wide / All Branches</option>
-                  {branches.map((b) => (
-                    <option key={b.code} value={b.code}>
-                      {b.code} - {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* STUDENT SPECIFIC: Semester & Section */}
-              {formRole === "student" && (
-                <div className="grid grid-cols-2 gap-3">
+                {/* 5. FACULTY SPECIFIC: Designation */}
+                {formRole === "faculty" && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Semester
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Faculty Academic Rank / Designation
                     </label>
                     <select
-                      value={semester}
-                      onChange={(e) => setSemester(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                      value={designation}
+                      onChange={(e) => setDesignation(e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                     >
-                      {semesters.map((s) => (
-                        <option key={s.number} value={s.number.toString()}>
-                          Semester {s.number}
+                      {COMMON_DESIGNATIONS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
                         </option>
                       ))}
+                      <option value="Other">Other / Custom Designation...</option>
                     </select>
-                  </div>
 
+                    {designation === "Other" && (
+                      <input
+                        type="text"
+                        required
+                        value={customDesignation}
+                        onChange={(e) => setCustomDesignation(e.target.value)}
+                        placeholder="Enter custom designation title"
+                        className="w-full mt-2 px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* 6. Contact Phone (Faculty & Admin) */}
+                {(formRole === "faculty" || formRole === "admin") && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Section
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Contact Phone Number (Optional)
                     </label>
-                    <select
-                      value={section}
-                      onChange={(e) => setSection(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
-                    >
-                      {allKnownSections.map((sec) => (
-                        <option key={sec} value={sec}>
-                          Section {sec}
-                        </option>
-                      ))}
-                    </select>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. 9491494021"
+                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 font-normal transition-all"
+                    />
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Account Status */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Account Status
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStatus("active")}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      status === "active"
-                        ? "bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-500/20"
-                        : "bg-slate-50 text-slate-600 border-slate-200"
-                    }`}
+                {/* 7. Department / Branch Scope */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {formRole === "faculty" ? "Department / Branch Assignment" : "Branch Specialization"}
+                  </label>
+                  <select
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                   >
-                    Active Account
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatus("deactivated")}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      status === "deactivated"
-                        ? "bg-slate-200 text-slate-800 border-slate-400 ring-2 ring-slate-500/20"
-                        : "bg-slate-50 text-slate-600 border-slate-200"
-                    }`}
-                  >
-                    Deactivated
-                  </button>
+                    <option value="ALL">Department Wide / All Branches</option>
+                    {branches.map((b) => (
+                      <option key={b.code} value={b.code}>
+                        {b.code} - {b.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              {/* PASSWORD MANAGEMENT (Edit Mode Only) */}
-              {editingUser && (
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-slate-800 block">
-                        Admin Password Management
-                      </span>
-                      <span className="text-[11px] text-slate-500 block">
-                        Reset user password to default (&quot;Password@789&quot;).
-                      </span>
+                {/* 8. STUDENT SPECIFIC: Semester & Section Grid */}
+                {formRole === "student" && (
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Semester
+                      </label>
+                      <select
+                        value={semester}
+                        onChange={(e) => setSemester(e.target.value)}
+                        className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+                      >
+                        {semesters.map((s) => (
+                          <option key={s.number} value={s.number.toString()}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Section
+                        </label>
+                        {!isAddingNewSection && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewSection(true)}
+                            className="text-[11px] font-semibold text-blue-600 hover:underline cursor-pointer"
+                          >
+                            + New
+                          </button>
+                        )}
+                      </div>
+                      <select
+                        value={section}
+                        onChange={(e) => setSection(e.target.value)}
+                        className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+                      >
+                        {allKnownSections.map((sec) => (
+                          <option key={sec} value={sec}>
+                            Section {sec}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline Input for New Section */}
+                {formRole === "student" && isAddingNewSection && (
+                  <div className="flex items-center gap-2 p-1.5 bg-slate-50 border border-slate-200 rounded-full">
+                    <input
+                      type="text"
+                      maxLength={3}
+                      placeholder="Section code (e.g. C)"
+                      value={customSectionInput}
+                      onChange={(e) => setCustomSectionInput(e.target.value.toUpperCase())}
+                      className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-full uppercase font-medium text-slate-900 w-32 focus:outline-none focus:border-slate-800"
+                    />
                     <button
                       type="button"
-                      onClick={handleResetPassword}
-                      disabled={isResettingPassword}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                      onClick={handleAddCustomSection}
+                      disabled={!customSectionInput.trim()}
+                      className="px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded-full cursor-pointer disabled:opacity-40"
                     >
-                      {isResettingPassword ? "Resetting..." : "Reset Password"}
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewSection(false)}
+                      className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                )}
 
-                  {resetPasswordResult && (
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs text-emerald-900 font-semibold">
-                      <span>Temporary Password: <strong className="font-mono">{resetPasswordResult}</strong></span>
+                {/* 9. Account Status */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Account Status
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as "active" | "deactivated")}
+                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+                  >
+                    <option value="active">Active (Access Enabled)</option>
+                    <option value="deactivated">Deactivated (Locked Out)</option>
+                  </select>
+                </div>
+
+                {/* 10. EDIT MODE: Password Reset Card (Classic Amber Style) */}
+                {editingUser && (
+                  <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/90 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <KeyRound className="h-4 w-4 text-amber-700" />
+                        <span className="text-xs font-bold text-amber-950">Credential Recovery</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
+                        Default Reset
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-900/85 font-normal leading-relaxed">
+                      If this user forgot their password, click below to immediately reset their password to the default credential (&quot;Password@789&quot;).
+                    </p>
+                    <div className="pt-1">
                       <button
                         type="button"
-                        onClick={() => copyToClipboard(resetPasswordResult)}
-                        className="inline-flex items-center gap-1 text-[11px] text-emerald-700 hover:text-emerald-900 font-bold ml-2"
+                        onClick={handleResetPassword}
+                        disabled={isResettingPassword}
+                        className="w-full py-2.5 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs hover:shadow-md cursor-pointer disabled:opacity-50"
                       >
-                        {copiedPassword ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                        <span>{copiedPassword ? "Copied" : "Copy"}</span>
+                        {isResettingPassword ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Resetting Password...</span>
+                          </>
+                        ) : resetPasswordResult ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            <span>Reset to {resetPasswordResult} (Copied)</span>
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
+                            <span>Reset Password</span>
+                          </>
+                        )}
                       </button>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </form>
 
-              {/* Submit Button */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              {/* Drawer Footer (Fixed at Bottom) */}
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={closeDrawer}
-                  className="px-4 py-2.5 rounded-full border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold hover:bg-slate-50 transition-all cursor-pointer"
+                  disabled={formLoading}
+                  className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  form="user-manage-form"
                   disabled={formLoading}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-60"
+                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  {formLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {formLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   <span>{editingUser ? "Save Changes" : "Create Account"}</span>
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -1611,12 +1683,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           />
 
           <div
+            data-lenis-prevent
             className={`relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 z-10 overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 transform ${
               isCsvVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
             }`}
           >
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/75">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
               <div className="space-y-0.5">
                 <h3 className="text-lg font-bold text-slate-900">
                   Batch Roster Import (CSV)
@@ -1627,7 +1700,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </div>
               <button
                 onClick={closeCsvModal}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all cursor-pointer"
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1636,16 +1709,16 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1">
               {/* Import Type Switcher */}
-              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-full border border-slate-200">
                 <button
                   type="button"
                   onClick={() => {
                     setCsvImportType("faculty");
                     handleCsvTextChange(csvRawText);
                   }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     csvImportType === "faculty"
-                      ? "bg-white text-violet-900 shadow-xs"
+                      ? "bg-white text-slate-900 shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
@@ -1657,9 +1730,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     setCsvImportType("student");
                     handleCsvTextChange(csvRawText);
                   }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     csvImportType === "student"
-                      ? "bg-white text-blue-900 shadow-xs"
+                      ? "bg-white text-slate-900 shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
@@ -1668,9 +1741,9 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </div>
 
               {/* Sample Template Helper */}
-              <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/60 text-xs text-blue-900 space-y-1.5">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold">
+                  <span className="font-semibold text-slate-700">
                     {csvImportType === "faculty" ? "Expected Faculty CSV Headers:" : "Expected Student CSV Headers:"}
                   </span>
                   <button
@@ -1682,12 +1755,12 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                           : "Name,RollNumber,Branch,Semester,Section\nAswin Sai,22331A4701,CIC,3,A\nRahul Sharma,22331A0502,CSD,3,B";
                       handleCsvTextChange(sample);
                     }}
-                    className="text-[11px] font-bold text-blue-700 hover:text-blue-900 underline"
+                    className="text-[11px] font-semibold text-blue-600 hover:underline"
                   >
                     Paste Sample Template
                   </button>
                 </div>
-                <code className="block p-2 rounded-xl bg-white border border-blue-200 font-mono text-[11px] text-slate-800 break-all">
+                <code className="block p-2 rounded-xl bg-white border border-slate-200 font-mono text-[11px] text-slate-800 break-all">
                   {csvImportType === "faculty"
                     ? "Name,Email,Designation,Phone,Branch"
                     : "Name,RollNumber,Branch,Semester,Section"}
@@ -1696,8 +1769,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
               {/* Raw CSV Textarea */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Paste Raw CSV Data or Drop Content
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Paste Raw CSV Data
                 </label>
                 <textarea
                   rows={5}
@@ -1708,7 +1781,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       ? "Name,Email,Designation,Phone,Branch\nMr. S. Paparao,surapaparao@mvgrce.edu.in,Assistant Professor,9491494021,CIC"
                       : "Name,RollNumber,Branch,Semester,Section\nAswin Sai,22331A4701,CIC,3,A"
                   }
-                  className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                  className="w-full p-3.5 rounded-2xl bg-white border border-slate-200 font-mono text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all"
                 />
               </div>
 
@@ -1760,11 +1833,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50/75 flex items-center justify-end gap-2.5">
+            <div className="p-4 border-t border-slate-100 bg-slate-50/75 flex items-center justify-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={closeCsvModal}
-                className="px-4 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition-all cursor-pointer"
+                className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
               >
                 Cancel
               </button>
@@ -1772,7 +1845,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 type="button"
                 onClick={handleCsvImportSubmit}
                 disabled={csvLoading || csvPreview.length === 0}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {csvLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 <span>Import {csvPreview.length} {csvImportType === "faculty" ? "Faculty" : "Students"}</span>
@@ -1798,6 +1871,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           />
 
           <div
+            data-lenis-prevent
             className={`relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 z-10 overflow-hidden p-6 space-y-5 transition-all duration-300 transform ${
               isPromoteModalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
             }`}
@@ -1817,11 +1891,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">From Semester</label>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">From Semester</label>
                   <select
                     value={promoteFromSem}
                     onChange={(e) => setPromoteFromSem(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
+                    className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                   >
                     {semesters.map((s) => (
                       <option key={s.number} value={s.number}>Sem {s.number}</option>
@@ -1830,11 +1904,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">To Semester</label>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">To Semester</label>
                   <select
                     value={promoteToSem}
                     onChange={(e) => setPromoteToSem(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
+                    className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                   >
                     {semesters.map((s) => (
                       <option key={s.number} value={s.number}>Sem {s.number}</option>
@@ -1844,11 +1918,11 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">Target Branch</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Target Branch</label>
                 <select
                   value={promoteBranch}
                   onChange={(e) => setPromoteBranch(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
+                  className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                 >
                   <option value="ALL">All Branches (CIC, CSD, CSM)</option>
                   {branches.map((b) => (
@@ -1865,7 +1939,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   setIsPromoteModalVisible(false);
                   setTimeout(() => setIsPromoteModalMounted(false), 300);
                 }}
-                className="px-4 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
+                className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
               >
                 Cancel
               </button>
@@ -1873,7 +1947,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 type="button"
                 onClick={handleBulkPromote}
                 disabled={isPromoting}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs disabled:opacity-50"
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isPromoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <GraduationCap className="h-4 w-4" />}
                 <span>Promote Students</span>
@@ -1911,7 +1985,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <button
                 type="button"
                 onClick={() => setDeletingUser(null)}
-                className="px-4 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer"
+                className="px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full cursor-pointer"
               >
                 Cancel
               </button>
@@ -1919,7 +1993,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 type="button"
                 onClick={handleDeleteUser}
                 disabled={isDeleteLoading}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isDeleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 <span>Delete Account</span>
