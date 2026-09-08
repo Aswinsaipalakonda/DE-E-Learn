@@ -69,7 +69,12 @@ export async function createUserAction(
     auth: { persistSession: false }
   });
 
-  const defaultPassword = role === "student" && formattedRollNumber ? formattedRollNumber : "Password@789";
+  const defaultPassword = 
+    role === "student" && formattedRollNumber 
+      ? formattedRollNumber 
+      : (role === "faculty" && phone && phone.trim().length >= 4 
+          ? `MVGRDE@${phone.trim().slice(-4)}` 
+          : "Password@789");
 
   const { data: authData, error: authError } = await statelessClient.auth.signUp({
     email: normalizedEmail,
@@ -95,14 +100,14 @@ export async function createUserAction(
     role,
     status: "active",
     branch: role === "student" 
-      ? (branch || (formattedRollNumber?.includes("47") ? "CIC" : formattedRollNumber?.includes("05") ? "CSD" : formattedRollNumber?.includes("42") ? "CSM" : null))
-      : (branch || null),
+      ? (branch || (formattedRollNumber?.includes("47") ? "CIC" : (formattedRollNumber?.includes("44") || formattedRollNumber?.includes("05")) ? "CSD" : formattedRollNumber?.includes("42") ? "CSM" : "CIC"))
+      : (branch === "ALL" ? null : (branch || null)),
     current_semester: role === "student" ? (semester || 3) : null,
     section: role === "student" ? (section ? section.toUpperCase().trim() : "A") : null,
     designation: role === "faculty" ? (designation ? designation.trim() : "Assistant Professor") : null,
-    phone: phone ? phone.trim() : null,
+    phone: role === "faculty" || role === "admin" ? (phone ? phone.trim() : null) : null,
     roll_number: role === "student" ? formattedRollNumber : null,
-    first_login_pending: true,
+    first_login_pending: false,
   };
 
   let { data: profileData, error: profileError } = await adminClient
@@ -230,8 +235,21 @@ export async function adminResetUserPassword(userId: string, email: string) {
     return { error: "Permission denied. Only System Administrators can reset user passwords." };
   }
 
-  const defaultPassword = "Password@789";
   const normalizedEmail = email.trim().toLowerCase();
+
+  // Find user to determine role and appropriate default password
+  const { data: targetUser } = await adminClient
+    .from("users")
+    .select("role, roll_number, phone, email")
+    .or(`id.eq.${userId},email.eq.${normalizedEmail}`)
+    .single();
+
+  const defaultPassword = 
+    targetUser?.role === "student" && targetUser?.roll_number
+      ? targetUser.roll_number.toUpperCase().trim()
+      : targetUser?.role === "faculty" && targetUser?.phone && targetUser.phone.trim().length >= 4
+      ? `MVGRDE@${targetUser.phone.trim().slice(-4)}`
+      : "Password@789";
 
   // 1. Try resetting password via Supabase Auth Admin API (if service role key is available)
   const { client: adminAuthClient, hasServiceKey } = createAdminClient();
@@ -290,7 +308,7 @@ export async function adminResetUserPassword(userId: string, email: string) {
   await adminClient
     .from("users")
     .update({ 
-      first_login_pending: true,
+      first_login_pending: false,
       status: "active"
     })
     .or(`id.eq.${userId},email.eq.${normalizedEmail}`);
@@ -402,7 +420,9 @@ export async function batchCreateUsersAction(
     try {
       const defaultPassword = item.role === "student" && item.rollNumber 
         ? item.rollNumber.toUpperCase().trim() 
-        : (item.role === "faculty" && item.phone ? `MVGRDE@${item.phone.trim().slice(-4)}` : "Password@789");
+        : (item.role === "faculty" && item.phone && item.phone.trim().length >= 4 
+            ? `MVGRDE@${item.phone.trim().slice(-4)}` 
+            : "Password@789");
 
       const { data: authData, error: authErr } = await statelessClient.auth.signUp({
         email: item.email.trim().toLowerCase(),
@@ -446,14 +466,14 @@ export async function batchCreateUsersAction(
         role: item.role,
         status: "active",
         branch: isStudent 
-          ? (item.branch || (formattedRoll?.includes("47") ? "CIC" : formattedRoll?.includes("05") ? "CSD" : formattedRoll?.includes("42") ? "CSM" : "CIC")) 
+          ? (item.branch || (formattedRoll?.includes("47") ? "CIC" : (formattedRoll?.includes("44") || formattedRoll?.includes("05")) ? "CSD" : formattedRoll?.includes("42") ? "CSM" : "CIC")) 
           : (item.branch || null),
         current_semester: isStudent ? (item.semester || 3) : null,
         section: isStudent ? (item.section ? item.section.toUpperCase().trim() : "A") : null,
         designation: isFaculty ? (item.designation ? item.designation.trim() : "Assistant Professor") : null,
         phone: item.phone ? item.phone.trim() : null,
         roll_number: formattedRoll,
-        first_login_pending: true,
+        first_login_pending: false,
       };
 
       let { error: profileError } = await adminClient.from("users").upsert(rowPayload);

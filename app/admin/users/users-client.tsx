@@ -222,7 +222,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     if (formRole === "student" && upper) {
       setEmail(`${upper.toLowerCase()}@mvgrce.edu.in`);
       if (upper.includes("47")) setBranch("CIC");
-      else if (upper.includes("05")) setBranch("CSD");
+      else if (upper.includes("44") || upper.includes("05")) setBranch("CSD");
       else if (upper.includes("42")) setBranch("CSM");
     }
   };
@@ -238,7 +238,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setPhone("");
     setDesignation("Assistant Professor");
     setCustomDesignation("");
-    setBranch("ALL");
+    setBranch(initialRole === "student" ? (branches[0]?.code || "CIC") : "ALL");
     setSemester("3");
     setSection("A");
     setStatus("active");
@@ -261,7 +261,15 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setPhone(user.phone || "");
     const resolvedRoll = user.roll_number || (user.role === "student" && user.email.includes("@") ? user.email.split("@")[0].toUpperCase() : "");
     setRollNumber(resolvedRoll);
-    setBranch(user.branch || "ALL");
+    let resolvedBranch = user.branch || "ALL";
+    if (user.role === "student" && (!user.branch || user.branch === "ALL")) {
+      const code = resolvedRoll.length >= 8 ? resolvedRoll.slice(6, 8) : "";
+      if (code === "47") resolvedBranch = "CIC";
+      else if (code === "44" || code === "05") resolvedBranch = "CSD";
+      else if (code === "42") resolvedBranch = "CSM";
+      else resolvedBranch = branches[0]?.code || "CIC";
+    }
+    setBranch(resolvedBranch);
     setSemester(user.current_semester ? user.current_semester.toString() : "3");
     setSection(user.section || "A");
     setStatus(user.status);
@@ -331,6 +339,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
       }
     }
 
+    if (formRole === "faculty") {
+      if (!phone.trim()) {
+        addToast("error", "Validation Error", "Contact Mobile Number is required for faculty accounts.");
+        return;
+      }
+    }
+
     if (!email.trim() || !email.includes("@")) {
       addToast("error", "Validation Error", "A valid institutional email address is required.");
       return;
@@ -339,9 +354,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setFormLoading(true);
     try {
       const selectedDesignation = designation === "Other" ? customDesignation.trim() : designation;
-      const selectedBranch = branch === "ALL" ? null : branch;
+      const selectedBranch = formRole === "admin" ? null : (branch === "ALL" ? null : branch);
       const parsedSemester = formRole === "student" ? parseInt(semester, 10) : null;
       const formattedRoll = formRole === "student" ? rollNumber.toUpperCase().trim() : null;
+      const formattedPhone = (formRole === "faculty" || formRole === "admin") ? (phone.trim() || null) : null;
 
       if (editingUser) {
         const res = await updateUserAction(editingUser.id, {
@@ -351,7 +367,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
           semester: parsedSemester,
           section: formRole === "student" ? section : null,
           designation: formRole === "faculty" ? selectedDesignation : null,
-          phone: phone.trim() || null,
+          phone: formattedPhone,
           rollNumber: formattedRoll,
           status,
         });
@@ -1343,6 +1359,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       onClick={() => {
                         setFormRole("student");
                         if (rollNumber) setEmail(`${rollNumber.toLowerCase()}@mvgrce.edu.in`);
+                        if (branch === "ALL") setBranch("CIC");
                       }}
                       className={`py-2 px-3 rounded-full text-xs font-medium transition-all cursor-pointer ${
                         formRole === "student"
@@ -1472,40 +1489,69 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 )}
 
-                {/* 6. Contact Phone (Faculty & Admin) */}
-                {(formRole === "faculty" || formRole === "admin") && (
+                {/* 6. FACULTY SPECIFIC: Contact Mobile Number (Required for password generation) */}
+                {formRole === "faculty" && (
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Contact Phone Number (Optional)
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Contact Mobile Number <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-[11px] text-slate-400">e.g. 9491494021</span>
+                    </div>
                     <input
                       type="tel"
+                      required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="e.g. 9491494021"
+                      placeholder="10-digit mobile number"
                       className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 font-normal transition-all"
                     />
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Default Password: <span className="font-mono font-semibold text-slate-800">{phone.trim().length >= 4 ? `MVGRDE@${phone.trim().slice(-4)}` : "MVGRDE@<last 4 digits>"}</span>
+                    </p>
                   </div>
                 )}
 
-                {/* 7. Department / Branch Scope */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    {formRole === "faculty" ? "Department / Branch Assignment" : "Branch Specialization"}
-                  </label>
-                  <select
-                    value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
-                  >
-                    <option value="ALL">Department Wide / All Branches</option>
-                    {branches.map((b) => (
-                      <option key={b.code} value={b.code}>
-                        {b.code} - {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* 7. STUDENT SPECIFIC: Branch Specialization */}
+                {formRole === "student" && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Branch Specialization <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={branch === "ALL" ? "CIC" : branch}
+                      onChange={(e) => setBranch(e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+                    >
+                      {branches.map((b) => (
+                        <option key={b.code} value={b.code}>
+                          {b.code} - {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* 8. FACULTY SPECIFIC: Department / Branch Assignment */}
+                {formRole === "faculty" && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Department / Branch Assignment
+                    </label>
+                    <select
+                      value={branch}
+                      onChange={(e) => setBranch(e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
+                    >
+                      <option value="ALL">Department-Wide Faculty (All Branches)</option>
+                      {branches.map((b) => (
+                        <option key={b.code} value={b.code}>
+                          {b.code} - {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* 8. STUDENT SPECIFIC: Semester & Section Grid */}
                 {formRole === "student" && (

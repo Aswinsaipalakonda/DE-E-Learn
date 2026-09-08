@@ -22,42 +22,6 @@ interface SubjectItem {
   regulation?: string;
 }
 
-const FALLBACK_ANNOUNCEMENTS: AnnouncementItem[] = [
-  {
-    id: "mock-ann-1",
-    title: "Mid-Term Examination Schedule & Syllabus Guidelines (AY 2026-27)",
-    content: "All B.Tech Data Engineering and CS students are required to review the published Mid-Term 1 timetable. Exam halls and seating allotments are posted on the departmental notice board. Attendance is strictly mandatory.",
-    scope_branch: null,
-    scope_semester: null,
-    priority: "important",
-    start_time: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    end_time: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "mock-ann-2",
-    title: "Guest Lecture: Scalable Distributed Systems by Industry Lead",
-    content: "Department of Data Engineering is hosting a specialized session on Big Data Architectures and Real-time Stream Analytics by Google Cloud engineers. All 3rd and 5th semester students are invited.",
-    scope_branch: "CIC",
-    scope_semester: 3,
-    priority: "normal",
-    start_time: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    end_time: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "mock-ann-3",
-    title: "Submission Deadline for Data Engineering Capstone Projects",
-    content: "Final year students must submit their complete design documents and GitHub repositories through the portal before 11:59 PM. Late submissions will incur credit deductions.",
-    scope_branch: "CSD",
-    scope_semester: 5,
-    priority: "important",
-    start_time: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    end_time: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
 import { readLocalExamSchedules, ExamSchedule } from "@/utils/exam-lockout";
 
 export default async function AdminAnnouncementsPage() {
@@ -91,7 +55,7 @@ export default async function AdminAnnouncementsPage() {
   ]);
 
   const dbAnnouncements = (announcementsRes.data as unknown as AnnouncementItem[]) || [];
-  const allAnnouncements = dbAnnouncements.length > 0 ? dbAnnouncements : FALLBACK_ANNOUNCEMENTS;
+  const allAnnouncements = dbAnnouncements;
 
   const localExamSchedules = readLocalExamSchedules();
   const dbExamSchedules = (examSchedulesRes.data as unknown as ExamSchedule[]) || [];
