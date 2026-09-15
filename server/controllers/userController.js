@@ -160,37 +160,61 @@ async function bulkImportUsers(req, res) {
     let errors = 0;
 
     for (const u of users) {
-      if (!u.email || !u.name) continue;
+      const rollNumber = u.roll_number ? u.roll_number.toString().trim().toUpperCase() : null;
+      let cleanEmail = u.email ? u.email.trim().toLowerCase() : (rollNumber ? `${rollNumber.toLowerCase()}@mvgrce.edu.in` : null);
+      if (!cleanEmail || !u.name) {
+        errors++;
+        continue;
+      }
+
       try {
-        const cleanEmail = u.email.trim().toLowerCase();
-        const defaultPassword = u.password || (u.role === 'student' ? (u.roll_number || cleanEmail.split('@')[0].toUpperCase()) : 'Password@789');
+        const isStudent = (u.role || 'student') === 'student';
+        const defaultPassword = u.password || (isStudent ? (rollNumber || cleanEmail.split('@')[0].toUpperCase()) : 'Password@789');
         const passwordHash = await bcrypt.hash(defaultPassword, 10);
         const userId = crypto.randomUUID();
 
+        let branch = u.branch ? u.branch.trim().toUpperCase() : null;
+        if (branch === 'ICB') branch = 'CIC';
+
+        const academicYear = u.academic_year 
+          ? parseInt(u.academic_year, 10) 
+          : (rollNumber && rollNumber.length >= 2 ? parseInt('20' + rollNumber.slice(0, 2), 10) : null);
+
+        const currentSemester = u.current_semester ? parseInt(u.current_semester, 10) : null;
+
         await pool.query(
-          `INSERT INTO users (id, email, password_hash, name, role, status, branch, current_semester, section, designation, phone, roll_number, first_login_pending)
-           VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, 1)
-           ON DUPLICATE KEY UPDATE
-             name = VALUES(name),
-             branch = VALUES(branch),
-             current_semester = VALUES(current_semester),
-             section = VALUES(section)`,
+          `INSERT INTO users (
+            id, email, password_hash, name, role, status,
+            branch, academic_year, current_semester, section,
+            designation, phone, roll_number, first_login_pending
+          ) VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, 1)
+          ON DUPLICATE KEY UPDATE
+            name = VALUES(name),
+            branch = VALUES(branch),
+            academic_year = VALUES(academic_year),
+            current_semester = VALUES(current_semester),
+            section = VALUES(section),
+            roll_number = VALUES(roll_number),
+            designation = VALUES(designation),
+            phone = VALUES(phone)`,
           [
             userId,
             cleanEmail,
             passwordHash,
             u.name.trim(),
             u.role || 'student',
-            u.branch || null,
-            u.current_semester ? parseInt(u.current_semester, 10) : null,
-            u.section || null,
-            u.designation || null,
-            u.phone || null,
-            u.roll_number || null,
+            branch,
+            academicYear,
+            currentSemester,
+            u.section ? u.section.trim().toUpperCase() : null,
+            u.designation ? u.designation.trim() : null,
+            u.phone ? u.phone.trim() : null,
+            rollNumber,
           ]
         );
         imported++;
       } catch (e) {
+        console.error('Row insert error in bulkImportUsers:', e);
         errors++;
       }
     }

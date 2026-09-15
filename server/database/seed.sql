@@ -1,147 +1,370 @@
 -- =========================================================================
--- DE E-LEARN PLATFORM — MYSQL SEED DATA
--- Only Administrator and 33 Faculty Staff
+-- DE E-LEARN PLATFORM — PRODUCTION SEED DATA
+-- Includes:
+--   - 3 Active Branches: CIC, CSD, CSM
+--   - 8 Semesters
+--   - 1 Regulation: R23 Autonomous Regulation
+--   - 213 R23 Curriculum Subjects
+--   - 1 Master System Administrator (admin@mvgrce.edu.in)
+--   - 33 Faculty Members
+--   - 70 CSM Section A Students (64 Regular 23331A42xx + 6 Lateral Entry 24335A42xx)
 -- =========================================================================
 
 USE `de_elearn`;
+SET FOREIGN_KEY_CHECKS = 0;
 
--- 1. Seed Branches
+-- 1. Branches
 INSERT INTO `branches` (`code`, `name`, `active`) VALUES
-('CIC', 'Cyber Security, IoT with BlockChain Technology', 1),
-('CSD', 'Data Science', 1),
-('CSM', 'Artificial Intelligence and Machine Learning', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `active` = VALUES(`active`);
+  ('CIC', 'Cyber Security, IoT with BlockChain Technology', 1),
+  ('CSD', 'Data Science', 1),
+  ('CSM', 'Artificial Intelligence and Machine Learning', 1)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `active` = 1;
 
--- 2. Seed Semesters (1 to 8)
+-- 2. Semesters
 INSERT INTO `semesters` (`number`, `name`, `active`) VALUES
-(1, '1st Semester', 1),
-(2, '2nd Semester', 1),
-(3, '3rd Semester', 1),
-(4, '4th Semester', 1),
-(5, '5th Semester', 1),
-(6, '6th Semester', 1),
-(7, '7th Semester', 1),
-(8, '8th Semester', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `active` = VALUES(`active`);
+  (1, '1st Semester', 1),
+  (2, '2nd Semester', 1),
+  (3, '3rd Semester', 1),
+  (4, '4th Semester', 1),
+  (5, '5th Semester', 1),
+  (6, '6th Semester', 1),
+  (7, '7th Semester', 1),
+  (8, '8th Semester', 1)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `active` = 1;
 
--- 3. Seed Regulations
+-- 3. Regulations
 INSERT INTO `regulations` (`code`, `name`, `active`) VALUES
-('R23', 'R23 Autonomous Regulation', 1),
-('R20', 'R20 Autonomous Regulation', 1),
-('R19', 'R19 Autonomous Regulation', 1),
-('A2', 'A2 Autonomous Regulation', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `active` = VALUES(`active`);
+  ('A2', 'A2 Autonomous Regulation', 1),
+  ('R19', 'R19 Autonomous Regulation', 1),
+  ('R20', 'R20 Autonomous Regulation', 1),
+  ('R23', 'R23 Autonomous Regulation', 1)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `active` = 1;
 
--- Clean up any legacy test users / dummy students
-DELETE FROM `users` WHERE `role` = 'student' OR `email` IN ('faculty@mvgrce.edu.in', 'student@mvgrce.edu.in', '23331a4745@mvgrce.edu.in');
+-- 4. Subjects (213 Records)
+INSERT INTO `subjects` (`code`, `title`, `branch`, `semester`, `regulation`, `active`) VALUES
+  ('R23CMET201', 'Basic Civil & Mechanical Engineering', 'CIC', 1, 'R23', 1),
+  ('R23CSEL201', 'Computer Programming Lab', 'CIC', 1, 'R23', 1),
+  ('R23CSET201', 'Introduction to Programming', 'CIC', 1, 'R23', 1),
+  ('R23CSEW201', 'IT Workshop', 'CIC', 1, 'R23', 1),
+  ('R23HSSL001', 'Communicative English Lab', 'CIC', 1, 'R23', 1),
+  ('R23HSSM801', 'Health and wellness, Yoga and Sports', 'CIC', 1, 'R23', 1),
+  ('R23HSST001', 'Communicative English', 'CIC', 1, 'R23', 1),
+  ('R23MATT101', 'Linear Algebra & Calculus', 'CIC', 1, 'R23', 1),
+  ('R23MECW201', 'Engineering Workshop', 'CIC', 1, 'R23', 1),
+  ('R23PHYL101', 'Engineering Physics Lab', 'CIC', 1, 'R23', 1),
+  ('R23PHYT101', 'Engineering Physics', 'CIC', 1, 'R23', 1),
+  ('R23CHYL102', 'Chemistry Lab', 'CIC', 2, 'R23', 1),
+  ('R23CHYT102', 'Chemistry', 'CIC', 2, 'R23', 1),
+  ('R23CSEL301', 'Data Structures Lab', 'CIC', 2, 'R23', 1),
+  ('R23CSET301', 'Data Structures', 'CIC', 2, 'R23', 1),
+  ('R23EEEL201', 'Electrical & Electronics Engineering Lab', 'CIC', 2, 'R23', 1),
+  ('R23EEET201', 'Basic Electrical &Electronics Engineering', 'CIC', 2, 'R23', 1),
+  ('R23HSSM802', 'NSS/NCC/Scouts & Guides/Community Service', 'CIC', 2, 'R23', 1),
+  ('R23MATT102', 'Differential Equations and Vector calculus', 'CIC', 2, 'R23', 1),
+  ('R23MECD201', 'Engineering Graphics', 'CIC', 2, 'R23', 1),
+  ('R23MBMCT001', 'Financial Management', 'CIC', 3, 'R23', 1),
+  ('R23MMECL001', 'Computer Aided Geometric Design and Assembly Lab', 'CIC', 3, 'R23', 1),
+  ('R23MMECT013', 'Leadership and Team Management', 'CIC', 3, 'R23', 1),
+  ('R23MSCSL003', 'Unix & Shell Programming Lab', 'CIC', 3, 'R23', 1),
+  ('R23MSCSL004', 'OOP with C++ Lab', 'CIC', 3, 'R23', 1),
+  ('R23MSCST003', 'Discrete Mathematical Structures', 'CIC', 3, 'R23', 1),
+  ('R23MSCST004', 'OOP with C++', 'CIC', 3, 'R23', 1),
+  ('R23MSCST005', 'Digital Logic Design', 'CIC', 3, 'R23', 1),
+  ('R23MSCST006', 'Principles of Programming Languages', 'CIC', 3, 'R23', 1),
+  ('R23MBMCL001', 'Financial Accounting Lab', 'CIC', 4, 'R23', 1),
+  ('R23MBMCT002', 'Quality Management', 'CIC', 4, 'R23', 1),
+  ('R23MENGAT01', 'Ethics & Human Values', 'CIC', 4, 'R23', 1),
+  ('R23MMECT020', 'Product Lifecycle Management', 'CIC', 4, 'R23', 1),
+  ('R23MSCSL005', 'Python Programming Lab', 'CIC', 4, 'R23', 1),
+  ('R23MSCSL006', 'Database Management Systems Lab', 'CIC', 4, 'R23', 1),
+  ('R23MSCST007', 'Python Programming', 'CIC', 4, 'R23', 1),
+  ('R23MSCST008', 'Design and Analysis of Algorithms', 'CIC', 4, 'R23', 1),
+  ('R23MSCST009', 'Computer Architecture', 'CIC', 4, 'R23', 1),
+  ('R23MSCST010', 'Database Management Systems', 'CIC', 4, 'R23', 1),
+  ('R23MBMCL002', 'Digital Engineering Lab(EOEC-L3)', 'CIC', 5, 'R23', 1),
+  ('R23MBMCT005', 'Entrepreneurship(EOEC – T5)', 'CIC', 5, 'R23', 1),
+  ('R23MSCSL007', 'Advanced Java Programming Lab', 'CIC', 5, 'R23', 1),
+  ('R23MSCSP001', 'Community Project', 'CIC', 5, 'R23', 1),
+  ('R23MSCST011', 'Operating Systems', 'CIC', 5, 'R23', 1),
+  ('R23MSCST012', 'Advanced Java Programming', 'CIC', 5, 'R23', 1),
+  ('R23MSCST013', 'Automata and Compiler Design', 'CIC', 5, 'R23', 1),
+  ('R23MSCST014', 'Computer Networks', 'CIC', 5, 'R23', 1),
+  ('R23MSCST032', 'DSC-E1(Cryptography and Information Security', 'CIC', 5, 'R23', 1),
+  ('R23MTPCT001', 'Quantitative Problem Solving Techniques', 'CIC', 5, 'R23', 1),
+  ('R23MBMCL003', 'Business Analytics Lab(EOEC-L4)', 'CIC', 6, 'R23', 1),
+  ('R23MMECT022', 'Business Analysis(EOEC – T6)', 'CIC', 6, 'R23', 1),
+  ('R23MSCSHT09/
+R23MSCSHT10', 'HON-1(Information Security and Forensics/ Routing and Switching Applications)', 'CIC', 6, 'R23', 1),
+  ('R23MSCSHT11/
+R23MSCSHT12', 'HON-2(Penetration Testing/ Network Security, Firewalls and VPNs)', 'CIC', 6, 'R23', 1),
+  ('R23MSCSL008', 'Web Technologies Lab', 'CIC', 6, 'R23', 1),
+  ('R23MSCST015', 'Web Technologies', 'CIC', 6, 'R23', 1),
+  ('R23MSCST016', 'OOAD and Design Patterns', 'CIC', 6, 'R23', 1),
+  ('R23MSCST017', 'Microprocessors and Interfacing', 'CIC', 6, 'R23', 1),
+  ('R23MSCST033', 'DSC E2(Block Chain Essentials)', 'CIC', 6, 'R23', 1),
+  ('R23MSCST034', 'DSC E3(Principles of IoT)', 'CIC', 6, 'R23', 1),
+  ('R23XXXXXXXX', 'Environmental Studies', 'CIC', 6, 'R23', 1),
+  ('R23MSCSHT13/R23MSCSHT14', 'HON-3(Information Security Governance and Complaince Standards/ Protocol Stacks)', 'CIC', 7, 'R23', 1),
+  ('R23MSCSHT15', 'HON-4(Block chain Technology and its Applications)', 'CIC', 7, 'R23', 1),
+  ('R23MSCSLXXX', 'Department Specific SEC Module  Android Development  Mean Stack  Robotic Process automation using UI path  Data Protection Officers  Data visualization Tools  UIX', 'CIC', 7, 'R23', 1),
+  ('R23MSCSP002', 'Mini Project', 'CIC', 7, 'R23', 1),
+  ('R23MSCST018', 'Software Engineering (Self-Study/MOOCS)', 'CIC', 7, 'R23', 1),
+  ('R23MSCST035', 'DSC E4(IoT Development Boards and its Interfacing)', 'CIC', 7, 'R23', 1),
+  ('R23MSCST036', 'DSC E5(Ad Hoc Networks) Data Science)', 'CIC', 7, 'R23', 1),
+  ('EOEC-E1', 'Strategic Management/(R23MBMCT003) Digital Marketing/(R23MBMCT004) Logistic and Supply Chain Management (Self-Study/MOOCS)(R23MMECT017)', 'CIC', 8, 'R23', 1),
+  ('R23MSCSP003', 'Major-Dissertation/Academic Project-Major', 'CIC', 8, 'R23', 1),
+  ('R23MSCSTXX5', 'HON-5(MOOCS/Self-Study)', 'CIC', 8, 'R23', 1),
+  ('R23MSCSTXX6', 'HON-6(MOOCS/Self-Study)', 'CIC', 8, 'R23', 1),
+  ('R23CMET201', 'Basic Civil & Mechanical Engineering', 'CSD', 1, 'R23', 1),
+  ('R23CSEL201', 'Computer Programming Lab', 'CSD', 1, 'R23', 1),
+  ('R23CSET201', 'Introduction to Programming', 'CSD', 1, 'R23', 1),
+  ('R23CSEW201', 'IT Workshop', 'CSD', 1, 'R23', 1),
+  ('R23HSSL001', 'Communicative English Lab', 'CSD', 1, 'R23', 1),
+  ('R23HSSM801', 'Health and wellness, Yoga and Sports', 'CSD', 1, 'R23', 1),
+  ('R23HSST001', 'Communicative English', 'CSD', 1, 'R23', 1),
+  ('R23MATT101', 'Linear Algebra & Calculus', 'CSD', 1, 'R23', 1),
+  ('R23MECW201', 'Engineering Workshop', 'CSD', 1, 'R23', 1),
+  ('R23PHYL101', 'Engineering Physics Lab', 'CSD', 1, 'R23', 1),
+  ('R23PHYT101', 'Engineering Physics', 'CSD', 1, 'R23', 1),
+  ('R23CHYL102', 'Chemistry Lab', 'CSD', 2, 'R23', 1),
+  ('R23CHYT102', 'Chemistry', 'CSD', 2, 'R23', 1),
+  ('R23CSEL301', 'Data Structures Lab', 'CSD', 2, 'R23', 1),
+  ('R23CSET301', 'Data Structures', 'CSD', 2, 'R23', 1),
+  ('R23EEEL201', 'Electrical & Electronics Engineering Lab', 'CSD', 2, 'R23', 1),
+  ('R23EEET201', 'Basic Electrical &Electronics Engineering', 'CSD', 2, 'R23', 1),
+  ('R23HSSM802', 'NSS/NCC/Scouts & Guides/Community Service', 'CSD', 2, 'R23', 1),
+  ('R23MATT102', 'Differential Equations and Vector calculus', 'CSD', 2, 'R23', 1),
+  ('R23MECD201', 'Engineering Graphics', 'CSD', 2, 'R23', 1),
+  ('R23MBMCT001', 'Financial Management', 'CSD', 3, 'R23', 1),
+  ('R23MMECL001', 'Computer Aided Geometric Design and Assembly Lab', 'CSD', 3, 'R23', 1),
+  ('R23MMECT013', 'Leadership and Team Management', 'CSD', 3, 'R23', 1),
+  ('R23MSCSL003', 'Unix & Shell Programming Lab', 'CSD', 3, 'R23', 1),
+  ('R23MSCSL004', 'OOP with C++ Lab', 'CSD', 3, 'R23', 1),
+  ('R23MSCST003', 'Discrete Mathematical Structures', 'CSD', 3, 'R23', 1),
+  ('R23MSCST004', 'OOP with C++', 'CSD', 3, 'R23', 1),
+  ('R23MSCST005', 'Digital Logic Design', 'CSD', 3, 'R23', 1),
+  ('R23MSCST006', 'Principles of Programming Languages', 'CSD', 3, 'R23', 1),
+  ('R23MBMCL001', 'Financial Accounting Lab', 'CSD', 4, 'R23', 1),
+  ('R23MBMCT002', 'Quality Management', 'CSD', 4, 'R23', 1),
+  ('R23MENGAT01', 'Ethics & Human Values', 'CSD', 4, 'R23', 1),
+  ('R23MMECT020', 'Product Lifecycle Management', 'CSD', 4, 'R23', 1),
+  ('R23MSCSL005', 'Python Programming Lab', 'CSD', 4, 'R23', 1),
+  ('R23MSCSL006', 'Database Management Systems Lab', 'CSD', 4, 'R23', 1),
+  ('R23MSCST007', 'Python Programming', 'CSD', 4, 'R23', 1),
+  ('R23MSCST008', 'Design and Analysis of Algorithms', 'CSD', 4, 'R23', 1),
+  ('R23MSCST009', 'Computer Architecture', 'CSD', 4, 'R23', 1),
+  ('R23MSCST010', 'Database Management Systems', 'CSD', 4, 'R23', 1),
+  ('R23MBMCL002', 'Digital Engineering Lab(EOEC-L3)', 'CSD', 5, 'R23', 1),
+  ('R23MBMCT005', 'Entrepreneurship(EOEC – T5)', 'CSD', 5, 'R23', 1),
+  ('R23MSCSL007', 'Advanced Java Programming Lab', 'CSD', 5, 'R23', 1),
+  ('R23MSCSP001', 'Community Project', 'CSD', 5, 'R23', 1),
+  ('R23MSCST011', 'Operating Systems', 'CSD', 5, 'R23', 1),
+  ('R23MSCST012', 'Advanced Java Programming', 'CSD', 5, 'R23', 1),
+  ('R23MSCST013', 'Automata and Compiler Design', 'CSD', 5, 'R23', 1),
+  ('R23MSCST014', 'Computer Networks', 'CSD', 5, 'R23', 1),
+  ('R23MSCST026', 'DSC-E1(Statistical and Mathematical Foundations of Data Analytics)', 'CSD', 5, 'R23', 1),
+  ('R23MTPCT001', 'Quantitative Problem Solving Techniques', 'CSD', 5, 'R23', 1),
+  ('R23MBMCL003', 'Business Analytics Lab(EOEC-L4)', 'CSD', 6, 'R23', 1),
+  ('R23MMECT022', 'Business Analysis(EOEC – T6)', 'CSD', 6, 'R23', 1),
+  ('R23MSCSHT01', 'HON-1(Computing for AI-ML)', 'CSD', 6, 'R23', 1),
+  ('R23MSCSHT02', 'HON-2(Open Databases)', 'CSD', 6, 'R23', 1),
+  ('R23MSCSL008', 'Web Technologies Lab', 'CSD', 6, 'R23', 1),
+  ('R23MSCST015', 'Web Technologies', 'CSD', 6, 'R23', 1),
+  ('R23MSCST016', 'OOAD and Design Patterns', 'CSD', 6, 'R23', 1),
+  ('R23MSCST017', 'Microprocessors and Interfacing', 'CSD', 6, 'R23', 1),
+  ('R23MSCST019', 'DSC E2(Data Warehousing and Data Mining)', 'CSD', 6, 'R23', 1),
+  ('R23MSCST020', 'DSC E3(Statistical and Predictive Analytics)', 'CSD', 6, 'R23', 1),
+  ('R23XXXXXXXX', 'Environmental Studies', 'CSD', 6, 'R23', 1),
+  ('R23MSCSHT06', 'HON-3(Big Data Visualization)', 'CSD', 7, 'R23', 1),
+  ('R23MSCSLXXX', 'Department Specific SEC Module  Android Development  Mean Stack  Robotic Process automation using UI path  Data Protection Officers  Data visualization Tools  UIX', 'CSD', 7, 'R23', 1),
+  ('R23MSCSP002', 'Mini Project', 'CSD', 7, 'R23', 1),
+  ('R23MSCST018', 'Software Engineering (Self-Study/MOOCS)', 'CSD', 7, 'R23', 1),
+  ('R23MSCST024', 'DSC E4(Data Analytics and Tools)', 'CSD', 7, 'R23', 1),
+  ('R23MSCST027', 'DSC E5(Time Series Analysis in Data Science)', 'CSD', 7, 'R23', 1),
+  ('R23MSCST033', 'HON-4(Block Chain Essentials)', 'CSD', 7, 'R23', 1),
+  ('EOEC-E1', 'Strategic Management/(R23MBMCT003) Digital Marketing/(R23MBMCT004) Logistic and Supply Chain Management (Self-Study/MOOCS)(R23MMECT017)', 'CSD', 8, 'R23', 1),
+  ('R23MSCSP003', 'Major-Dissertation/Academic Project-Major', 'CSD', 8, 'R23', 1),
+  ('R23MSCSTXX5', 'HON-5(MOOCS/Self-Study)', 'CSD', 8, 'R23', 1),
+  ('R23MSCSTXX6', 'HON-6(MOOCS/Self-Study)', 'CSD', 8, 'R23', 1),
+  ('R23CMET201', 'Basic Civil & Mechanical Engineering', 'CSM', 1, 'R23', 1),
+  ('R23CSEL201', 'Computer Programming Lab', 'CSM', 1, 'R23', 1),
+  ('R23CSET201', 'Introduction to Programming', 'CSM', 1, 'R23', 1),
+  ('R23CSEW201', 'IT Workshop', 'CSM', 1, 'R23', 1),
+  ('R23HSSL001', 'Communicative English Lab', 'CSM', 1, 'R23', 1),
+  ('R23HSSM801', 'Health and wellness, Yoga and Sports', 'CSM', 1, 'R23', 1),
+  ('R23HSST001', 'Communicative English', 'CSM', 1, 'R23', 1),
+  ('R23MATT101', 'Linear Algebra & Calculus', 'CSM', 1, 'R23', 1),
+  ('R23MECW201', 'Engineering Workshop', 'CSM', 1, 'R23', 1),
+  ('R23PHYL101', 'Engineering Physics Lab', 'CSM', 1, 'R23', 1),
+  ('R23PHYT101', 'Engineering Physics', 'CSM', 1, 'R23', 1),
+  ('R23CHYL102', 'Chemistry Lab', 'CSM', 2, 'R23', 1),
+  ('R23CHYT102', 'Chemistry', 'CSM', 2, 'R23', 1),
+  ('R23CSEL301', 'Data Structures Lab', 'CSM', 2, 'R23', 1),
+  ('R23CSET301', 'Data Structures', 'CSM', 2, 'R23', 1),
+  ('R23EEEL201', 'Electrical & Electronics Engineering Lab', 'CSM', 2, 'R23', 1),
+  ('R23EEET201', 'Basic Electrical &Electronics Engineering', 'CSM', 2, 'R23', 1),
+  ('R23HSSM802', 'NSS/NCC/Scouts & Guides/Community Service', 'CSM', 2, 'R23', 1),
+  ('R23MATT102', 'Differential Equations and Vector calculus', 'CSM', 2, 'R23', 1),
+  ('R23MECD201', 'Engineering Graphics', 'CSM', 2, 'R23', 1),
+  ('R23MBMCT001', 'Financial Management', 'CSM', 3, 'R23', 1),
+  ('R23MMECL001', 'Computer Aided Geometric Design and Assembly Lab', 'CSM', 3, 'R23', 1),
+  ('R23MMECT013', 'Leadership and Team Management', 'CSM', 3, 'R23', 1),
+  ('R23MSCSL003', 'Unix & Shell Programming Lab', 'CSM', 3, 'R23', 1),
+  ('R23MSCSL004', 'OOP with C++ Lab', 'CSM', 3, 'R23', 1),
+  ('R23MSCST003', 'Discrete Mathematical Structures', 'CSM', 3, 'R23', 1),
+  ('R23MSCST004', 'OOP with C++', 'CSM', 3, 'R23', 1),
+  ('R23MSCST005', 'Digital Logic Design', 'CSM', 3, 'R23', 1),
+  ('R23MSCST006', 'Principles of Programming Languages', 'CSM', 3, 'R23', 1),
+  ('R23MBMCL001', 'Financial Accounting Lab', 'CSM', 4, 'R23', 1),
+  ('R23MBMCT002', 'Quality Management', 'CSM', 4, 'R23', 1),
+  ('R23MENGAT01', 'Ethics & Human Values', 'CSM', 4, 'R23', 1),
+  ('R23MMECT020', 'Product Lifecycle Management', 'CSM', 4, 'R23', 1),
+  ('R23MSCSL005', 'Python Programming Lab', 'CSM', 4, 'R23', 1),
+  ('R23MSCSL006', 'Database Management Systems Lab', 'CSM', 4, 'R23', 1),
+  ('R23MSCST007', 'Python Programming', 'CSM', 4, 'R23', 1),
+  ('R23MSCST008', 'Design and Analysis of Algorithms', 'CSM', 4, 'R23', 1),
+  ('R23MSCST009', 'Computer Architecture', 'CSM', 4, 'R23', 1),
+  ('R23MSCST010', 'Database Management Systems', 'CSM', 4, 'R23', 1),
+  ('R23MBMCL002', 'Digital Engineering Lab(EOEC-L3', 'CSM', 5, 'R23', 1),
+  ('R23MBMCT005', 'Entrepreneurship(EOEC – T5)', 'CSM', 5, 'R23', 1),
+  ('R23MSCSL007', 'Advanced Java Programming Lab', 'CSM', 5, 'R23', 1),
+  ('R23MSCSP001', 'Community Project', 'CSM', 5, 'R23', 1),
+  ('R23MSCST011', 'Operating Systems', 'CSM', 5, 'R23', 1),
+  ('R23MSCST012', 'Advanced Java Programming', 'CSM', 5, 'R23', 1),
+  ('R23MSCST013', 'Automata and Compiler Design', 'CSM', 5, 'R23', 1),
+  ('R23MSCST014', 'Computer Networks', 'CSM', 5, 'R23', 1),
+  ('R23MSCST019', 'DSC-E1(Data Warehousing and Data Mining)', 'CSM', 5, 'R23', 1),
+  ('R23MTPCT001', 'Quantitative Problem Solving Techniques', 'CSM', 5, 'R23', 1),
+  ('R23MBMCL003', 'Business Analytics Lab(EOEC-L4)', 'CSM', 6, 'R23', 1),
+  ('R23MMECT022', 'Business Analysis(EOEC – T6)', 'CSM', 6, 'R23', 1),
+  ('R23MSCSL008', 'Web Technologies Lab', 'CSM', 6, 'R23', 1),
+  ('R23MSCST015', 'Web Technologies', 'CSM', 6, 'R23', 1),
+  ('R23MSCST016', 'OOAD and Design Patterns', 'CSM', 6, 'R23', 1),
+  ('R23MSCST017', 'Microprocessors and Interfacing', 'CSM', 6, 'R23', 1),
+  ('R23MSCST020', 'DSC E2(Statistical and Predictive Analytics)', 'CSM', 6, 'R23', 1),
+  ('R23MSCST021', 'DSC E3(Machine Learning)', 'CSM', 6, 'R23', 1),
+  ('R23MSCST023', 'HON-1(Computing for AI-ML)', 'CSM', 6, 'R23', 1),
+  ('R23MSCST024', 'HON-2(Open Databases)', 'CSM', 6, 'R23', 1),
+  ('R23XXXXXXXX', 'Environmental Studies', 'CSM', 6, 'R23', 1),
+  ('R23MSCSLXXX', 'Department Specific SEC Module  Android Development  Mean Stack  Robotic Process automation using UI path  Data Protection Officers  Data visualization Tools  UIX', 'CSM', 7, 'R23', 1),
+  ('R23MSCSP002', 'Mini Project', 'CSM', 7, 'R23', 1),
+  ('R23MSCST002', 'DSC E4(Self-Study/MOOCS)(Deep Learning)', 'CSM', 7, 'R23', 1),
+  ('R23MSCST018', 'Software Engineering (Self-Study/MOOCS)', 'CSM', 7, 'R23', 1),
+  ('R23MSCST022', 'DSC E5(Self-Study/MOOCS)(Natural Language Processing)', 'CSM', 7, 'R23', 1),
+  ('R23MSCST025', 'HON-3(Process Automation using UI Path)', 'CSM', 7, 'R23', 1),
+  ('R23MSCST026', 'HON-4(Decision Support Mechanisms)', 'CSM', 7, 'R23', 1),
+  ('EOEC-E1', 'Strategic Management/(R23MBMCT003) Digital Marketing/(R23MBMCT004) Logistic and Supply Chain Management (Self-Study/MOOCS)(R23MMECT017)', 'CSM', 8, 'R23', 1),
+  ('R23MSCSP003', 'Major-Dissertation/Academic Project-Major', 'CSM', 8, 'R23', 1),
+  ('R23MSCSTXX5', 'HON-5(MOOCS/Self-Study)', 'CSM', 8, 'R23', 1),
+  ('R23MSCSTXX6', 'HON-6(MOOCS/Self-Study)', 'CSM', 8, 'R23', 1)
+ON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `active` = 1;
 
--- Clean up dummy subjects so admin/faculty can add their own
-DELETE FROM `subjects`;
+-- 5. Users (104 Records: 1 Admin, 33 Faculty, 70 Students)
+INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `branch`, `academic_year`, `current_semester`, `section`, `designation`, `phone`, `roll_number`, `first_login_pending`) VALUES
+  ('00000000-0000-0000-0000-000000000001', 'admin@mvgrce.edu.in', '$2b$10$X20auI7TJFHGY857JSVJQewlHa2YAm7dsYPQx21LchqvkdChKQyYy', 'System Administrator', 'admin', 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0),
+  ('10000000-0000-0000-0000-000000000023', 'amaravathikaviti@mvgrce.edu.in', '$2b$10$3ayvlcf5Mhq1aw5a4V3ByeCeIQM1zC5UFQdg13Y6Qd0MIzGfFZH8O', 'Mrs. K. Amaravathi', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9493277988', NULL, 1),
+  ('10000000-0000-0000-0000-000000000031', 'anjalidevi@mvgrce.edu.in', '$2b$10$JeBzUz6JHK4Gjj7PS9bUkeU7xWn2vMf3PLSsH3ZSEHM5OvGwnAId.', 'Ms. J. Anjali Devi', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '7330838157', NULL, 1),
+  ('10000000-0000-0000-0000-000000000017', 'annepusruthipatro@mvgrce.edu.in', '$2b$10$nZXRDCLe9Bo95tXKFpa23..Pq9bjECRTE6Eq2HHfvf7hK1a/03jYW', 'Mrs. A. Sruthi Patro', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9490225613', NULL, 1),
+  ('10000000-0000-0000-0000-000000000009', 'apunyavardhanraj@mvgrce.edu.in', '$2b$10$xIo9FsrWxx2mk2lYY00rsuT1HfmyNzhMEpT7FL2UlJoGfdZjbsnpq', 'Mr. A. Punya Vardhan Raj', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '8688174609', NULL, 1),
+  ('10000000-0000-0000-0000-000000000012', 'aswinikumarm@mvgrce.edu.in', '$2b$10$Q.UcK7e0a2SM95mjAy7yvOltnWn4sYyoeD3yEVNCzu9gFh7dLQqCG', 'Mr. M. Aswini Kumar', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9059287397', NULL, 1),
+  ('10000000-0000-0000-0000-000000000005', 'atchut.sadu@mvgrce.edu.in', '$2b$10$eyYPzyhRl7ywqJgGjj.vk.p/2nzVXq4ZC9IcUloyXaVoPPUxOHA46', 'Dr. S Atchuta Rao', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Professor', '9441159714', NULL, 1),
+  ('10000000-0000-0000-0000-000000000030', 'gaparanjini@mvgrce.edu.in', '$2b$10$7ycWw1VbLzaLqY38JPobieCGqlds/dN8y9SMe9sK/T7.P8MbcZC0G', 'Ms. G. Aparanjini', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '7989639183', NULL, 1),
+  ('10000000-0000-0000-0000-000000000022', 'gayathri.imandi@mvgrce.edu.in', '$2b$10$n85TH6FGhtLSWjaHGHJCPOX1k2MPRZtfKTONbHY/lKBHaVq.cNObe', 'Mrs. I. Gayathri', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '8074104033', NULL, 1),
+  ('10000000-0000-0000-0000-000000000020', 'ggayathri@mvgrce.edu.in', '$2b$10$Cx.PDU9ML5XTTt1sIE7pNu5ERDruiC44P3JPP3pdYQd1qofhdbL6m', 'Mrs. G. Gayathri', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '7416500759', NULL, 1),
+  ('10000000-0000-0000-0000-000000000021', 'glalitha@mvgrce.edu.in', '$2b$10$TBdGcWZHgr4OW4WBeV1Lhez9uVrzXTqH0NHTOQXbW1FtZ3gqm1PKm', 'Mrs. G. Lalitha', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '7306666619', NULL, 1),
+  ('10000000-0000-0000-0000-000000000007', 'jyothi@mvgrce.edu.in', '$2b$10$DfL.lI0YqjRJig3ox49URe9KzguvqwcamapujDBrwiuyBvQUevd/W', 'Dr. V. Jyothi', 'faculty', 'active', NULL, NULL, NULL, NULL, 'HOD & Associate Professor', '9701562756', NULL, 1),
+  ('10000000-0000-0000-0000-000000000032', 'kallaswathi@mvgrce.edu.in', '$2b$10$XEMv6QmCYu/PrdQxp3I.2uZu.lkzwr.K3WZD7RJmA0h7Umq1Twf6C', 'Ms. K. Swathi', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '8790177137', NULL, 1),
+  ('10000000-0000-0000-0000-000000000024', 'kpapayamma@mvgrce.edu.in', '$2b$10$ZYhhfpXaHMuqOoOXC2A4COJyYAmCsjWPOyzz889BTts1CcfcXxAfO', 'Mrs. K. Papayamma', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9581136635', NULL, 1),
+  ('10000000-0000-0000-0000-000000000010', 'kvenkatarao@mvgrce.edu.in', '$2b$10$Ov4DiVm5UG4l6BShh6Z.A.dR50RUnEy2K7CqAS/WPEwGBc9Fy6ADG', 'Mr. K. Venkata Rao', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9032606706', NULL, 1),
+  ('10000000-0000-0000-0000-000000000016', 'manikantavella48@mvgrce.edu.in', '$2b$10$Nt5fY9e4p.xeZHTipxPIe.sY58QncVCHifQQFiinENbRE4goo/6qC', 'Mr. V. Manikanta', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '8978970366', NULL, 1),
+  ('10000000-0000-0000-0000-000000000027', 'pmonika@mvgrce.edu.in', '$2b$10$vULYJ7FEIh/Kf98nu.RdFuWS84bEu82V3F4pfdyGGqj8oflDKYHXO', 'Mrs. P. Monika', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '8639086350', NULL, 1),
+  ('10000000-0000-0000-0000-000000000008', 'prasannaraju@mvgrce.edu.in', '$2b$10$fRCMX3j9Ni031DJDzKEl2urCjV.UVfPG8ii0Tfi.2/iyPBr2K9x66', 'Dr. Y. Home Prasanna Raju', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Associate Professor', '8688771559', NULL, 1),
+  ('10000000-0000-0000-0000-000000000004', 'psr.cse@mvgrce.edu.in', '$2b$10$U6tVVYm6p/9xKeQhxkDG9OqmamM1oxlp.XtfX3ksh6rprZtG.Rdi6', 'Dr. P. Srinivasa Rao', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Professor', '9866370352', NULL, 1),
+  ('10000000-0000-0000-0000-000000000033', 'pylalova@mvgrce.edu.in', '$2b$10$2JTQDbAQ7gbcuOg4TQaWtei7J10OVvCSVjdjs51xtpwk4YS.6Pm0m', 'Ms. P. Lova', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '8374470543', NULL, 1),
+  ('10000000-0000-0000-0000-000000000002', 'ravikumarkottala@mvgrce.edu.in', '$2b$10$hrOqoeM5RquzZK6EfpLjDu5Oz9BJWZv5OnFgfw593X6sY9rEUgvJC', 'Dr. K. Ravi Kumar', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Distinguished Assistant Professor', '8886369167', NULL, 1),
+  ('10000000-0000-0000-0000-000000000028', 's.nikhila@mvgrce.edu.in', '$2b$10$GhBaibepQaz9kMhOt6Pxi.BhvBpPgfgGxp6o34tEKSCGMEVnI48z6', 'Mrs. S. Nikhila', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9490653956', NULL, 1),
+  ('10000000-0000-0000-0000-000000000011', 'saiganeshlolla@mvgrce.edu.in', '$2b$10$8XRCV4NG9g5x009ZJdfMmex6IU/kVUM7iKutaNA56RyK.j5.6AiHe', 'Mr. L. Sai Ganesh', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '6281682306', NULL, 1),
+  ('10000000-0000-0000-0000-000000000003', 'satish@mvgrce.edu.in', '$2b$10$S5TJN1WhvrJNkklNonfZcuD2EHQXAPtxsFGEMvEbZ87B1MdwcnpJS', 'Dr. P. Sateesh', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Professor', '9246615251', NULL, 1),
+  ('10000000-0000-0000-0000-000000000001', 'satyanarayanareddy@mvgrce.edu.in', '$2b$10$lUtbhi4VOZdHtJfDmMkeTuHKBxNVez4Ba68Uz9RxT.X620ivVSXyi', 'Dr. G. Satyanarayana Reddy', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Associate Professor', '9490545686', NULL, 1),
+  ('10000000-0000-0000-0000-000000000018', 'sowjanyabodasingi@mvgrce.edu.in', '$2b$10$s9TygiGSggL7hrhmeMCNQOQh2AVO0z8OMLdz7ZySJCrlLF4uhUCmm', 'Mrs. B. Sowjanya', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '8500192192', NULL, 1),
+  ('10000000-0000-0000-0000-000000000026', 'sowjanyanalam@mvgrce.edu.in', '$2b$10$KfPk6btJuy/BA5bEpL6j.OvIqeItsjg9XSmcieun2KnO9Fcf2rfUe', 'Mrs. N. Sowjanya Kumari', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9063166307', NULL, 1),
+  ('10000000-0000-0000-0000-000000000013', 'spalavelli@mvgrce.edu.in', '$2b$10$L4XFee5h05J8L6EcnAbI5eRduHxCXNLDb0BSiQAmoxInKRLMzJ4Ai', 'Mr. S. Palavalli', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9010695939', NULL, 1),
+  ('10000000-0000-0000-0000-000000000019', 'sravanidandu@mvgrce.edu.in', '$2b$10$69THD.GwJYo2wj0kQq1avuepE5nJWrLrDMvVw7fjVNQy6wUcxvfte', 'Mrs. D. Sravani', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9490560621', NULL, 1),
+  ('10000000-0000-0000-0000-000000000014', 'surapaparao@mvgrce.edu.in', '$2b$10$XzlzgVFY9ElRlart8yygBu1e8jNTG.oL35gku7itJc3iLilCvGd/G', 'Mr. S. Paparao', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9491494021', NULL, 1),
+  ('10000000-0000-0000-0000-000000000025', 'sushmaranin@mvgrce.edu.in', '$2b$10$.3SWr0ZJwn0zpA9gnrRHEuORxQcNH6A9246oa8WlqYMIkovXQRSgS', 'Mrs. N Sushma Rani', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Distinguished Assistant Professor', '9948056302', NULL, 1),
+  ('10000000-0000-0000-0000-000000000006', 'tgrao@mvgrce.edu.in', '$2b$10$gsNI/3zgfRyzz1Cr9NcjGOs8/T67/7C7.0V4x18r/VdzABg2HZzu6', 'Dr. T. Govindarao', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Senior Assistant Professor', '8328505780', NULL, 1),
+  ('10000000-0000-0000-0000-000000000029', 'tulasidesetti@mvgrce.edu.in', '$2b$10$3K40e0kzNd/K3Ye8rEB0FOSijKbiqxD0obOXlo9L3LJFqB39GFg7O', 'Ms. D. Tulasi', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '9100783439', NULL, 1),
+  ('10000000-0000-0000-0000-000000000015', 'velalakirankumar@mvgrce.edu.in', '$2b$10$kOMXzs65jI8Dvrg.5t11beMlSjvX/oFXB0fqHYP6yI9WPlC7Ar33i', 'Mr. V. Kiran Kumar', 'faculty', 'active', NULL, NULL, NULL, NULL, 'Assistant Professor', '8978438583', NULL, 1),
+  ('c19e68a5-8855-4586-9259-8238af16fb28', '23331a4201@mvgrce.edu.in', '$2b$10$333JA7u8iDMp9ixeqyfHNODRwRrJ6EOaFBxSdf9JuCftMSPM/0NMC', 'ADHYA NAIDU CHOKKAKULA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4201', 1),
+  ('5cec5908-4d0e-4a4c-afce-cfe9600830eb', '23331a4202@mvgrce.edu.in', '$2b$10$rHU8lQJm/5TgCJILhVuiweTO8me8hbP5T8.i89Dx999ajDrqjhSBK', 'ANNEPU JAYARAM', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4202', 1),
+  ('5b435b2a-b596-4954-893b-17730adb85a5', '23331a4203@mvgrce.edu.in', '$2b$10$4sGgmK8QTYcuEkvqbWicMOJVWlyAiBY3mrdvk/LxLxjaaOoseho.e', 'AYENAMPUDI PARDHA SARADI RAJU', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4203', 1),
+  ('ecfd1564-a48f-4b89-9a08-a680ce4367a9', '23331a4204@mvgrce.edu.in', '$2b$10$y5wAiiv/V85kcQlBj/ATy.jyxvBqhIfNMNi1./41ODplOg7nLqQO6', 'BALAGA MANI SAI SAMPATH', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4204', 1),
+  ('c782008a-b91e-4a29-adec-272cd46e1dd3', '23331a4205@mvgrce.edu.in', '$2b$10$AZn7aOBbTesp1Zn0NsYuX..oVXwFLNd6kKaMoaoBMx2HgGVCIkFNW', 'BASAVA NAYANA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4205', 1),
+  ('99f35505-bbdc-4b4a-9d02-d1aadd9bf103', '23331a4206@mvgrce.edu.in', '$2b$10$tZuG9HZF7wJSFbVmDBtW/OGiiopT7oSqlNRKx1y.4Pe5oRsiomR/6', 'BHEEMIREDDI PAVAN KUMAR', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4206', 1),
+  ('152ecad9-bfd6-4107-b2b7-a04a1d66f7c3', '23331a4207@mvgrce.edu.in', '$2b$10$GNNW2R.HpXTgo71MUNfgbu020KY6oPNo1jOXpHYak3FL2hVWDGuKu', 'BOKKENA HARSHA TEJA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4207', 1),
+  ('42f17604-4879-43f9-bce6-38b2d9d9794c', '23331a4208@mvgrce.edu.in', '$2b$10$ZLgXCce34iraztvx0ti7MOYsWWtd7Q0L9Imm0LkrKSy1TkbL2jCBO', 'BORA RAJA GOPALA REDDY', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4208', 1),
+  ('de29740b-c783-49f0-a2f1-db3abae8d581', '23331a4209@mvgrce.edu.in', '$2b$10$SwTt7J/p5uRcZ36ikPE.EuiSENnCMYlE2Xnx2OQWLjj4ea8Pq2/3u', 'CHAINI BALAJI RAGHUNADH', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4209', 1),
+  ('ee6fd593-dd24-486d-be35-92ed5ea2883b', '23331a4210@mvgrce.edu.in', '$2b$10$o5mNrQBAz6NtZ3onpHpNXeSJHWE6wfs6asdN.CnVv73mdKUy6yU1i', 'CHAMALA JAYA SREE', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4210', 1),
+  ('0c595432-a161-4860-8c13-9931a00eb860', '23331a4211@mvgrce.edu.in', '$2b$10$U49xRTfvi2oQlxKgLsY6ju3vZXyqWJnVNSVlvkCO77xSUgUlb8h3a', 'CHINTAPALLI SHANMUKHA PRIYA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4211', 1),
+  ('8ba5121b-0fe2-4330-8502-5f5d678fcd80', '23331a4212@mvgrce.edu.in', '$2b$10$GyyBkkVdx5mYw6emY3x4SuMp0BgKlY0uvdOpx4MtiagrP3kcWI6x6', 'DANTHULURI MEGHANA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4212', 1),
+  ('591dd9e3-8af8-4294-a6df-33cc4d2602b7', '23331a4213@mvgrce.edu.in', '$2b$10$78dSjkipCnmemapn7D7h.uaigBlvnioAr3SUsbdSDyktCuEFmeTM.', 'DANTULURI RAMA VISHNU VARDHAN', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4213', 1),
+  ('d436ad7a-ef4d-4647-bb17-c56407ad3e63', '23331a4214@mvgrce.edu.in', '$2b$10$BIUAyR6GbQJS3h1gn9RWKuAuW1/0Gvft.YMTcljKG3hDdzsqJxgGC', 'DINDI TARUN SAI KIRAN', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4214', 1),
+  ('8621bb88-d7ca-4fa5-9ebd-8d45854beb49', '23331a4215@mvgrce.edu.in', '$2b$10$cE2pmWsHPDNDLAaxHxZX7uGKSOAdOw6YF4DqAq7uwTNZdXxfpO1UW', 'ERRABILLI GEETHIKA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4215', 1),
+  ('36c3f427-77fd-40b8-a468-e50b19def2cc', '23331a4216@mvgrce.edu.in', '$2b$10$OXIGFzeK3CD90XDiAO7CQurcTXtTutX.0AMcVeYZMEK4cBclLV5J2', 'GANDRETI CHANDAN KOUSHIK', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4216', 1),
+  ('75e6a1ef-8307-4996-98b1-a76b530c6311', '23331a4217@mvgrce.edu.in', '$2b$10$RTeq1PQrPPnXCGhrH/.wRuWQgl8d8.VDuhZji0Ji/rymu039/SDc6', 'GANDRETI NAVEEN', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4217', 1),
+  ('5dffb6bc-21c0-4e8f-9b6a-a97c02db0f09', '23331a4218@mvgrce.edu.in', '$2b$10$qtSWdLOrEGxkGu3KJthXAuvojlvq9QF/jOSH71GTT5j2ARFDiiLHC', 'GIRADA SAI TEJA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4218', 1),
+  ('85d54db9-3bb5-4623-860f-50c973d2d0d5', '23331a4219@mvgrce.edu.in', '$2b$10$0AevBTd1fM/PxxRZIKaimuJeD9j058tZCgDAAbE6g0qOhhk1Jd8XG', 'GONNABHATHULA SAI NIKHIL', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4219', 1),
+  ('acdc4924-dda5-40e9-9e82-68333218d3e1', '23331a4220@mvgrce.edu.in', '$2b$10$tUnkL0DPTi5Kccnq62HGs.gYbFXT7g8pmM/59yt.yN0zAgJtlFAOq', 'GONTI JAYA SRI', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4220', 1),
+  ('abfbccfa-92d3-40f4-828e-734af7e140b6', '23331a4221@mvgrce.edu.in', '$2b$10$SXhRtGVeNtcr5xr2s4f2cOYsMmSte8omcz4Xg2OqGq.i6sTge/wnq', 'GORLE POOJITHA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4221', 1),
+  ('f0389c6d-6e9f-4b9a-b63c-c85e240aa53a', '23331a4222@mvgrce.edu.in', '$2b$10$7M8iZroCGhYK.68RtPCrwu7OY02puG2ED4JqCbuKhXXJ8iR4gb36O', 'GUMMALURI AKSHAYA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4222', 1),
+  ('7cfd835a-b7f3-4236-896b-784055f95dce', '23331a4223@mvgrce.edu.in', '$2b$10$VoYFmbsYycXOl4zDeQHEeuX8VXz9IxbfBr.QlERlRAqMwY13Z08Ba', 'HIMESH DAS', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4223', 1),
+  ('62f58b85-c746-407e-8f45-a853f7d98638', '23331a4224@mvgrce.edu.in', '$2b$10$oOn3TaISGeBTqiXwUrAzou4DtQN8ZE9.RGWq2FbSksAtkaCbzVEEm', 'JAKKA JAI VENKATA SAI SRUJAN', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4224', 1),
+  ('7c36def4-b016-4fe4-843a-bd39c4fbfb3a', '23331a4225@mvgrce.edu.in', '$2b$10$oQ9X7j12fp69BW2dmWM3EOPuv4SoCYVYJD/DglbIxLBz0VquKS.TO', 'JAMMU KAVYA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4225', 1),
+  ('e4e8e9d6-ccc1-4266-9d41-70d679c3eec1', '23331a4226@mvgrce.edu.in', '$2b$10$y2WwGJsnpB6r2P9fM7pnmOU0hV.fXEoOEPhpzOJfqmfiXd9OL95UC', 'JAYASRI MIRIYALA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4226', 1),
+  ('8471fc32-8123-4757-8140-2331421739d0', '23331a4227@mvgrce.edu.in', '$2b$10$4fZK7E2X/kKbaSfoBVC4ienly3u0cBQ65dA7pXpPsQPlk/uTMreWG', 'JINAGAM BALU', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4227', 1),
+  ('96dba520-bbf5-4668-a2c1-ac12002589cb', '23331a4228@mvgrce.edu.in', '$2b$10$fxp4DgsGsiEASte7ffbyCe1.cqj9Wjof0mTEgNOE/dY.kY11QyEMy', 'KARAKAVALASA VIDYADHAR', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4228', 1),
+  ('8dc542f0-2366-44e6-bca2-c4f493b81f5f', '23331a4229@mvgrce.edu.in', '$2b$10$CMG4beOpT/ode8.Z56rVeubwr7mK9V3DfIeIqjv3RKfQU4HE4mQL2', 'KARRI RISHI VARSHITH', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4229', 1),
+  ('0fc9d25f-f213-4fec-a6bb-d5f68465eb39', '23331a4230@mvgrce.edu.in', '$2b$10$vXftNMYK8vp2Yf3BGSs35Os3iP6NfyrQGyGpSSlJQ8gckW3E8ElIu', 'KILIMI VIJAYALAKSHMI', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4230', 1),
+  ('c271251c-7791-45be-8b2e-fe0ea06b7655', '23331a4231@mvgrce.edu.in', '$2b$10$3wvE0jufGVldOKTjicOFceIgpU13voFx822h0Y8VBAphm9Eqdxl7.', 'KOLLABATTULA ROHITH', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4231', 1),
+  ('ca0d57ba-f5f0-48f5-8627-378209f0f832', '23331a4232@mvgrce.edu.in', '$2b$10$pIizfFAKiQyOAKplABjRaOzA99lADeAJpr57sRkG1MS8tndpQfQ3S', 'KOLLI SANYASIRAO', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4232', 1),
+  ('5f30aa31-1592-48d8-809c-e9baeb12b3ec', '23331a4233@mvgrce.edu.in', '$2b$10$94LPGb4Y5oP/tRf8UfGfaOmOVRqspFG5LfLWtCgCsGN4UFRTLWSpS', 'KOLLI TEJESWARA RAO', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4233', 1),
+  ('7677f7d8-22eb-471d-ad8e-563ed4652570', '23331a4234@mvgrce.edu.in', '$2b$10$lEsN9pTbv2EZxe1d/nElrekfUYwoNwUnrvk3MKnDtYc01U1zMCfSO', 'KOMMURU MOHAN SANDEEP', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4234', 1),
+  ('9ffb11df-1431-4933-9530-843fcc339531', '23331a4235@mvgrce.edu.in', '$2b$10$61mYrSdpSZAFjkW37tRmZuszJNhlebzx6C2c2YdK0CH69F8GGG5TO', 'KOTNI CHANDANA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4235', 1),
+  ('3e267c33-f477-413d-94d5-7a3dda46b850', '23331a4236@mvgrce.edu.in', '$2b$10$S6uy4HLOlFlIHTenLmb.S.yBNg/43F39u2WMclCxzNfaQo1vvgG8a', 'KUNDI SHARMILA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4236', 1),
+  ('7c290df5-0c8a-4c1e-a68a-8fedbb2a2c20', '23331a4237@mvgrce.edu.in', '$2b$10$9D1xo7bz7flVzuGKgeeiW.qZU6uBJA0YeZ5arwPj9Dqk96qHPB3jS', 'MADABATTULA PRIYANKA VALLI', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4237', 1),
+  ('f16948e0-5cde-48d3-b577-3aa408c23e30', '23331a4238@mvgrce.edu.in', '$2b$10$q2ZExgyYJqMsIxVteKxEv.JZSHRp33bZPoKVbPHqJ/o2dHHNEBM1O', 'MADAPADA KRISHNA MOHAN', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4238', 1),
+  ('6738d90e-307c-4146-883a-ebef4a70c125', '23331a4239@mvgrce.edu.in', '$2b$10$ZwKOF9SAtWSTtaj/Vl.OZuU9u5ix8r8/8nxYdcThQd1nSooNqXbIS', 'MAJJI JASWANTH', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4239', 1),
+  ('4264ce5b-7db7-40b1-aaa8-9c9ce12e6220', '23331a4240@mvgrce.edu.in', '$2b$10$R8LbWsKEghrwCyhxnXrOme/DU.q2Xw8zlOKARR1RjOh3tWyqdp2x.', 'MAMIDI LASYASHREE VIJAYA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4240', 1),
+  ('a584e4fa-db63-40db-9664-8fba4023ff72', '23331a4241@mvgrce.edu.in', '$2b$10$FgoUcHVQND.wdJ40UOcPQeX4Oju4ySkuoR4WU9hLCHhpvGZWTSZxO', 'MOKARA RAMJI', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4241', 1),
+  ('00cd66d3-de87-4019-b676-460b560c4346', '23331a4242@mvgrce.edu.in', '$2b$10$fAMMo676LknDyxQ4E6ASTuES9PpXGzZcHVOYlfPV9dvUX/yq4/KPK', 'MUDE GIRI NAIK', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4242', 1),
+  ('e258d342-1a70-451f-a611-01e07eb6f265', '23331a4243@mvgrce.edu.in', '$2b$10$q.xRvdMrYwqo71hJ0R1ZTe9ll2GU7kk8biJe/gTvCm/iiP9ucatui', 'MUGIDA POOJITHA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4243', 1),
+  ('29c7c7c7-d0ee-43e6-b1ee-8ffb035bb332', '23331a4244@mvgrce.edu.in', '$2b$10$UaFzADaFdayxcpXwDEek9OLcH8a2pf9ZiZ9ypPMEBjoWVQ3navBMK', 'MULAPARTHI ROHIT SAI VENKAT', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4244', 1),
+  ('339e2e71-6595-47ce-8b72-f805594c8f4b', '23331a4245@mvgrce.edu.in', '$2b$10$xdj1Hvk4078mrEUEIOEOE.un7TsqkxoakhhuVNK6DAxZRFMMsfqgS', 'NADIPALLI MEGHANA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4245', 1),
+  ('183929f6-bfcf-4117-bee0-c801fd9e63a9', '23331a4246@mvgrce.edu.in', '$2b$10$YYjakKm5Tvo8FbJ0god9s.PQftMKkbUXg/z91YqxQBZshXtE.v.DK', 'NADIPENA HARSHITHA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4246', 1),
+  ('969f2afe-6e71-4b8e-b26b-8dd7c35e6aab', '23331a4247@mvgrce.edu.in', '$2b$10$Qa7fR30zXQ7TntXKqN2hDu3IykOiucdcFR6Vo2vaHuNuuURFPuOsS', 'PACHIGOLLA KRISHNA TEJA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4247', 1),
+  ('aceeb741-1843-4889-b202-40c4dc8c1351', '23331a4248@mvgrce.edu.in', '$2b$10$HjkoH5LAeb50jI1pBnawxuoFkzBflJGDyUq5vKtqAvNE78hVr8d.e', 'PADALA SANDEEP', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4248', 1),
+  ('4ecc9a75-bfb6-4c18-807e-f4a866f89634', '23331a4249@mvgrce.edu.in', '$2b$10$HTABQ6lS6glunCKkooYcJ.6Con6G7Y3rCbjZbP6CNQwBKeFKjGjmS', 'PASALA BHARATH KALYAN', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4249', 1),
+  ('7517f3f2-7848-4cea-b41c-50f99e563290', '23331a4250@mvgrce.edu.in', '$2b$10$yMD.tTOwve58nmVTrlQGF.hWSk1ySQCna7yGEoPE27uhCSfUFH7oW', 'PATTIGILLI NAVYA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4250', 1),
+  ('620b678b-6a4e-4088-9490-87582c6e653d', '23331a4252@mvgrce.edu.in', '$2b$10$YvTGsvMsUgG/JubJ.Z3xxOXpb9QdGYqB0c75bM/CHU9n5XYveD7YK', 'PILLA POORNA KRISHNA PRIYA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4252', 1),
+  ('e12abcee-28ac-4fd5-af75-ba6c540bce7f', '23331a4253@mvgrce.edu.in', '$2b$10$JeKKJ4n90ECmRxipO.Gwr.te5rcZ/wqR8saXhp8IOaWDtC9nv90K6', 'PRADHAN SHILPI', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4253', 1),
+  ('971f2a8a-e646-4555-9675-f486a55994f9', '23331a4254@mvgrce.edu.in', '$2b$10$K2goP/T7MBsDJFTU0Qgt8.GHzc9r345F1vci8T20mDtQ5bfSryaxO', 'RANI ABHILASH', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4254', 1),
+  ('d4475c79-f333-41f1-a58e-210b16149d4f', '23331a4255@mvgrce.edu.in', '$2b$10$nqX7xoKv5e33mgNO8GDbZeMfMWUA0Qs6/srMtWy0livHzJtD2FSuK', 'REDDI SAI GEETHAM', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4255', 1),
+  ('c708fd52-b364-4a04-9ab2-612c146f2619', '23331a4256@mvgrce.edu.in', '$2b$10$rUUt02k7lJ9cRd5wGwwCBuqT42bW455se/Db0EbJZjwSXDqnc/k/K', 'RELANGI YASWANTH BALAJI', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4256', 1),
+  ('15f634a0-2237-4f00-82a0-fde32b0c5bb9', '23331a4257@mvgrce.edu.in', '$2b$10$FlaIRne7pYCUSLzaT9/mBuNqeBTmN.iHdVDEdISXGNIruwECeFo2O', 'SAILADA SAI RESHMA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4257', 1),
+  ('7c8cb3c9-e89b-4648-b0b9-a2f6b2fab783', '23331a4258@mvgrce.edu.in', '$2b$10$D5iQhLc2zFEKRhqtNsHcGeim6fQ.3FEwvlYjEFYKnFjIRakk7g0PW', 'SANCHANA HARISH KUMAR', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4258', 1),
+  ('af4ae28f-ddbe-43ba-9aec-c56b0e00d7b3', '23331a4260@mvgrce.edu.in', '$2b$10$Oh15cOqTsMk/os37Dp.3KuKi6334SdMvHZ3Ss1C16gmMq8KdW6GBC', 'SIMHADRI AKSHITHA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4260', 1),
+  ('d7407330-38c3-4dba-bdab-53a9c74671c0', '23331a4261@mvgrce.edu.in', '$2b$10$7J7m5enakygCb0pL5gFNae5HHKiOzftflWu5aJ8R3BIR/nBreIJCC', 'TALARI TEJESWARI', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4261', 1),
+  ('e1ed9003-001a-4596-bfa4-ba2c26be6269', '23331a4262@mvgrce.edu.in', '$2b$10$vFItbjwdXwze.Jns6r1/lOmW78G4T9anxrryb1e6V5h7tEOd8cg0K', 'TARIGOPPULA SAI SIRI VARSHINI', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4262', 1),
+  ('c4a03a32-e24d-44cb-960f-a5517579b5eb', '23331a4263@mvgrce.edu.in', '$2b$10$M1OnUbPAjr7q9VdyC0UUiuMg9ps3jIcnoCe2gx.3NR3nithzfjuKe', 'VETLA ROHITH', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4263', 1),
+  ('f6ea7aac-b3ae-44d3-a7ee-b1448655c1e3', '23331a4264@mvgrce.edu.in', '$2b$10$iMJro.be/9BlqS1S5JXDdekhbOuJIB0hZRRvb3/w0BiYcCpRnYdXm', 'VISHNUMURTHULA DIVYA SRI SATYA', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4264', 1),
+  ('d59e784c-1f64-448a-9ad1-e06dc23e4953', '23331a4265@mvgrce.edu.in', '$2b$10$NWYgvlqQYlY52mw5ZE.xf./Rkii1A7J43rbwigEzAdM7rqgDID2MO', 'YAMALI AJAY KUMAR', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4265', 1),
+  ('f0b4910c-f2fb-4ef0-82ee-ed5142f89472', '23331a4266@mvgrce.edu.in', '$2b$10$yiSwdhr4KNjW0Woo5Q5WCefOy1HqdYN7GgaYyeymrgP8/w8F11KrC', 'YANDAVA SANJAY', 'student', 'active', 'CSM', 2023, 1, 'A', NULL, NULL, '23331A4266', 1),
+  ('ff51fb25-c0d2-40ce-977b-e31527223723', '24335a4201@mvgrce.edu.in', '$2b$10$oRaNetsRMI.n2/IR3JQLo.U57We6m9KrC97nX7BMOe0yjHcZg.bSq', 'DARAPU VARSHINI', 'student', 'active', 'CSM', 2024, 1, 'A', NULL, NULL, '24335A4201', 1),
+  ('02c68067-ffd5-463c-bccc-95e442fd8d4c', '24335a4202@mvgrce.edu.in', '$2b$10$OYJe0c01ni/w8MU0X1HleeIJYOTybm0mlcMaBAZEeBlyw.DbgZb56', 'ITHEMSETTI MYTHRI', 'student', 'active', 'CSM', 2024, 1, 'A', NULL, NULL, '24335A4202', 1),
+  ('e49f4cba-f7f5-4989-ae95-8a73c06d049d', '24335a4203@mvgrce.edu.in', '$2b$10$staIZsxppUz4LH/sVdLHsuO.npOLrlhOHtjlB8ZSYmC.8rNZ2SOwu', 'KOYYANA SAIYASWANTH', 'student', 'active', 'CSM', 2024, 1, 'A', NULL, NULL, '24335A4203', 1),
+  ('265b061a-49fd-4c54-b141-e31f42939b74', '24335a4204@mvgrce.edu.in', '$2b$10$U5zSWpx.6YY0PeRmd63tsursQ/egpkAlh2NK6ZFeF4SfABY80skpy', 'LOTLA MONIKA BEDI', 'student', 'active', 'CSM', 2024, 1, 'A', NULL, NULL, '24335A4204', 1),
+  ('2ef36e01-2c85-4140-a025-5a7b8a75be0c', '24335a4205@mvgrce.edu.in', '$2b$10$4T0539YxUeCPlVWrao6qkOfWHYwjGcNr8TS62DUkR45.foCN9pgpe', 'SUTTI SOWMYA', 'student', 'active', 'CSM', 2024, 1, 'A', NULL, NULL, '24335A4205', 1),
+  ('b910b112-67eb-4fd4-97fd-2c45975964ba', '24335a4206@mvgrce.edu.in', '$2b$10$a9T2hWi2X1VadCz/.pXQPOj9540xhoblhg4Tfi./6YxqeFySriWsW', 'CHUKKALA YASWANTH SAI', 'student', 'active', 'CSM', 2024, 1, 'A', NULL, NULL, '24335A4206', 1)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `role` = VALUES(`role`), `status` = VALUES(`status`), `branch` = VALUES(`branch`), `academic_year` = VALUES(`academic_year`), `current_semester` = VALUES(`current_semester`), `section` = VALUES(`section`), `roll_number` = VALUES(`roll_number`);
 
--- 4. Seed Users: Administrator and 33 Faculty Members
-
--- System Administrator
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `first_login_pending`) VALUES
-('00000000-0000-0000-0000-000000000001', 'admin@mvgrce.edu.in', '$2b$10$X20auI7TJFHGY857JSVJQewlHa2YAm7dsYPQx21LchqvkdChKQyYy', 'System Administrator', 'admin', 'active', 0)
-ON DUPLICATE KEY UPDATE `password_hash` = VALUES(`password_hash`), `name` = VALUES(`name`), `role` = 'admin';
-
--- 33 Official Department Faculty Members
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000001', 'satyanarayanareddy@mvgrce.edu.in', '$2b$10$lUtbhi4VOZdHtJfDmMkeTuHKBxNVez4Ba68Uz9RxT.X620ivVSXyi', 'Dr. G. Satyanarayana Reddy', 'faculty', 'active', 'Associate Professor', '9490545686', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000002', 'ravikumarkottala@mvgrce.edu.in', '$2b$10$hrOqoeM5RquzZK6EfpLjDu5Oz9BJWZv5OnFgfw593X6sY9rEUgvJC', 'Dr. K. Ravi Kumar', 'faculty', 'active', 'Distinguished Assistant Professor', '8886369167', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000003', 'satish@mvgrce.edu.in', '$2b$10$S5TJN1WhvrJNkklNonfZcuD2EHQXAPtxsFGEMvEbZ87B1MdwcnpJS', 'Dr. P. Sateesh', 'faculty', 'active', 'Professor', '9246615251', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000004', 'psr.cse@mvgrce.edu.in', '$2b$10$U6tVVYm6p/9xKeQhxkDG9OqmamM1oxlp.XtfX3ksh6rprZtG.Rdi6', 'Dr. P. Srinivasa Rao', 'faculty', 'active', 'Professor', '9866370352', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000005', 'atchut.sadu@mvgrce.edu.in', '$2b$10$eyYPzyhRl7ywqJgGjj.vk.p/2nzVXq4ZC9IcUloyXaVoPPUxOHA46', 'Dr. S Atchuta Rao', 'faculty', 'active', 'Professor', '9441159714', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000006', 'tgrao@mvgrce.edu.in', '$2b$10$gsNI/3zgfRyzz1Cr9NcjGOs8/T67/7C7.0V4x18r/VdzABg2HZzu6', 'Dr. T. Govindarao', 'faculty', 'active', 'Senior Assistant Professor', '8328505780', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000007', 'jyothi@mvgrce.edu.in', '$2b$10$DfL.lI0YqjRJig3ox49URe9KzguvqwcamapujDBrwiuyBvQUevd/W', 'Dr. V. Jyothi', 'faculty', 'active', 'HOD & Associate Professor', '9701562756', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000008', 'prasannaraju@mvgrce.edu.in', '$2b$10$fRCMX3j9Ni031DJDzKEl2urCjV.UVfPG8ii0Tfi.2/iyPBr2K9x66', 'Dr. Y. Home Prasanna Raju', 'faculty', 'active', 'Associate Professor', '8688771559', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000009', 'apunyavardhanraj@mvgrce.edu.in', '$2b$10$xIo9FsrWxx2mk2lYY00rsuT1HfmyNzhMEpT7FL2UlJoGfdZjbsnpq', 'Mr. A. Punya Vardhan Raj', 'faculty', 'active', 'Assistant Professor', '8688174609', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000010', 'kvenkatarao@mvgrce.edu.in', '$2b$10$Ov4DiVm5UG4l6BShh6Z.A.dR50RUnEy2K7CqAS/WPEwGBc9Fy6ADG', 'Mr. K. Venkata Rao', 'faculty', 'active', 'Assistant Professor', '9032606706', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000011', 'saiganeshlolla@mvgrce.edu.in', '$2b$10$8XRCV4NG9g5x009ZJdfMmex6IU/kVUM7iKutaNA56RyK.j5.6AiHe', 'Mr. L. Sai Ganesh', 'faculty', 'active', 'Assistant Professor', '6281682306', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000012', 'aswinikumarm@mvgrce.edu.in', '$2b$10$Q.UcK7e0a2SM95mjAy7yvOltnWn4sYyoeD3yEVNCzu9gFh7dLQqCG', 'Mr. M. Aswini Kumar', 'faculty', 'active', 'Assistant Professor', '9059287397', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000013', 'spalavelli@mvgrce.edu.in', '$2b$10$L4XFee5h05J8L6EcnAbI5eRduHxCXNLDb0BSiQAmoxInKRLMzJ4Ai', 'Mr. S. Palavalli', 'faculty', 'active', 'Assistant Professor', '9010695939', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000014', 'surapaparao@mvgrce.edu.in', '$2b$10$XzlzgVFY9ElRlart8yygBu1e8jNTG.oL35gku7itJc3iLilCvGd/G', 'Mr. S. Paparao', 'faculty', 'active', 'Assistant Professor', '9491494021', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000015', 'velalakirankumar@mvgrce.edu.in', '$2b$10$kOMXzs65jI8Dvrg.5t11beMlSjvX/oFXB0fqHYP6yI9WPlC7Ar33i', 'Mr. V. Kiran Kumar', 'faculty', 'active', 'Assistant Professor', '8978438583', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000016', 'manikantavella48@mvgrce.edu.in', '$2b$10$Nt5fY9e4p.xeZHTipxPIe.sY58QncVCHifQQFiinENbRE4goo/6qC', 'Mr. V. Manikanta', 'faculty', 'active', 'Assistant Professor', '8978970366', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000017', 'annepusruthipatro@mvgrce.edu.in', '$2b$10$nZXRDCLe9Bo95tXKFpa23..Pq9bjECRTE6Eq2HHfvf7hK1a/03jYW', 'Mrs. A. Sruthi Patro', 'faculty', 'active', 'Assistant Professor', '9490225613', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000018', 'sowjanyabodasingi@mvgrce.edu.in', '$2b$10$s9TygiGSggL7hrhmeMCNQOQh2AVO0z8OMLdz7ZySJCrlLF4uhUCmm', 'Mrs. B. Sowjanya', 'faculty', 'active', 'Assistant Professor', '8500192192', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000019', 'sravanidandu@mvgrce.edu.in', '$2b$10$69THD.GwJYo2wj0kQq1avuepE5nJWrLrDMvVw7fjVNQy6wUcxvfte', 'Mrs. D. Sravani', 'faculty', 'active', 'Assistant Professor', '9490560621', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000020', 'ggayathri@mvgrce.edu.in', '$2b$10$Cx.PDU9ML5XTTt1sIE7pNu5ERDruiC44P3JPP3pdYQd1qofhdbL6m', 'Mrs. G. Gayathri', 'faculty', 'active', 'Assistant Professor', '7416500759', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000021', 'glalitha@mvgrce.edu.in', '$2b$10$TBdGcWZHgr4OW4WBeV1Lhez9uVrzXTqH0NHTOQXbW1FtZ3gqm1PKm', 'Mrs. G. Lalitha', 'faculty', 'active', 'Assistant Professor', '7306666619', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000022', 'gayathri.imandi@mvgrce.edu.in', '$2b$10$n85TH6FGhtLSWjaHGHJCPOX1k2MPRZtfKTONbHY/lKBHaVq.cNObe', 'Mrs. I. Gayathri', 'faculty', 'active', 'Assistant Professor', '8074104033', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000023', 'amaravathikaviti@mvgrce.edu.in', '$2b$10$3ayvlcf5Mhq1aw5a4V3ByeCeIQM1zC5UFQdg13Y6Qd0MIzGfFZH8O', 'Mrs. K. Amaravathi', 'faculty', 'active', 'Assistant Professor', '9493277988', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000024', 'kpapayamma@mvgrce.edu.in', '$2b$10$ZYhhfpXaHMuqOoOXC2A4COJyYAmCsjWPOyzz889BTts1CcfcXxAfO', 'Mrs. K. Papayamma', 'faculty', 'active', 'Assistant Professor', '9581136635', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000025', 'sushmaranin@mvgrce.edu.in', '$2b$10$.3SWr0ZJwn0zpA9gnrRHEuORxQcNH6A9246oa8WlqYMIkovXQRSgS', 'Mrs. N Sushma Rani', 'faculty', 'active', 'Distinguished Assistant Professor', '9948056302', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000026', 'sowjanyanalam@mvgrce.edu.in', '$2b$10$KfPk6btJuy/BA5bEpL6j.OvIqeItsjg9XSmcieun2KnO9Fcf2rfUe', 'Mrs. N. Sowjanya Kumari', 'faculty', 'active', 'Assistant Professor', '9063166307', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000027', 'pmonika@mvgrce.edu.in', '$2b$10$vULYJ7FEIh/Kf98nu.RdFuWS84bEu82V3F4pfdyGGqj8oflDKYHXO', 'Mrs. P. Monika', 'faculty', 'active', 'Assistant Professor', '8639086350', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000028', 's.nikhila@mvgrce.edu.in', '$2b$10$GhBaibepQaz9kMhOt6Pxi.BhvBpPgfgGxp6o34tEKSCGMEVnI48z6', 'Mrs. S. Nikhila', 'faculty', 'active', 'Assistant Professor', '9490653956', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000029', 'tulasidesetti@mvgrce.edu.in', '$2b$10$3K40e0kzNd/K3Ye8rEB0FOSijKbiqxD0obOXlo9L3LJFqB39GFg7O', 'Ms. D. Tulasi', 'faculty', 'active', 'Assistant Professor', '9100783439', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000030', 'gaparanjini@mvgrce.edu.in', '$2b$10$7ycWw1VbLzaLqY38JPobieCGqlds/dN8y9SMe9sK/T7.P8MbcZC0G', 'Ms. G. Aparanjini', 'faculty', 'active', 'Assistant Professor', '7989639183', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000031', 'anjalidevi@mvgrce.edu.in', '$2b$10$JeBzUz6JHK4Gjj7PS9bUkeU7xWn2vMf3PLSsH3ZSEHM5OvGwnAId.', 'Ms. J. Anjali Devi', 'faculty', 'active', 'Assistant Professor', '7330838157', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000032', 'kallaswathi@mvgrce.edu.in', '$2b$10$XEMv6QmCYu/PrdQxp3I.2uZu.lkzwr.K3WZD7RJmA0h7Umq1Twf6C', 'Ms. K. Swathi', 'faculty', 'active', 'Assistant Professor', '8790177137', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `designation`, `phone`, `first_login_pending`) VALUES
-('10000000-0000-0000-0000-000000000033', 'pylalova@mvgrce.edu.in', '$2b$10$2JTQDbAQ7gbcuOg4TQaWtei7J10OVvCSVjdjs51xtpwk4YS.6Pm0m', 'Ms. P. Lova', 'faculty', 'active', 'Assistant Professor', '8374470543', 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `password_hash` = VALUES(`password_hash`), `phone` = VALUES(`phone`), `designation` = VALUES(`designation`);
+SET FOREIGN_KEY_CHECKS = 1;

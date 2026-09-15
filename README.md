@@ -132,17 +132,37 @@ Open your browser at **[http://localhost:3000](http://localhost:3000)**.
 
 ---
 
-## 🔑 Default Seed Credentials
+## 🔑 Default Seed Credentials & Academic Dataset
 
-Only the **System Administrator** and **33 Department Faculty Staff** are seeded by default. Academic subjects and student cohorts can be added directly via the Admin Console (`/admin/taxonomy` and `/admin/users`).
+The platform is pre-loaded with official institutional data from `R23_Regulation Details.xlsx`:
+* **Curriculum**: **213 R23 Autonomous Regulation Subjects** across Semesters 1 to 8 for branches `CSM`, `CSD`, and `CIC`.
+* **Faculty Staff**: **33 Department Faculty Members** with designations, branches, and contact numbers.
+* **Student Roster**: **70 CSM Section A Students** (64 Regular 4-year B.Tech + 6 Lateral Entry Diploma students).
 
-| Role | Name | Email | Password | Scope & Notes |
+| Role | Name / Group | Login Email | Password | Scope & Notes |
 | :--- | :--- | :--- | :--- | :--- |
 | **System Admin** | System Administrator | `admin@mvgrce.edu.in` | `AdminPassword@123!` | Full governance, roster management, taxonomy, exam schedules (`/admin`). |
 | **Faculty #1** | Dr. G. Satyanarayana Reddy | `satyanarayanareddy@mvgrce.edu.in` | `MVGRDE@5686` | Associate Professor (`/faculty`). Rule: `MVGRDE@<last-4-digits-of-mobile>`. |
-| **Faculty #2** | Dr. K. Ravi Kumar | `ravikumarkottala@mvgrce.edu.in` | `MVGRDE@9167` | Distinguished Assistant Professor (`/faculty`). |
 | **Faculty #7** | Dr. V. Jyothi (HOD) | `jyothi@mvgrce.edu.in` | `MVGRDE@2756` | HOD & Associate Professor (`/faculty`). |
-| **Faculty (All 33)** | *Department Faculty Staff* | *`<name>@mvgrce.edu.in`* | `MVGRDE@<last4>` | All 33 official faculty accounts are active. See `creds.md` for complete roster. |
+| **Faculty (All 33)** | *Department Faculty Staff* | *`<name>@mvgrce.edu.in`* | `MVGRDE@<last4>` | All 33 official faculty accounts are active. |
+| **Regular Student** | Adhya Naidu Chokkakula | `23331a4201@mvgrce.edu.in` | `23331A4201` | 2023 Regular B.Tech CSM Sem 1 Sec A. Password is uppercase roll number. |
+| **Regular Student** | Sanjay Yandava | `23331a4266@mvgrce.edu.in` | `23331A4266` | 2023 Regular B.Tech CSM Sem 1 Sec A. Password is uppercase roll number. |
+| **Lateral Student** | Darapu Varshini | `24335a4201@mvgrce.edu.in` | `24335A4201` | Lateral Entry Diploma student. Password is uppercase roll number (`24335A4201`). |
+| **Lateral Student** | Chukkala Yaswanth Sai | `24335a4206@mvgrce.edu.in` | `24335A4206` | Lateral Entry Diploma student. Password is uppercase roll number (`24335A4206`). |
+
+> **Student Login Rule**: Every student account has an institutional email `<roll_number_lower>@mvgrce.edu.in` and their default password is their **exact uppercase roll number** (e.g. `23331A4201` or `24335A4201`). Lateral entry students completed Diploma and study the B.Tech curriculum together with the class.
+
+---
+
+### 📊 Ingesting & Re-importing Excel Spreadsheets
+
+To re-ingest or update data directly from `R23_Regulation Details.xlsx`:
+```bash
+node server/database/import-excel-data.js
+```
+This script strictly validates each row and column:
+1. **Curriculum Sheet (`Regulation(R23)`)**: Maps `ICB` -> `CIC`, converts Roman numeral semesters (`I`–`VIII`) to integers (`1`–`8`), disambiguates duplicate codes in Sem 8, and upserts 213 subjects.
+2. **Student Cohort Sheet (`Sheet2`)**: Validates roll number structure, assigns college emails, computes bcrypt hashes for roll numbers, and provisions all regular and lateral entry students.
 
 ---
 

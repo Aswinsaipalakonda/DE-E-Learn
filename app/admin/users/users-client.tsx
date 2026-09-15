@@ -559,10 +559,14 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         });
       } else {
         const rowName = row["name"] || row["studentname"] || cols[0] || "";
-        const rowRoll = (row["rollnumber"] || row["rollno"] || row["roll"] || cols[1] || "").toUpperCase();
-        const rowBranch = row["branch"] || cols[2] || "CIC";
-        const rowSem = row["semester"] || row["sem"] || cols[3] || "3";
-        const rowSec = row["section"] || row["sec"] || cols[4] || "A";
+        const rowRoll = (row["rollnumber"] || row["rollno"] || row["roll"] || cols[1] || "").toUpperCase().trim();
+        let rowBranch = (row["branch"] || cols[2] || "CSM").trim().toUpperCase();
+        if (rowBranch === "ICB") rowBranch = "CIC";
+
+        const semRaw = (row["semester"] || row["sem"] || cols[3] || "1").toString().trim().toUpperCase();
+        const romanMap: Record<string, string> = { I: "1", II: "2", III: "3", IV: "4", V: "5", VI: "6", VII: "7", VIII: "8" };
+        const rowSem = romanMap[semRaw] || semRaw;
+        const rowSec = (row["section"] || row["sec"] || cols[4] || "A").trim().toUpperCase();
 
         if (!rowName) errors.push(`Row ${i}: Missing Student Name`);
         if (!rowRoll) errors.push(`Row ${i}: Missing Roll Number`);

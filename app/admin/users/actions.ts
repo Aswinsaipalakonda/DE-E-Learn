@@ -397,16 +397,28 @@ export async function batchCreateUsersAction(
       const isFaculty = item.role === "faculty";
       const formattedRoll = isStudent && item.rollNumber ? item.rollNumber.toUpperCase().trim() : null;
 
+      let studentBranch = item.branch ? item.branch.trim().toUpperCase() : null;
+      if (studentBranch === "ICB") studentBranch = "CIC";
+      if (!studentBranch && formattedRoll) {
+        if (formattedRoll.includes("47")) studentBranch = "CIC";
+        else if (formattedRoll.includes("44") || formattedRoll.includes("05")) studentBranch = "CSD";
+        else if (formattedRoll.includes("42")) studentBranch = "CSM";
+        else studentBranch = "CIC";
+      }
+
+      const academicYear = isStudent && formattedRoll && formattedRoll.length >= 2
+        ? parseInt("20" + formattedRoll.slice(0, 2), 10)
+        : null;
+
       const rowPayload: Record<string, unknown> = {
         id: userId,
         email: item.email.trim().toLowerCase(),
         name: item.name.trim(),
         role: item.role,
         status: "active",
-        branch: isStudent 
-          ? (item.branch || (formattedRoll?.includes("47") ? "CIC" : (formattedRoll?.includes("44") || formattedRoll?.includes("05")) ? "CSD" : formattedRoll?.includes("42") ? "CSM" : "CIC")) 
-          : (item.branch || null),
-        current_semester: isStudent ? (item.semester || 3) : null,
+        branch: isStudent ? (studentBranch || "CIC") : (item.branch === "ICB" ? "CIC" : item.branch || null),
+        academic_year: academicYear,
+        current_semester: isStudent ? (item.semester || 1) : null,
         section: isStudent ? (item.section ? item.section.toUpperCase().trim() : "A") : null,
         designation: isFaculty ? (item.designation ? item.designation.trim() : "Assistant Professor") : null,
         phone: item.phone ? item.phone.trim() : null,
@@ -417,6 +429,7 @@ export async function batchCreateUsersAction(
       let { error: profileError } = await adminClient.from("users").upsert(rowPayload);
 
       if (profileError) {
+        delete rowPayload.academic_year;
         delete rowPayload.section;
         delete rowPayload.designation;
         delete rowPayload.roll_number;
