@@ -109,8 +109,8 @@ DataDock centralizes all autonomous curriculum assets, verified lecture notes, l
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/Aswinsaipalakonda/DE-E-Learn.git
-cd DE-E-Learn
+git clone https://github.com/Aswinsaipalakonda/DataDock.git
+cd DataDock
 npm install
 ```
 
