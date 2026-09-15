@@ -149,8 +149,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   // Batch Semester Promotion Modal State
   const [isPromoteModalMounted, setIsPromoteModalMounted] = useState(false);
   const [isPromoteModalVisible, setIsPromoteModalVisible] = useState(false);
-  const [promoteFromSem, setPromoteFromSem] = useState(3);
-  const [promoteToSem, setPromoteToSem] = useState(4);
+  const [promoteFromSem, setPromoteFromSem] = useState(1);
+  const [promoteToSem, setPromoteToSem] = useState(2);
   const [promoteBranch, setPromoteBranch] = useState("ALL");
   const [isPromoting, setIsPromoting] = useState(false);
 
@@ -197,6 +197,27 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     });
     return Array.from(secSet).sort();
   }, [availableSections, users]);
+
+  // Target students eligible for promotion based on selection
+  const eligiblePromoteStudents = useMemo(() => {
+    return users.filter((u) => {
+      if (u.role !== "student") return false;
+      if (u.status !== "active") return false;
+      if (u.current_semester !== promoteFromSem) return false;
+      if (promoteBranch !== "ALL" && u.branch !== promoteBranch) return false;
+      return true;
+    });
+  }, [users, promoteFromSem, promoteBranch]);
+
+  // Branch breakdown of eligible students
+  const eligibleStudentsByBranch = useMemo(() => {
+    const map: Record<string, number> = {};
+    eligiblePromoteStudents.forEach((s) => {
+      const b = s.branch || "Unknown";
+      map[b] = (map[b] || 0) + 1;
+    });
+    return map;
+  }, [eligiblePromoteStudents]);
 
   // Duplicate Check for roll number
   const isDuplicateRollNumber = useMemo(() => {
@@ -1938,13 +1959,19 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">From Semester</label>
                   <select
                     value={promoteFromSem}
-                    onChange={(e) => setPromoteFromSem(Number(e.target.value))}
+                    onChange={(e) => {
+                      const from = Number(e.target.value);
+                      setPromoteFromSem(from);
+                      if (promoteToSem <= from && from < 8) {
+                        setPromoteToSem(from + 1);
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                   >
                     {semesters.map((s) => (
@@ -1980,6 +2007,58 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   ))}
                 </select>
               </div>
+
+              {/* Dynamic Enrolled Students Count Display */}
+              <div
+                className={`p-3.5 rounded-2xl border transition-all ${
+                  eligiblePromoteStudents.length > 0
+                    ? "bg-blue-50/80 border-blue-200/80 text-blue-950"
+                    : "bg-amber-50/80 border-amber-200/80 text-amber-950"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UsersIcon className={`h-4 w-4 ${eligiblePromoteStudents.length > 0 ? "text-blue-600" : "text-amber-600"}`} />
+                    <span className="text-xs font-semibold">
+                      Eligible Students:
+                    </span>
+                  </div>
+                  <span
+                    className={`text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                      eligiblePromoteStudents.length > 0
+                        ? "bg-white text-blue-700 border-blue-200"
+                        : "bg-white text-amber-700 border-amber-200"
+                    }`}
+                  >
+                    {eligiblePromoteStudents.length} {eligiblePromoteStudents.length === 1 ? "Student" : "Students"}
+                  </span>
+                </div>
+
+                {eligiblePromoteStudents.length > 0 ? (
+                  <div className="mt-2 text-[11px] text-blue-800 space-y-1.5">
+                    <p className="leading-relaxed">
+                      <strong>{eligiblePromoteStudents.length}</strong> active {eligiblePromoteStudents.length === 1 ? "student" : "students"} in <strong>Sem {promoteFromSem}</strong> {promoteBranch !== "ALL" ? `(${promoteBranch})` : "across all branches"} will advance to <strong>Sem {promoteToSem}</strong>.
+                    </p>
+                    {promoteBranch === "ALL" && Object.keys(eligibleStudentsByBranch).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {Object.entries(eligibleStudentsByBranch).map(([bCode, bCount]) => (
+                          <span
+                            key={bCode}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-white rounded-md border border-blue-100 text-[10px] font-semibold text-blue-900"
+                          >
+                            <span>{bCode}:</span>
+                            <span className="font-bold">{bCount}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-1.5 text-[11px] text-amber-800 leading-relaxed">
+                    No active students are currently enrolled in <strong>Sem {promoteFromSem}</strong> {promoteBranch !== "ALL" ? `(${promoteBranch})` : "across the selected branches"}.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -1996,11 +2075,21 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
               <button
                 type="button"
                 onClick={handleBulkPromote}
-                disabled={isPromoting}
-                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                disabled={isPromoting || eligiblePromoteStudents.length === 0}
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium rounded-full shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                {isPromoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <GraduationCap className="h-4 w-4" />}
-                <span>Promote Students</span>
+                {isPromoting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <GraduationCap className="h-4 w-4" />
+                )}
+                <span>
+                  {isPromoting
+                    ? "Promoting..."
+                    : eligiblePromoteStudents.length > 0
+                    ? `Promote ${eligiblePromoteStudents.length} Students`
+                    : "Promote Students"}
+                </span>
               </button>
             </div>
           </div>
