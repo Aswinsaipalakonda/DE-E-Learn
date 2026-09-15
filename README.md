@@ -16,26 +16,7 @@
 
 DataDock centralizes all autonomous curriculum assets, verified lecture notes, laboratory manuals, and previous question papers across specialized data engineering tracks, providing seamless access for students, faculty contributors, and academic administrators.
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       DataDock Academic Cloud                           │
-├────────────────────┬───────────────────────────────┬────────────────────┤
-│   Student Vault    │         Faculty Studio        │  Admin Governance  │
-│  - Curriculum Hub  │  - Material Publishing Engine │  - Role Management │
-│  - Document Stream │  - Readership Analytics       │  - Exam Lockouts   │
-│  - Quick Bookmarks │  - Cohort Notice Board        │  - Taxonomy CRUD   │
-└────────────────────┴───────────────┬───────────────┴────────────────────┘
-                                     │
-                    Next.js App Router & Express API
-              (JWT HttpOnly Auth, RBAC, Rate-Limiting, Multer)
-                                     │
-             ┌───────────────────────┴───────────────────────┐
-             ▼                                               ▼
-       MySQL Database                               Hot Storage Vault
- (Hostinger Production / XAMPP)                 (server/uploads/materials/)
-```
-
----
+![DataDock Academic Operations Command](public/admin.png)
 
 ## 🚀 Key Modules & Capabilities
 
@@ -58,7 +39,6 @@ DataDock centralizes all autonomous curriculum assets, verified lecture notes, l
 * **Audit Trail**: Security event logging capturing authentication attempts, credential changes, and material publications.
 * **Automated Daily Backups**: Built-in, zero-downtime hot backup engine that executes scheduled database exports daily at **12:20 AM IST** with automated 30-day retention pruning.
 
-![DataDock Academic Operations Command](public/admin.png)
 
 ---
 

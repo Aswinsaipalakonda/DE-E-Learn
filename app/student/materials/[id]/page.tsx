@@ -153,7 +153,7 @@ export default async function MaterialDetailsPage(props: PageProps) {
   const files: MaterialFileItem[] = (material.material_files as unknown as MaterialFileItem[]) || [];
 
   return (
-    <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">
+    <div className="space-y-6 sm:space-y-7 w-full pb-10">
       {/* Navigation Breadcrumb */}
       <div>
         <Link 

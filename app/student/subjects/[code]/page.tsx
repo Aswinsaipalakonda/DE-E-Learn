@@ -132,7 +132,7 @@ export default async function SubjectDetailPage(props: PageProps) {
   ];
 
   return (
-    <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">
+    <div className="space-y-6 sm:space-y-7 w-full pb-10">
       {/* Header Banner */}
       <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-1.5">

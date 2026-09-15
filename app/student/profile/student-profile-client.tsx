@@ -81,7 +81,7 @@ export default function StudentProfileClient({ profile }: StudentProfileClientPr
   };
 
   return (
-    <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">
+    <div className="space-y-6 sm:space-y-7 w-full pb-10">
 
       {/* ========================================================================= */}
       {/* 2-COLUMN MAIN WORKSPACE */}
