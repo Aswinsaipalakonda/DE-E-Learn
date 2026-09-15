@@ -1,11 +1,9 @@
-import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-// Explicit public routes that never require authentication or server roundtrips
+// Explicit public routes that never require authentication
 const PUBLIC_ROUTES = new Set([
+  "/",
+  "/login",
   "/about",
   "/terms",
   "/privacy",
@@ -26,45 +24,19 @@ const PROTECTED_PREFIXES = [
   "/change-password",
 ];
 
-// High-speed local JWT session parser (handles chunked cookies sb-*-auth-token.0, .1 in 0.05ms)
-function parseLocalSession(request: NextRequest): { email: string; role: string; expired: boolean } | null {
+// High-speed JWT session parser (0.01ms, no network latency)
+function parseDeSession(request: NextRequest): { email: string; role: string; expired: boolean } | null {
   try {
-    const cookies = request.cookies.getAll();
-    const authCookies = cookies.filter((c) => c.name.includes("-auth-token"));
-    if (!authCookies.length) return null;
+    const token = request.cookies.get("de_token")?.value;
+    if (!token) return null;
 
-    authCookies.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    let combinedVal = authCookies.map((c) => c.value).join("");
-
-    if (combinedVal.startsWith("base64-")) {
-      combinedVal = Buffer.from(combinedVal.slice(7), "base64").toString("utf-8");
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(combinedVal);
-    } catch {
-      parsed = combinedVal;
-    }
-
-    let accessToken: string | null = null;
-    if (Array.isArray(parsed)) {
-      accessToken = parsed[0];
-    } else if (parsed && typeof parsed === "object" && parsed.access_token) {
-      accessToken = parsed.access_token;
-    } else if (typeof parsed === "string") {
-      accessToken = parsed;
-    }
-
-    if (!accessToken || typeof accessToken !== "string") return null;
-
-    const parts = accessToken.split(".");
+    const parts = token.split(".");
     if (parts.length !== 3) return null;
 
     const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
     const isExpired = !!(payload.exp && payload.exp * 1000 < Date.now());
 
-    let role = (payload.user_metadata?.role as string) || (payload.role as string) || "";
+    let role = (payload.role as string) || "";
     const email = (payload.email as string) || "";
     if (!role) {
       if (email.startsWith("admin")) role = "admin";
@@ -85,15 +57,11 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
+    pathname.startsWith("/uploads") ||
     pathname.startsWith("/static") ||
     pathname.includes(".") ||
     pathname === "/favicon.ico"
   ) {
-    return NextResponse.next();
-  }
-
-  // 2. Fast-path: Return immediately for public informational and legal routes
-  if (PUBLIC_ROUTES.has(pathname)) {
     return NextResponse.next();
   }
 
@@ -108,13 +76,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Fast-path: Check local decoded session first (avoids remote HTTPS roundtrip to Supabase)
-  const localSession = parseLocalSession(request);
+  // 2. Check session token
+  const session = parseDeSession(request);
 
-  if (localSession && !localSession.expired) {
-    const role = localSession.role;
+  if (session && !session.expired) {
+    const role = session.role;
 
-    // Logged in user visiting login page or root -> instant redirect
+    // Logged in user visiting login page or root -> redirect to role dashboard
     if (isAuthPath || isRoot) {
       return NextResponse.redirect(new URL(`/${role}`, request.url));
     }
@@ -127,73 +95,17 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/student", request.url));
     }
 
-    // Authorized internal page navigation (e.g. /admin/users -> /admin/profile) -> instantaneous
-    return NextResponse.next({
-      request: { headers: request.headers },
-    });
+    return NextResponse.next();
   }
 
-  // 4. If no local session token and accessing a protected page -> instant login redirect
-  if (!localSession && isProtectedPath) {
+  // 3. If no valid session and accessing a protected page -> redirect to login
+  if (isProtectedPath) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 5. Fallback full auth refresh only when token is expired or requires synchronization
-  let supabaseResponse = NextResponse.next({
-    request: { headers: request.headers },
-  });
-
-  const supabase = createServerClient(
-    supabaseUrl!,
-    supabaseKey!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    },
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    if (isProtectedPath) {
-      const redirectUrl = new URL("/login", request.url);
-      redirectUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-    return supabaseResponse;
-  }
-
-  let role = (user.user_metadata?.role as string) || "";
-  if (!role) {
-    if (user.email?.startsWith("admin")) role = "admin";
-    else if (user.email?.startsWith("faculty") || user.email?.startsWith("testfaculty")) role = "faculty";
-    else role = "student";
-  }
-
-  if (isAuthPath || isRoot) {
-    return NextResponse.redirect(new URL(`/${role}`, request.url));
-  }
-
-  if (pathname.startsWith("/admin") && role !== "admin") {
-    return NextResponse.redirect(new URL(`/${role}`, request.url));
-  }
-  if (pathname.startsWith("/faculty") && role === "student") {
-    return NextResponse.redirect(new URL("/student", request.url));
-  }
-
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const middleware = proxy;

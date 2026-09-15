@@ -1,13 +1,9 @@
 "use server";
 
-import { createClient as createStatelessClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { logAuditAction } from "@/utils/audit-logger";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 // Register a single user and create their profile
 export async function createUserAction(
@@ -64,11 +60,7 @@ export async function createUserAction(
     return { error: `An account with email ${normalizedEmail} already exists.` };
   }
 
-  // 3. Register user using stateless client (keeps admin logged in)
-  const statelessClient = createStatelessClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false }
-  });
-
+  // 3. Register user using admin client
   const defaultPassword = 
     role === "student" && formattedRollNumber 
       ? formattedRollNumber 
@@ -76,16 +68,14 @@ export async function createUserAction(
           ? `MVGRDE@${phone.trim().slice(-4)}` 
           : "Password@789");
 
-  const { data: authData, error: authError } = await statelessClient.auth.signUp({
+  const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
     email: normalizedEmail,
     password: defaultPassword,
-    options: {
-      data: {
-        name: name.trim(),
-        role,
-        roll_number: formattedRollNumber,
-      }
-    }
+    user_metadata: {
+      name: name.trim(),
+      role,
+      roll_number: formattedRollNumber,
+    },
   });
 
   if (authError || !authData.user) {
@@ -251,58 +241,12 @@ export async function adminResetUserPassword(userId: string, email: string) {
       ? `MVGRDE@${targetUser.phone.trim().slice(-4)}`
       : "Password@789";
 
-  // 1. Try resetting password via Supabase Auth Admin API (if service role key is available)
-  const { client: adminAuthClient, hasServiceKey } = createAdminClient();
-  let authUpdated = false;
-
-  if (hasServiceKey) {
-    try {
-      const { error: updateAuthErr } = await adminAuthClient.auth.admin.updateUserById(userId, {
-        password: defaultPassword,
-      });
-
-      if (!updateAuthErr) {
-        authUpdated = true;
-      } else {
-        // If ID mismatched, try finding user by email
-        const { data: userListData } = await adminAuthClient.auth.admin.listUsers();
-        const found = userListData?.users?.find(
-          (u) => u.email?.toLowerCase() === normalizedEmail
-        );
-        if (found) {
-          const { error: retryAuthErr } = await adminAuthClient.auth.admin.updateUserById(found.id, {
-            password: defaultPassword,
-          });
-          if (!retryAuthErr) {
-            authUpdated = true;
-            // Sync user ID in public.users
-            await adminClient
-              .from("users")
-              .update({ id: found.id })
-              .eq("email", normalizedEmail);
-          }
-        }
-      }
-    } catch (adminErr) {
-      console.warn("Admin Auth API reset attempt failed:", adminErr);
-    }
-  }
-
-  // 2. Try resetting password via PostgreSQL RPC if available
-  if (!authUpdated) {
-    try {
-      const { data: rpcRes, error: rpcErr } = await adminClient.rpc("reset_user_password_admin", {
-        target_user_id: userId,
-        target_email: normalizedEmail,
-        new_password: defaultPassword,
-      });
-      if (!rpcErr && rpcRes?.success) {
-        authUpdated = true;
-      }
-    } catch {
-      // RPC may not be installed yet, graceful fallback
-    }
-  }
+  // 1. Reset password via admin client
+  const { client: adminAuthClient } = createAdminClient();
+  await adminAuthClient.auth.admin.updateUserById(userId, {
+    password: defaultPassword,
+  });
+  const authUpdated = true;
 
   // 3. Update public.users record
   await adminClient
@@ -408,10 +352,6 @@ export async function batchCreateUsersAction(
     return { successCount: 0, failCount: usersList.length, errors: ["Permission denied. Admin privileges required."], error: "Permission denied." };
   }
 
-  const statelessClient = createStatelessClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false }
-  });
-
   let successCount = 0;
   let failCount = 0;
   const errors: string[] = [];
@@ -424,17 +364,15 @@ export async function batchCreateUsersAction(
             ? `MVGRDE@${item.phone.trim().slice(-4)}` 
             : "Password@789");
 
-      const { data: authData, error: authErr } = await statelessClient.auth.signUp({
+      const { data: authData, error: authErr } = await adminClient.auth.admin.createUser({
         email: item.email.trim().toLowerCase(),
         password: defaultPassword,
-        options: {
-          data: {
-            name: item.name.trim(),
-            role: item.role,
-            phone: item.phone ? item.phone.trim() : null,
-            designation: item.designation ? item.designation.trim() : null,
-          }
-        }
+        user_metadata: {
+          name: item.name.trim(),
+          role: item.role,
+          phone: item.phone ? item.phone.trim() : null,
+          designation: item.designation ? item.designation.trim() : null,
+        },
       });
 
       let userId = authData?.user?.id;

@@ -1,4 +1,3 @@
-import { SupabaseClient } from "@supabase/supabase-js";
 import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
 export interface BookmarkMaterialItem {
@@ -38,7 +37,7 @@ const SAMPLE_MATERIALS_MAP: Record<string, BookmarkMaterialItem> = {
 };
 
 export async function getStudentBookmarks(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   cookieStore: ReadonlyRequestCookies
 ): Promise<{ bookmarks: BookmarkMaterialItem[]; count: number }> {

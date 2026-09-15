@@ -1,6 +1,10 @@
 import { cache } from "react";
 import { createClient } from "./server";
 import { cookies } from "next/headers";
+import pool from "@/lib/db";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "de-elearn-mvgrce-super-secure-jwt-secret-key-2026";
 
 export interface CachedUserProfile {
   id: string;
@@ -16,7 +20,6 @@ export interface CachedUserProfile {
   status?: string;
 }
 
-// In-memory process cache for profiles to avoid redundant DB queries across page navigations
 const profileMemCache = new Map<string, { profile: CachedUserProfile; expiresAt: number }>();
 
 export function invalidateProfileCache(idOrEmail?: string) {
@@ -27,83 +30,37 @@ export function invalidateProfileCache(idOrEmail?: string) {
   }
 }
 
-export function extractJwtPayloadFromCookies(allCookies: { name: string; value: string }[]): { token: string; payload: any } | null {
-  try {
-    const authCookies = allCookies.filter((c) => c.name.includes("-auth-token"));
-    if (!authCookies.length) return null;
-
-    authCookies.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    let combinedValue = authCookies.map((c) => c.value).join("");
-
-    if (combinedValue.startsWith("base64-")) {
-      combinedValue = Buffer.from(combinedValue.slice(7), "base64").toString("utf-8");
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(combinedValue);
-    } catch {
-      parsed = combinedValue;
-    }
-
-    let accessToken: string | null = null;
-    if (Array.isArray(parsed)) {
-      accessToken = parsed[0];
-    } else if (parsed && typeof parsed === "object" && parsed.access_token) {
-      accessToken = parsed.access_token;
-    } else if (typeof parsed === "string") {
-      accessToken = parsed;
-    }
-
-    if (!accessToken || typeof accessToken !== "string") return null;
-
-    const parts = accessToken.split(".");
-    if (parts.length !== 3) return null;
-
-    const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
-    return { token: accessToken, payload };
-  } catch {
-    return null;
-  }
-}
-
-// React cache deduplicates calls within the same request lifecycle (0ms for subsequent calls in layout & page)
 export const getCachedAuthUser = cache(async () => {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // Fast-path: Parse JWT directly from local cookies (0.01ms, 0 network requests)
   try {
-    const allCookies = cookieStore.getAll();
-    const extracted = extractJwtPayloadFromCookies(allCookies);
+    const token = cookieStore.get("de_token")?.value;
+    if (!token) return { user: null, supabase };
 
-    if (extracted && extracted.payload) {
-      const payload = extracted.payload;
-      const isExpired = !!(payload.exp && payload.exp * 1000 < Date.now());
+    const payload: any = jwt.verify(token, JWT_SECRET);
+    if (!payload || !payload.id) return { user: null, supabase };
 
-      if (!isExpired && payload.sub) {
-        const user = {
-          id: payload.sub as string,
-          email: (payload.email as string) || "",
-          user_metadata: payload.user_metadata || {},
-          app_metadata: payload.app_metadata || {},
-          role: payload.role || payload.user_metadata?.role,
-          aud: payload.aud || "authenticated",
-          created_at: payload.created_at || new Date().toISOString(),
-        };
-        return { user, supabase };
-      }
-    }
+    const user = {
+      id: payload.id as string,
+      email: payload.email as string,
+      name: payload.name as string,
+      role: (payload.role || "student") as "student" | "faculty" | "admin",
+      user_metadata: {
+        name: payload.name,
+        role: payload.role,
+        branch: payload.branch,
+        current_semester: payload.current_semester,
+        section: payload.section,
+      },
+      app_metadata: { role: payload.role },
+      created_at: new Date().toISOString(),
+    };
+
+    return { user, supabase };
   } catch {
-    // proceed to fallback
-  }
-
-  // Fallback: network round-trip to Supabase Auth only if token is expired or parsing failed
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
     return { user: null, supabase };
   }
-  return { user, supabase };
 });
 
 export const getCachedUserProfile = cache(async (): Promise<{ user: any; profile: CachedUserProfile | null; supabase: any }> => {
@@ -112,49 +69,40 @@ export const getCachedUserProfile = cache(async (): Promise<{ user: any; profile
     return { user: null, profile: null, supabase };
   }
 
-  // Fast-path: In-memory cache for database profile (0.01ms, 0 DB queries)
-  const cached = profileMemCache.get(user.id) || (user.email ? profileMemCache.get(user.email) : undefined);
+  // Fast path: memory cache
+  const cached = profileMemCache.get(user.id) || profileMemCache.get(user.email);
   if (cached && cached.expiresAt > Date.now()) {
     return { user, profile: cached.profile, supabase };
   }
 
-  // Query database profile
+  // Fetch directly from MySQL users table
   try {
-    const { data: dbProfile } = await supabase
-      .from("users")
-      .select("id, name, email, role, branch, current_semester, section, designation, phone, roll_number, status")
-      .or(`id.eq.${user.id},email.eq.${user.email}`)
-      .single();
+    const [rows]: any = await pool.query(
+      "SELECT id, name, email, role, branch, current_semester, section, designation, phone, roll_number, status FROM users WHERE id = ? OR email = ? LIMIT 1",
+      [user.id, user.email]
+    );
 
-    if (dbProfile) {
-      const profile = dbProfile as CachedUserProfile;
+    if (rows && rows.length > 0) {
+      const profile = rows[0] as CachedUserProfile;
       profileMemCache.set(user.id, { profile, expiresAt: Date.now() + 60_000 });
-      if (user.email) profileMemCache.set(user.email, { profile, expiresAt: Date.now() + 60_000 });
+      profileMemCache.set(user.email, { profile, expiresAt: Date.now() + 60_000 });
       return { user, profile, supabase };
     }
-  } catch {}
-
-  // Fallback default profile if not in DB
-  const metaRole = user.user_metadata?.role as "student" | "faculty" | "admin" | undefined;
-  const metaName = user.user_metadata?.name as string | undefined;
-
-  const fallbackRole: "student" | "faculty" | "admin" = 
-    metaRole || 
-    (user.email?.startsWith("admin") ? "admin" : user.email?.startsWith("faculty") || user.email?.startsWith("testfaculty") ? "faculty" : "student");
-
-  const fallbackRoll = fallbackRole === "student" && user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : null;
+  } catch (dbErr) {
+    console.warn("MySQL getCachedUserProfile error:", dbErr);
+  }
 
   const fallbackProfile: CachedUserProfile = {
     id: user.id,
-    name: metaName || (fallbackRole === "admin" ? "System Administrator" : fallbackRole === "faculty" ? "Faculty Member" : `Student ${fallbackRoll || ""}`),
-    email: user.email || "",
-    role: fallbackRole,
-    branch: fallbackRole === "student" ? "CIC" : null,
-    current_semester: fallbackRole === "student" ? 3 : null,
-    section: fallbackRole === "student" ? "A" : null,
-    designation: fallbackRole === "faculty" ? "Assistant Professor" : null,
+    name: user.name || "User",
+    email: user.email,
+    role: user.role || "student",
+    branch: user.user_metadata?.branch || null,
+    current_semester: user.user_metadata?.current_semester || null,
+    section: user.user_metadata?.section || null,
+    designation: null,
     phone: null,
-    roll_number: fallbackRoll,
+    roll_number: user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : null,
     status: "active",
   };
 
