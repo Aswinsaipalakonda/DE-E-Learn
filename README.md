@@ -1,24 +1,30 @@
 # MVGR Data Engineering E-Learning Portal (DE E-Learn)
 
-Welcome to the **MVGR Data Engineering E-Learning Portal** (`MVGR DE E-learn`), a high-performance academic resource distribution and syllabus management system built for the students, faculty, and administration of the **Department of Data Engineering** at **MVGR College of Engineering (Autonomous)**.
+Welcome to the **MVGR Data Engineering E-Learning Portal** (`MVGR DE E-learn`), a production-grade academic resource distribution, curriculum management, and analytics system built for the students, faculty, and administration of the **Department of Data Engineering** at **MVGR College of Engineering (Autonomous)**.
 
 ---
 
-## 🏛️ System Overview & Architecture
+## 🏛️ System Architecture
 
-DE E-Learn is engineered to streamline curriculum material delivery, enforce strict academic regulation isolation, provide engagement telemetry, and secure exam integrity across autonomous cohorts.
+DE E-Learn is built on a decoupled, self-hosted modern architecture designed for maximum performance, data privacy, and unlimited file storage capacity without cloud vendor lock-in.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    MVGR DE E-Learn Platform                 │
-├─────────────────┬───────────────────────────┬───────────────┤
-│  Student Portal │       Faculty Portal      │  Admin Suite  │
-│  - Syllabus Hub │  - Resource Distribution  │  - Governance │
-│  - Dynamic View │  - Engagement Telemetry   │  - Roster CSV │
-│  - Bookmarks    │  - Material Lifecycle     │  - Lockouts   │
-└─────────────────┴───────────────────────────┴───────────────┘
-                                │
-               Supabase PostgreSQL & Storage Engine
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       MVGR DE E-Learn Platform                          │
+├────────────────────┬───────────────────────────────┬────────────────────┤
+│   Student Portal   │         Faculty Portal        │    Admin Suite     │
+│  - Syllabus Hub    │  - Multi-File Distribution    │  - Governance      │
+│  - In-Browser View │  - Engagement Analytics       │  - Roster CSV      │
+│  - Bookmarks & DL  │  - Material Lifecycle (Draft) │  - Exam Lockouts   │
+└────────────────────┴───────────────┬───────────────┴────────────────────┘
+                                     │
+                        Node.js & Express REST API
+                      (Authentication, RBAC, Multer)
+                                     │
+             ┌───────────────────────┴───────────────────────┐
+             ▼                                               ▼
+       MySQL Database                              Disk Storage Engine
+    (XAMPP / Hostinger)                        (server/uploads/materials/)
 ```
 
 ---
@@ -26,30 +32,31 @@ DE E-Learn is engineered to streamline curriculum material delivery, enforce str
 ## 🚀 Key Modules & Capabilities
 
 ### 👨‍🎓 1. Student Academic Hub
-* **Curriculum Exploration:** Filter notes, lecture presentations, lab manuals, and question banks by Autonomous Regulation (`R23`), Department Branch (`CIC`, `CSD`, `CSM`), and Semester (`Sem 1` – `Sem 8`).
-* **Personalized Bookmarking:** Save materials to a private, persistent library for quick revision.
-* **Integrated Inquiries:** Submit academic inquiries directly to course coordinators and faculty.
+* **Curriculum Exploration:** Filter lecture notes, presentations, lab manuals, question banks, and reference materials by Autonomous Regulation (`R23`, `R20`, `R19`, `A2`), Department Branch (`CIC`, `CSD`, `CSM`), and Semester (`Sem 1` – `Sem 8`).
+* **In-Browser Document Preview & Download:** High-speed streaming downloads and preview modal for PDF, Word, PowerPoint, and lab files.
+* **Personalized Bookmarking:** Save materials to a private, persistent library for rapid exam revision.
+* **Support Inquiries:** Submit academic queries directly to department coordinators.
 * **Exam Lockout Compliance:** Automated UI lockdown during scheduled examination windows to prevent unauthorized material access.
 
 ### 👩‍🏫 2. Faculty Distribution & Analytics
-* **Course Material Publisher:** Multi-file drag-and-drop uploader supporting PDF, Word, PowerPoint, and lab archives with version tracking.
-* **Real-time Engagement Metrics:** Real-time dashboards monitoring total published files, unique student readers, download counts, and active subject portfolios.
+* **Course Material Publisher:** Multi-file drag-and-drop uploader supporting PDF, Word (.doc/.docx), PowerPoint (.ppt/.pptx), and TXT files up to 100 MB per file.
+* **State Management:** Publish immediately or save drafts for later review and scheduling.
+* **Engagement Telemetry:** Dashboards monitoring total published resources, download counts, and unique student readers.
 * **Cohort Isolation:** Direct material publishing scoped to specific branches or cross-listed cohorts.
 * **Broadcast Circulars:** Post targeted departmental announcements and notice board updates.
 
 ### 🛠️ 3. Administrative Governance Suite
 * **Student Roster & Cohort Management:** Single student enrollment with 10-digit roll number validation, auto-generated institutional emails, and bulk CSV roster imports.
-* **Batch Cohort Promotion:** Advance an entire semester cohort to the next curriculum term with a single administrative action.
-* **Academic Taxonomy Manager:** Dynamic CRUD operations for Autonomous Regulations, Department Branches, and Semester Timelines.
+* **Academic Taxonomy Manager:** Dynamic CRUD operations for Autonomous Regulations, Department Branches, Semesters, and Subjects.
 * **Examination Lockout Scheduler:** Schedule timed material lockouts for specific branches, semesters, and subject codes.
-* **Security & Immutable Audit Logs:** Append-only logging tracking user lifecycle, password resets, and curriculum adjustments.
+* **Security & Immutable Audit Logs:** Append-only logging tracking user lifecycle, authentication events, password resets, and curriculum adjustments.
 
 ---
 
 ## 🏢 Departmental Specializations Supported
 
-* **CIC:** *Computer Science and Information Technology*
-* **CSD:** *Computer Science and Design*
+* **CIC:** *Cyber Security, IoT with BlockChain Technology*
+* **CSD:** *Data Science*
 * **CSM:** *Artificial Intelligence and Machine Learning*
 
 ---
@@ -57,60 +64,109 @@ DE E-Learn is engineered to streamline curriculum material delivery, enforce str
 ## 🔐 Role-Based Access Control (RBAC)
 
 The platform enforces strict role-based access:
-* **Administrators:** Full system governance, taxonomy, roster imports, and exam schedules.
-* **Faculty Members:** Publishing materials, viewing engagement metrics, and posting announcements.
+* **Administrators:** Full system governance, taxonomy, roster imports, system logs, and exam schedules.
+* **Faculty Members:** Publishing materials, viewing engagement telemetry, and posting announcements.
 * **Students:** Accessing enrolled semester materials, bookmarking documents, and submitting inquiries.
-
-> [!NOTE]
-> For authenticated credentials and setup procedures, authorized staff should consult the internal `creds.md` documentation.
 
 ---
 
 ## 🛠️ Technology Stack
 
-* **Framework:** Next.js 16 (App Router & Server Actions)
-* **Language:** TypeScript 5.x
-* **Database & Auth:** Supabase (PostgreSQL with Row Level Security & GoTrue)
-* **Storage:** Supabase Storage Bucket (`materials`)
-* **Styling:** Tailwind CSS with custom design tokens
-* **Icons:** Lucide React
+* **Frontend:** Next.js 16 (React 19, App Router, Server Actions)
+* **Backend:** Node.js & Express 5 (REST API, layered architecture)
+* **Database:** MySQL 8.x / MariaDB (managed via connection pooling with `mysql2/promise`)
+* **Storage Engine:** Local / Hostinger Disk Storage via `multer` (bypassing 500MB cloud limits)
+* **Authentication:** Stateless JWT (`jsonwebtoken`) with salted bcrypt hashes (`bcryptjs`) & HTTP-only cookies
+* **Styling & UI:** Tailwind CSS v4, Lucide React icons, and custom design tokens
 
 ---
 
 ## 💻 Local Development Setup
 
 ### 1. Prerequisites
-* Node.js 18+ or 20+
-* npm or pnpm
-* Supabase Project
+* **Node.js** (v20.x or higher) and **npm**
+* **XAMPP** (or MySQL server running locally on port `3306`)
 
-### 2. Environment Configuration
-Create a `.env.local` file in the root directory:
+### 2. Configure Environment Variables
+Verify or create `.env.local` in the project root:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project-id>.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+# Local MySQL Database Configuration
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=de_elearn
+
+# Express Server Port
+PORT=5000
+
+# Security & JWT Token Secret
+JWT_SECRET=de-elearn-mvgrce-super-secure-jwt-secret-key-2026
+JWT_EXPIRES_IN=7d
+
+# API Endpoint URL
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
-### 3. Install Dependencies
+### 3. Initialize & Seed MySQL Database
+Make sure Apache & MySQL are running in your **XAMPP Control Panel**, then run:
+
 ```bash
-npm install
+npm run db:init
 ```
+*This automatically connects to MySQL, creates the database `de_elearn`, executes `schema.sql`, and seeds initial branches, semesters, regulations, subjects, all 33 faculty members, and test accounts.*
 
-### 4. Run Development Server
+### 4. Start the Application
+Run both the Express API backend and Next.js frontend concurrently:
+
 ```bash
-npm run dev
+npm run dev:all
 ```
-Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-### 5. Validate Production Build
+Or run them individually:
+* **Terminal 1 (Express API)**: `npm run server` (runs at `http://localhost:5000`)
+* **Terminal 2 (Next.js Frontend)**: `npm run dev` (runs at `http://localhost:3000`)
+
+Open your browser at **[http://localhost:3000](http://localhost:3000)**.
+
+---
+
+## 🔑 Default Seed Credentials for Testing
+
+| Role | Email | Password | Scope & Notes |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin@mvgrce.edu.in` | `AdminPassword@123!` | Full governance, roster imports, taxonomy, exam schedules (`/admin`). |
+| **Faculty** | `satyanarayanareddy@mvgrce.edu.in` | `MVGRDE@5686` | Dr. G. Satyanarayana Reddy (`/faculty`). Rule: `MVGRDE@<last-4-digits-of-mobile>`. |
+| **Faculty (Generic)** | `faculty@mvgrce.edu.in` | `Password@789` | Department Faculty test account (`/faculty`). |
+| **Student** | `23331a4745@mvgrce.edu.in` | `23331A4745` | Test Student (CSD, Sem 4). Rule: Roll Number in uppercase. |
+| **Student (Demo)** | `student@mvgrce.edu.in` | `Password@789` | Demo Student (CIC, Sem 3). |
+
+---
+
+## 🌐 Production Deployment (Hostinger)
+
+For complete, step-by-step instructions on deploying the Node.js/Express backend, MySQL database, and Next.js frontend to **Hostinger Web Hosting (cPanel / hPanel)**, see the dedicated deployment guide:
+
+📖 **[HOSTINGER_DEPLOYMENT.md](./HOSTINGER_DEPLOYMENT.md)**
+
+---
+
+## 🧪 Testing & Verification
+
+Run the automated integration test suite to verify the database connection, authentication, file storage, and analytics:
+
+```bash
+node server/test-integration.js
+```
+
+Validate production bundle compilation:
 ```bash
 npm run build
 ```
 
 ---
 
-## 📄 License & Institutional Rights
+## 📄 Institutional Rights
 
 Developed for the **Department of Data Engineering**, **MVGR College of Engineering (Autonomous)**, Vizianagaram, Andhra Pradesh, India.
