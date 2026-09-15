@@ -71,7 +71,6 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
   const [selectedSemester, setSelectedSemester] = useState<number | null>(null);
 
   // Step 2 State: Subject & Branch
-  const [subjectSearch, setSubjectSearch] = useState("");
   const [selectedSubjectCode, setSelectedSubjectCode] = useState("");
   const [targetBranches, setTargetBranches] = useState<string[]>([]);
 
@@ -133,17 +132,6 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
     return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
   }, [subjectsForRegulation, selectedSemester, selectedRegulation]);
 
-  // Filtered courses by search query
-  const filteredSubjects = useMemo(() => {
-    if (!subjectSearch.trim()) return groupedSubjects;
-    const q = subjectSearch.toLowerCase().trim();
-    return groupedSubjects.filter(s => 
-      s.code.toLowerCase().includes(q) || 
-      s.title.toLowerCase().includes(q) ||
-      s.branches.some(b => b.toLowerCase().includes(q))
-    );
-  }, [groupedSubjects, subjectSearch]);
-
   // Active Selected Subject Object
   const currentSubject = useMemo(() => {
     return groupedSubjects.find(s => s.code === selectedSubjectCode);
@@ -155,7 +143,6 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
     setSelectedSemester(null);
     setSelectedSubjectCode("");
     setTargetBranches([]);
-    setSubjectSearch("");
   };
 
   // Semester selection handler
@@ -163,7 +150,6 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
     setSelectedSemester(sem);
     setSelectedSubjectCode("");
     setTargetBranches([]);
-    setSubjectSearch("");
   };
 
   // Subject selection handler (defaults to selecting all branches of that course)
@@ -545,123 +531,55 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
             </button>
           </div>
 
-          {/* Subject Search & Auto-Filtered Interactive List */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+          {/* Subject Simple Dropdown Selection */}
+          <div className="space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <label htmlFor="subject-select" className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Layers className="h-4 w-4 text-blue-600" />
                 <span>Select Course Subject (Semester {selectedSemester}) *</span>
               </label>
 
               <span className="text-[11px] font-medium text-slate-500">
-                {filteredSubjects.length} of {groupedSubjects.length} subjects
+                {groupedSubjects.length} subjects available in Semester {selectedSemester}
               </span>
             </div>
 
-            {/* Instant Search Bar */}
-            <div className="relative">
-              <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={subjectSearch}
-                onChange={(e) => setSubjectSearch(e.target.value)}
-                placeholder="Search by subject code, title, or branch (e.g. CSEL201, Data Structures)..."
-                className="w-full pl-10 pr-10 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-              />
-              {subjectSearch && (
-                <button
-                  type="button"
-                  onClick={() => setSubjectSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Scrollable Subject Cards Container */}
-            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-              {filteredSubjects.length === 0 ? (
-                <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 space-y-2">
-                  <BookOpen className="h-7 w-7 text-slate-400 mx-auto" />
-                  <p className="text-xs font-bold text-slate-700">No subjects found</p>
-                  <p className="text-[11px] text-slate-500">
-                    No course matches &quot;{subjectSearch}&quot; for Semester {selectedSemester}.
-                  </p>
-                  {subjectSearch && (
-                    <button
-                      type="button"
-                      onClick={() => setSubjectSearch("")}
-                      className="text-xs font-semibold text-primary hover:underline cursor-pointer"
-                    >
-                      Clear search filter
-                    </button>
-                  )}
-                </div>
-              ) : (
-                filteredSubjects.map((sub) => {
-                  const isSelected = selectedSubjectCode === sub.code;
-                  return (
-                    <button
-                      key={sub.code}
-                      type="button"
-                      onClick={() => handleSubjectChange(sub.code)}
-                      className={`w-full p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-start justify-between gap-3 ${
-                        isSelected
-                          ? "bg-blue-50/90 border-blue-600 ring-2 ring-blue-500/25 shadow-xs"
-                          : "bg-white hover:bg-slate-50 border-slate-200/90 text-slate-800"
-                      }`}
-                    >
-                      <div className="space-y-1.5 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold ${
-                            isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-800"
-                          }`}>
-                            {sub.code}
-                          </span>
-                          <span className="text-[11px] font-semibold text-slate-500">
-                            Sem {sub.semester}
-                          </span>
-                        </div>
-
-                        <h4 className={`text-xs sm:text-sm font-bold leading-snug break-words ${
-                          isSelected ? "text-blue-950" : "text-slate-900"
-                        }`}>
-                          {sub.title}
-                        </h4>
-
-                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                            Branches:
-                          </span>
-                          {sub.branches.map((b) => (
-                            <span
-                              key={b}
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                isSelected ? "bg-blue-200/80 text-blue-900" : "bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              {b}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="shrink-0 pt-0.5">
-                        {isSelected ? (
-                          <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center">
-                            <Check className="h-3.5 w-3.5" />
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded-full border border-slate-300 bg-white" />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+            <select
+              id="subject-select"
+              value={selectedSubjectCode}
+              onChange={(e) => handleSubjectChange(e.target.value)}
+              className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+            >
+              <option value="">-- Choose Subject ({groupedSubjects.length} Available in Semester {selectedSemester}) --</option>
+              {groupedSubjects.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.code} - {s.title} ({s.branches.join(", ")})
+                </option>
+              ))}
+            </select>
           </div>
+
+          {/* Selected Course Confirmation Card */}
+          {currentSubject && (
+            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-start justify-between gap-3 animate-in fade-in duration-150">
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold bg-blue-600 text-white px-2 py-0.5 rounded-md">
+                    {currentSubject.code}
+                  </span>
+                  <span className="text-xs font-bold text-blue-900">
+                    Semester {currentSubject.semester}
+                  </span>
+                </div>
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                  {currentSubject.title}
+                </h4>
+                <p className="text-[11px] text-slate-600">
+                  Applicable Branches: <strong className="text-slate-800">{currentSubject.branches.join(", ")}</strong>
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Section / Branch Allocation (Appears once subject is selected) */}
           {currentSubject && (
