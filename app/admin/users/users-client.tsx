@@ -809,7 +809,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
   };
 
   return (
-    <div className="space-y-6 w-full pb-10">
+    <div className="space-y-6 w-full pb-10" suppressHydrationWarning>
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       {/* ========================================================================= */}

@@ -141,6 +141,7 @@ export default function Sidebar({ userRole, userScope, signOutAction }: SidebarP
       <div className="p-3.5 border-t border-slate-800/80 bg-slate-900/30">
         <button
           onClick={() => signOutAction()}
+          suppressHydrationWarning
           className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-2xl transition-all duration-200 cursor-pointer"
         >
           <LogOut className="h-4 w-4" />

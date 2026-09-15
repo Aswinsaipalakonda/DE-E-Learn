@@ -143,6 +143,7 @@ export default function RootLayout({
     <html
       lang="en"
       className="h-full antialiased font-sans"
+      suppressHydrationWarning
     >
       <head>
         {/* Explicit Google Site Verification Meta Tag */}
@@ -162,7 +163,7 @@ export default function RootLayout({
         {/* Structured Data (Schema.org JSON-LD for Google Sitelinks) */}
         <StructuredData primaryDomain={PRIMARY_URL} alternateDomain={ALIAS_URL} />
       </head>
-      <body className="min-h-full flex flex-col font-sans bg-[#F8FAFC]">
+      <body className="min-h-full flex flex-col font-sans bg-[#F8FAFC]" suppressHydrationWarning>
         <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
