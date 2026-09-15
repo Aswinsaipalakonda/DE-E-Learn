@@ -831,7 +831,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {activeTab === "student" && counts.student > 0 && (
+          {counts.student > 0 && (
             <button
               onClick={() => {
                 setIsPromoteModalMounted(true);
@@ -841,7 +841,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   });
                 });
               }}
-              className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-all cursor-pointer shadow-2xs"
             >
               <GraduationCap className="h-4 w-4 text-blue-600" />
               <span>Promote Cohort</span>
@@ -876,13 +876,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
             className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "all"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-semibold"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-slate-900 text-white shadow-sm border border-slate-800 font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
             }`}
           >
-            <UsersIcon className="h-3.5 w-3.5 text-slate-600" />
+            <UsersIcon className={`h-3.5 w-3.5 ${activeTab === "all" ? "text-slate-200" : "text-slate-600"}`} />
             <span>All Users</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "all"
+                ? "bg-white/20 text-white"
+                : "bg-slate-200/80 text-slate-700"
+            }`}>
               {counts.total}
             </span>
           </button>
@@ -891,13 +895,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             onClick={() => { setActiveTab("faculty"); setCurrentPage(1); }}
             className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "faculty"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-semibold"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-slate-900 text-white shadow-sm border border-slate-800 font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
             }`}
           >
-            <Briefcase className="h-3.5 w-3.5 text-slate-700" />
+            <Briefcase className={`h-3.5 w-3.5 ${activeTab === "faculty" ? "text-indigo-300" : "text-slate-700"}`} />
             <span>Faculty</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "faculty"
+                ? "bg-white/20 text-white"
+                : "bg-slate-200/80 text-slate-700"
+            }`}>
               {counts.faculty}
             </span>
           </button>
@@ -906,13 +914,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             onClick={() => { setActiveTab("student"); setCurrentPage(1); }}
             className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "student"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-semibold"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-slate-900 text-white shadow-sm border border-slate-800 font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
             }`}
           >
-            <GraduationCap className="h-3.5 w-3.5 text-blue-600" />
+            <GraduationCap className={`h-3.5 w-3.5 ${activeTab === "student" ? "text-blue-400" : "text-blue-600"}`} />
             <span>Students</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "student"
+                ? "bg-white/20 text-white"
+                : "bg-slate-200/80 text-slate-700"
+            }`}>
               {counts.student}
             </span>
           </button>
@@ -921,13 +933,17 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
             onClick={() => { setActiveTab("admin"); setCurrentPage(1); }}
             className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "admin"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-semibold"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-slate-900 text-white shadow-sm border border-slate-800 font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
             }`}
           >
-            <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
+            <ShieldCheck className={`h-3.5 w-3.5 ${activeTab === "admin" ? "text-amber-400" : "text-amber-600"}`} />
             <span>Admins</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "admin"
+                ? "bg-white/20 text-white"
+                : "bg-slate-200/80 text-slate-700"
+            }`}>
               {counts.admin}
             </span>
           </button>
