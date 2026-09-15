@@ -20,12 +20,25 @@ export const metadata = {
 };
 
 export default async function LandingPage() {
-  const { user, profile } = await getCachedUserProfile();
-
-  // If user is already authenticated, redirect directly to their respective role dashboard
-  if (user) {
-    const role = profile?.role || user.user_metadata?.role || (user.email?.startsWith("admin") ? "admin" : user.email?.startsWith("faculty") ? "faculty" : "student");
-    redirect(`/${role}`);
+  try {
+    const { user, profile } = await getCachedUserProfile();
+    if (user) {
+      const role =
+        profile?.role ||
+        user.user_metadata?.role ||
+        (user.email?.startsWith("admin")
+          ? "admin"
+          : user.email?.startsWith("faculty")
+          ? "faculty"
+          : "student");
+      redirect(`/${role}`);
+    }
+  } catch (err: any) {
+    // If Next.js redirect was thrown, rethrow it so navigation works
+    if (err?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw err;
+    }
+    // Otherwise gracefully continue rendering the public landing page
   }
 
   return (

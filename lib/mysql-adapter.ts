@@ -8,8 +8,12 @@ import path from 'path';
 const JWT_SECRET = process.env.JWT_SECRET || 'de-elearn-mvgrce-super-secure-jwt-secret-key-2026';
 const uploadBaseDir = path.join(process.cwd(), 'server', 'uploads', 'materials');
 
-if (!fs.existsSync(uploadBaseDir)) {
-  fs.mkdirSync(uploadBaseDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadBaseDir)) {
+    fs.mkdirSync(uploadBaseDir, { recursive: true });
+  }
+} catch (e) {
+  // Directory might already exist or running in restricted environment
 }
 
 interface QueryFilter {

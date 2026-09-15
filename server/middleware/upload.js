@@ -3,9 +3,12 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-const uploadBaseDir = path.join(__dirname, '..', 'uploads', 'materials');
-if (!fs.existsSync(uploadBaseDir)) {
-  fs.mkdirSync(uploadBaseDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadBaseDir)) {
+    fs.mkdirSync(uploadBaseDir, { recursive: true });
+  }
+} catch (e) {
+  // Directory might already exist or running in restricted environment
 }
 
 const storage = multer.diskStorage({
