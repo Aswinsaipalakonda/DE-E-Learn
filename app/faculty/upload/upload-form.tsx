@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo } from "react";
 import { uploadMaterialAction } from "./actions";
 import { 
   ArrowLeft, 
@@ -20,8 +20,7 @@ import {
   GraduationCap,
   Search,
   BookOpen,
-  CheckCircle2,
-  ChevronDown
+  CheckCircle2
 } from "lucide-react";
 
 interface RegulationOption {
@@ -75,18 +74,6 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
   const [subjectSearch, setSubjectSearch] = useState("");
   const [selectedSubjectCode, setSelectedSubjectCode] = useState("");
   const [targetBranches, setTargetBranches] = useState<string[]>([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // Step 3 State: Details & Files
   const [title, setTitle] = useState("");
@@ -558,167 +545,123 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
             </button>
           </div>
 
-          {/* Subject Dropdown Selector */}
+          {/* Subject Search & Auto-Filtered Interactive List */}
           <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Layers className="h-4 w-4 text-blue-600" />
                 <span>Select Course Subject (Semester {selectedSemester}) *</span>
               </label>
 
               <span className="text-[11px] font-medium text-slate-500">
-                {groupedSubjects.length} subjects available in Semester {selectedSemester}
+                {filteredSubjects.length} of {groupedSubjects.length} subjects
               </span>
             </div>
 
-            {/* Custom Interactive Dropdown / Combobox */}
-            <div ref={dropdownRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setIsDropdownOpen(prev => !prev)}
-                className={`w-full px-4.5 py-3.5 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all cursor-pointer ${
-                  isDropdownOpen
-                    ? "bg-white border-blue-600 ring-2 ring-blue-500/20 shadow-sm"
-                    : selectedSubjectCode
-                    ? "bg-blue-50/50 border-blue-300 hover:border-blue-400"
-                    : "bg-slate-50 hover:bg-slate-100/80 border-slate-200"
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <BookOpen className={`h-4 w-4 shrink-0 ${selectedSubjectCode ? "text-blue-600" : "text-slate-400"}`} />
-                  {currentSubject ? (
-                    <div className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-blue-600 text-white shrink-0">
-                        {currentSubject.code}
-                      </span>
-                      <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                        {currentSubject.title}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-xs sm:text-sm text-slate-500 font-medium truncate">
-                      -- Click to Select Subject ({groupedSubjects.length} Available) --
-                    </span>
+            {/* Instant Search Bar */}
+            <div className="relative">
+              <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={subjectSearch}
+                onChange={(e) => setSubjectSearch(e.target.value)}
+                placeholder="Search by subject code, title, or branch (e.g. CSEL201, Data Structures)..."
+                className="w-full pl-10 pr-10 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+              {subjectSearch && (
+                <button
+                  type="button"
+                  onClick={() => setSubjectSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Scrollable Subject Cards Container */}
+            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+              {filteredSubjects.length === 0 ? (
+                <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 space-y-2">
+                  <BookOpen className="h-7 w-7 text-slate-400 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No subjects found</p>
+                  <p className="text-[11px] text-slate-500">
+                    No course matches &quot;{subjectSearch}&quot; for Semester {selectedSemester}.
+                  </p>
+                  {subjectSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setSubjectSearch("")}
+                      className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+                    >
+                      Clear search filter
+                    </button>
                   )}
                 </div>
+              ) : (
+                filteredSubjects.map((sub) => {
+                  const isSelected = selectedSubjectCode === sub.code;
+                  return (
+                    <button
+                      key={sub.code}
+                      type="button"
+                      onClick={() => handleSubjectChange(sub.code)}
+                      className={`w-full p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-start justify-between gap-3 ${
+                        isSelected
+                          ? "bg-blue-50/90 border-blue-600 ring-2 ring-blue-500/25 shadow-xs"
+                          : "bg-white hover:bg-slate-50 border-slate-200/90 text-slate-800"
+                      }`}
+                    >
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold ${
+                            isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-800"
+                          }`}>
+                            {sub.code}
+                          </span>
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            Sem {sub.semester}
+                          </span>
+                        </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {selectedSubjectCode && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 hidden sm:inline-block">
-                      Selected
-                    </span>
-                  )}
-                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? "rotate-180 text-blue-600" : ""}`} />
-                </div>
-              </button>
+                        <h4 className={`text-xs sm:text-sm font-bold leading-snug break-words ${
+                          isSelected ? "text-blue-950" : "text-slate-900"
+                        }`}>
+                          {sub.title}
+                        </h4>
 
-              {/* Dropdown Options Menu */}
-              {isDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full mt-2 z-30 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                  {/* Search inside dropdown */}
-                  <div className="p-3 border-b border-slate-100 bg-slate-50/70">
-                    <div className="relative">
-                      <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={subjectSearch}
-                        onChange={(e) => setSubjectSearch(e.target.value)}
-                        placeholder="Type to filter subjects by code or title..."
-                        className="w-full pl-8.5 pr-8 py-2 text-xs sm:text-sm bg-white rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium"
-                        autoFocus
-                      />
-                      {subjectSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setSubjectSearch("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Options List */}
-                  <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 p-1.5">
-                    {filteredSubjects.length === 0 ? (
-                      <div className="p-5 text-center text-xs text-slate-500 space-y-1">
-                        <p className="font-semibold text-slate-700">No matching subjects</p>
-                        <p className="text-[11px]">No course found matching &quot;{subjectSearch}&quot;</p>
+                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                            Branches:
+                          </span>
+                          {sub.branches.map((b) => (
+                            <span
+                              key={b}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                isSelected ? "bg-blue-200/80 text-blue-900" : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {b}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      filteredSubjects.map((sub) => {
-                        const isSelected = selectedSubjectCode === sub.code;
-                        return (
-                          <button
-                            key={sub.code}
-                            type="button"
-                            onClick={() => {
-                              handleSubjectChange(sub.code);
-                              setIsDropdownOpen(false);
-                            }}
-                            className={`w-full p-3 text-left rounded-xl transition-all flex items-start justify-between gap-3 text-xs cursor-pointer ${
-                              isSelected
-                                ? "bg-blue-50/90 text-blue-950 font-semibold"
-                                : "hover:bg-slate-50 text-slate-800"
-                            }`}
-                          >
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
-                                  {sub.code}
-                                </span>
-                                <span className="text-[10px] text-slate-500 font-medium">
-                                  Branches: {sub.branches.join(", ")}
-                                </span>
-                              </div>
-                              <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-snug break-words">
-                                {sub.title}
-                              </p>
-                            </div>
 
-                            {isSelected && (
-                              <Check className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                            )}
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
+                      <div className="shrink-0 pt-0.5">
+                        {isSelected ? (
+                          <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                            <Check className="h-3.5 w-3.5" />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border border-slate-300 bg-white" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
-
-          {/* Selected Course Confirmation Card */}
-          {currentSubject && (
-            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-start justify-between gap-3 animate-in fade-in duration-150">
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold bg-blue-600 text-white px-2 py-0.5 rounded-md">
-                    {currentSubject.code}
-                  </span>
-                  <span className="text-xs font-bold text-blue-900">
-                    Semester {currentSubject.semester}
-                  </span>
-                </div>
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
-                  {currentSubject.title}
-                </h4>
-                <p className="text-[11px] text-slate-600">
-                  Applicable Branches: <strong className="text-slate-800">{currentSubject.branches.join(", ")}</strong>
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsDropdownOpen(true)}
-                className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline cursor-pointer shrink-0 pt-0.5"
-              >
-                Change
-              </button>
-            </div>
-          )}
 
           {/* Section / Branch Allocation (Appears once subject is selected) */}
           {currentSubject && (
