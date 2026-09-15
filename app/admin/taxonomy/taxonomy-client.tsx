@@ -1959,7 +1959,7 @@ export default function TaxonomyClient({
                   required
                   value={semTitle}
                   onChange={(e) => setSemTitle(e.target.value)}
-                  placeholder="e.g., 1st Semester (Freshman)"
+                  placeholder="Enter semester display title"
                   className="w-full px-4 py-2.5 text-sm bg-bg border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 text-primary font-medium"
                 />
               </div>

@@ -217,13 +217,13 @@ export default async function AdminAnalyticsPage() {
         (userProfile?.roll_number as string) || 
         ev.actor_roll || 
         ev.metadata?.roll_number || 
-        (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "23331A4701");
+        (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "");
 
       const studentName = 
         (userProfile?.name as string) || 
         ev.actor_name || 
         ev.metadata?.student_name || 
-        (roll === "23331A4701" ? "Rahul Varma Datla" : roll === "23331A4745" ? "Aswin Sai Palakonda" : `Student ${roll}`);
+        (roll ? `Student (${roll})` : "Enrolled Student");
 
       let actionDetail = ev.action_detail || "Viewed Material Workspace";
       const fileName = ev.file_name || ev.metadata?.file_name;
@@ -280,7 +280,7 @@ export default async function AdminAnalyticsPage() {
 
     return {
       id: String(u.id || roll),
-      name: String(u.name || (roll === "23331A4701" ? "Rahul Varma Datla" : roll === "23331A4745" ? "Aswin Sai Palakonda" : roll === "23331A4746" ? "Aswinnn" : `Student ${roll.slice(-4)}`)),
+      name: String(u.name || (roll ? `Student (${roll})` : "Enrolled Student")),
       email: email || `${roll.toLowerCase()}@mvgrce.edu.in`,
       role: "student",
       branch,

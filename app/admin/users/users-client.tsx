@@ -375,7 +375,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     setFormLoading(true);
     try {
       const selectedDesignation = designation === "Other" ? customDesignation.trim() : designation;
-      const selectedBranch = formRole === "admin" ? null : (branch === "ALL" ? null : branch);
+      const selectedBranch = (formRole === "admin" || formRole === "faculty") ? null : (branch === "ALL" ? null : branch);
       const parsedSemester = formRole === "student" ? parseInt(semester, 10) : null;
       const formattedRoll = formRole === "student" ? rollNumber.toUpperCase().trim() : null;
       const formattedPhone = (formRole === "faculty" || formRole === "admin") ? (phone.trim() || null) : null;
@@ -1187,14 +1187,18 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
                         {/* 3. Department / Scope */}
                         <td className="py-3.5 px-4">
-                          {u.branch ? (
+                          {u.role === "faculty" ? (
+                            <span className="text-slate-600 text-xs font-medium">
+                              Department Faculty
+                            </span>
+                          ) : u.branch ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-medium">
                               <Layers className="h-3 w-3 text-slate-500" />
                               <span>{u.branch}</span>
                             </span>
                           ) : (
                             <span className="text-slate-500 text-xs font-normal">
-                              {u.role === "admin" ? "System Administrator" : "Data Engineering (All)"}
+                              {u.role === "admin" ? "System Administrator" : "Data Engineering"}
                             </span>
                           )}
                         </td>
@@ -1417,7 +1421,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
                         College Roll Number <span className="text-red-500">*</span>
                       </label>
-                      <span className="text-[11px] text-slate-400">e.g. 23331A4745</span>
+                      <span className="text-[11px] text-slate-400">Format: 10 characters</span>
                     </div>
                     <input
                       type="text"
@@ -1461,7 +1465,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder={formRole === "faculty" ? "e.g. Dr. P. Srinivasa Rao" : "e.g. Rahul Varma"}
+                    placeholder={formRole === "faculty" ? "Enter faculty name" : formRole === "student" ? "Enter student name" : "Enter full name"}
                     className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
                   />
                 </div>
@@ -1477,8 +1481,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={formRole === "student" && !!rollNumber && !editingUser}
-                    placeholder="e.g. faculty@mvgrce.edu.in"
-                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 font-normal transition-all disabled:opacity-75 disabled:bg-slate-50"
+                    placeholder={formRole === "student" ? "Enter student email" : formRole === "faculty" ? "Enter faculty email" : "Enter institutional email"}
+                    className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all disabled:opacity-75 disabled:bg-slate-50"
                   />
                 </div>
 
@@ -1514,22 +1518,22 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </div>
                 )}
 
-                {/* 6. FACULTY SPECIFIC: Contact Mobile Number (Required for password generation) */}
+                {/* 6. FACULTY SPECIFIC: Contact Mobile Number */}
                 {formRole === "faculty" && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Contact Mobile Number <span className="text-red-500">*</span>
                       </label>
-                      <span className="text-[11px] text-slate-400">e.g. 9491494021</span>
+                      <span className="text-[11px] text-slate-400">Format: 10 digits</span>
                     </div>
                     <input
                       type="tel"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="10-digit mobile number"
-                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 font-normal transition-all"
+                      placeholder="Enter 10-digit mobile number"
+                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
                     />
                     <p className="text-[11px] text-slate-500 font-medium">
                       Default Password: <span className="font-mono font-semibold text-slate-800">{phone.trim().length >= 4 ? `MVGRDE@${phone.trim().slice(-4)}` : "MVGRDE@<last 4 digits>"}</span>
@@ -1548,27 +1552,6 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       onChange={(e) => setBranch(e.target.value)}
                       className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
                     >
-                      {branches.map((b) => (
-                        <option key={b.code} value={b.code}>
-                          {b.code} - {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* 8. FACULTY SPECIFIC: Department / Branch Assignment */}
-                {formRole === "faculty" && (
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Department / Branch Assignment
-                    </label>
-                    <select
-                      value={branch}
-                      onChange={(e) => setBranch(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 text-slate-900 font-normal cursor-pointer"
-                    >
-                      <option value="ALL">Department-Wide Faculty (All Branches)</option>
                       {branches.map((b) => (
                         <option key={b.code} value={b.code}>
                           {b.code} - {b.name}
@@ -1822,8 +1805,8 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                     onClick={() => {
                       const sample =
                         csvImportType === "faculty"
-                          ? "Name,Email,Designation,Phone,Branch\nDr. P. Srinivasa Rao,psr.cse@mvgrce.edu.in,Professor,9491494021,CIC\nMrs. B. Sowjanya,sowjanyabodasingi@mvgrce.edu.in,Assistant Professor,8500192192,CSD"
-                          : "Name,RollNumber,Branch,Semester,Section\nAswin Sai,22331A4701,CIC,3,A\nRahul Sharma,22331A0502,CSD,3,B";
+                          ? "Name,Email,Designation,Phone\nFaculty Member Name,faculty.email@mvgrce.edu.in,Assistant Professor,9876543210"
+                          : "Name,RollNumber,Branch,Semester,Section\nStudent Name,23331A4201,CSM,1,A";
                       handleCsvTextChange(sample);
                     }}
                     className="text-[11px] font-semibold text-blue-600 hover:underline"
@@ -1833,7 +1816,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                 </div>
                 <code className="block p-2 rounded-xl bg-white border border-slate-200 font-mono text-[11px] text-slate-800 break-all">
                   {csvImportType === "faculty"
-                    ? "Name,Email,Designation,Phone,Branch"
+                    ? "Name,Email,Designation,Phone"
                     : "Name,RollNumber,Branch,Semester,Section"}
                 </code>
               </div>
@@ -1849,10 +1832,10 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   onChange={(e) => handleCsvTextChange(e.target.value)}
                   placeholder={
                     csvImportType === "faculty"
-                      ? "Name,Email,Designation,Phone,Branch\nMr. S. Paparao,surapaparao@mvgrce.edu.in,Assistant Professor,9491494021,CIC"
-                      : "Name,RollNumber,Branch,Semester,Section\nAswin Sai,22331A4701,CIC,3,A"
+                      ? "Paste comma-separated CSV rows:\nName, Email, Designation, Phone"
+                      : "Paste comma-separated CSV rows:\nName, RollNumber, Branch, Semester, Section"
                   }
-                  className="w-full p-3.5 rounded-2xl bg-white border border-slate-200 font-mono text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all"
+                  className="w-full p-3.5 rounded-2xl bg-white border border-slate-200 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all"
                 />
               </div>
 
