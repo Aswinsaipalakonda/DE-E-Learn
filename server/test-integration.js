@@ -68,12 +68,12 @@ async function runTests() {
     const statsRes = await makeRequest('/api/analytics/stats', 'GET', null, authHeaders);
     console.log(`6. Analytics Stats [${statsRes.status}]:`, `Total Users: ${statsRes.data.stats?.totalUsers}, Faculty: ${statsRes.data.stats?.totalFaculty}`);
 
-    // 7. Student Login Check
-    const studentLogin = await makeRequest('/api/auth/login', 'POST', {
-      email: '23331a4745@mvgrce.edu.in',
-      password: '23331A4745',
+    // 7. Faculty Login Check
+    const facultyLogin = await makeRequest('/api/auth/login', 'POST', {
+      email: 'satyanarayanareddy@mvgrce.edu.in',
+      password: 'MVGRDE@5686',
     });
-    console.log(`7. Student Login [${studentLogin.status}]:`, studentLogin.data.success ? `✓ Authenticated as ${studentLogin.data.user.name}` : studentLogin.data.error);
+    console.log(`7. Faculty Login [${facultyLogin.status}]:`, facultyLogin.data.success ? `✓ Authenticated as ${facultyLogin.data.user.name}` : facultyLogin.data.error);
 
     console.log('\n=========================================');
     console.log('🎉 ALL INTEGRATION TESTS PASSED 100%!');

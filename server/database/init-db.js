@@ -43,10 +43,10 @@ async function initDatabase() {
 
     console.log('\n=========================================');
     console.log('🎉 Database initialization complete!');
-    console.log('Admin user: admin@mvgrce.edu.in');
-    console.log('Password:   AdminPassword@123!');
-    console.log('Test student: 23331a4745@mvgrce.edu.in');
-    console.log('Password:     23331A4745');
+    console.log('System Admin: admin@mvgrce.edu.in');
+    console.log('Password:     AdminPassword@123!');
+    console.log('Faculty:      33 department staff accounts seeded');
+    console.log('Password:     MVGRDE@<last-4-digits-of-mobile>');
     console.log('=========================================\n');
   } catch (err) {
     console.error('❌ Database initialization error:', err.message);

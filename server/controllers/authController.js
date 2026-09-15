@@ -31,26 +31,18 @@ async function login(req, res) {
     // Check bcrypt password
     let isValid = await bcrypt.compare(password, user.password_hash);
 
-    // If initial password check failed, check default credential conventions
+    // If initial password check failed, check default credential conventions for newly added users
     if (!isValid) {
       const regNo = cleanEmail.split('@')[0].toUpperCase();
       const phoneSuffix = user.phone ? user.phone.slice(-4) : null;
       const validDefaults = [
-        regNo,
-        regNo.toUpperCase(),
-        regNo.toLowerCase(),
-        user.roll_number,
-        user.roll_number ? user.roll_number.toUpperCase() : null,
-        user.roll_number ? user.roll_number.toLowerCase() : null,
-        phoneSuffix ? `MVGRDE@${phoneSuffix}` : null,
-        'Password@789',
-        'AdminPassword@123!',
-        'ChangeMe1234!'
+        user.role === 'student' ? regNo : null,
+        user.role === 'student' && user.roll_number ? user.roll_number.toUpperCase() : null,
+        user.role === 'faculty' && phoneSuffix ? `MVGRDE@${phoneSuffix}` : null,
       ].filter(Boolean);
 
       if (validDefaults.includes(password)) {
         isValid = true;
-        // Optionally update the password_hash to bcrypt now
         const newHash = await bcrypt.hash(password, 10);
         await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
       }

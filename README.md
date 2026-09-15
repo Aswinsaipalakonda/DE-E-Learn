@@ -132,15 +132,17 @@ Open your browser at **[http://localhost:3000](http://localhost:3000)**.
 
 ---
 
-## 🔑 Default Seed Credentials for Testing
+## 🔑 Default Seed Credentials
 
-| Role | Email | Password | Scope & Notes |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@mvgrce.edu.in` | `AdminPassword@123!` | Full governance, roster imports, taxonomy, exam schedules (`/admin`). |
-| **Faculty** | `satyanarayanareddy@mvgrce.edu.in` | `MVGRDE@5686` | Dr. G. Satyanarayana Reddy (`/faculty`). Rule: `MVGRDE@<last-4-digits-of-mobile>`. |
-| **Faculty (Generic)** | `faculty@mvgrce.edu.in` | `Password@789` | Department Faculty test account (`/faculty`). |
-| **Student** | `23331a4745@mvgrce.edu.in` | `23331A4745` | Test Student (CSD, Sem 4). Rule: Roll Number in uppercase. |
-| **Student (Demo)** | `student@mvgrce.edu.in` | `Password@789` | Demo Student (CIC, Sem 3). |
+Only the **System Administrator** and **33 Department Faculty Staff** are seeded by default. Academic subjects and student cohorts can be added directly via the Admin Console (`/admin/taxonomy` and `/admin/users`).
+
+| Role | Name | Email | Password | Scope & Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **System Admin** | System Administrator | `admin@mvgrce.edu.in` | `AdminPassword@123!` | Full governance, roster management, taxonomy, exam schedules (`/admin`). |
+| **Faculty #1** | Dr. G. Satyanarayana Reddy | `satyanarayanareddy@mvgrce.edu.in` | `MVGRDE@5686` | Associate Professor (`/faculty`). Rule: `MVGRDE@<last-4-digits-of-mobile>`. |
+| **Faculty #2** | Dr. K. Ravi Kumar | `ravikumarkottala@mvgrce.edu.in` | `MVGRDE@9167` | Distinguished Assistant Professor (`/faculty`). |
+| **Faculty #7** | Dr. V. Jyothi (HOD) | `jyothi@mvgrce.edu.in` | `MVGRDE@2756` | HOD & Associate Professor (`/faculty`). |
+| **Faculty (All 33)** | *Department Faculty Staff* | *`<name>@mvgrce.edu.in`* | `MVGRDE@<last4>` | All 33 official faculty accounts are active. See `creds.md` for complete roster. |
 
 ---
 

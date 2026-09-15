@@ -40,7 +40,7 @@ const facultyList = [
 
 let sql = `-- =========================================================================
 -- DE E-LEARN PLATFORM — MYSQL SEED DATA
--- Default Branches, Semesters, Regulations, Subjects, and User Accounts
+-- Only Administrator and 33 Faculty Staff
 -- =========================================================================
 
 USE \`de_elearn\`;
@@ -72,57 +72,24 @@ INSERT INTO \`regulations\` (\`code\`, \`name\`, \`active\`) VALUES
 ('A2', 'A2 Autonomous Regulation', 1)
 ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`), \`active\` = VALUES(\`active\`);
 
--- 4. Seed Standard Subjects
-INSERT INTO \`subjects\` (\`code\`, \`title\`, \`branch\`, \`semester\`, \`regulation\`, \`active\`) VALUES
-('R23MATT101', 'Linear Algebra & Calculus', 'CIC', 1, 'R23', 1),
-('R23MATT101', 'Linear Algebra & Calculus', 'CSD', 1, 'R23', 1),
-('R23MATT101', 'Linear Algebra & Calculus', 'CSM', 1, 'R23', 1),
-('R23CS301', 'Data Structures & Algorithms', 'CIC', 3, 'R23', 1),
-('R23CS301', 'Data Structures & Algorithms', 'CSD', 3, 'R23', 1),
-('R23CS301', 'Data Structures & Algorithms', 'CSM', 3, 'R23', 1),
-('R23CS401', 'Database Management Systems', 'CIC', 4, 'R23', 1),
-('R23CS401', 'Database Management Systems', 'CSD', 4, 'R23', 1),
-('R23CS401', 'Database Management Systems', 'CSM', 4, 'R23', 1),
-('R23CS501', 'Operating Systems', 'CIC', 5, 'R23', 1),
-('R23CS501', 'Operating Systems', 'CSD', 5, 'R23', 1),
-('R23CS501', 'Operating Systems', 'CSM', 5, 'R23', 1),
-('R23CS601', 'Computer Networks', 'CIC', 6, 'R23', 1),
-('R23CS601', 'Computer Networks', 'CSD', 6, 'R23', 1),
-('R23CS601', 'Computer Networks', 'CSM', 6, 'R23', 1),
-('R23SE701', 'Software Engineering', 'CIC', 7, 'R23', 1),
-('R23SE701', 'Software Engineering', 'CSD', 7, 'R23', 1),
-('R23SE701', 'Software Engineering', 'CSM', 7, 'R23', 1)
-ON DUPLICATE KEY UPDATE \`title\` = VALUES(\`title\`), \`active\` = VALUES(\`active\`);
+-- Clean up any legacy test users / dummy students
+DELETE FROM \`users\` WHERE \`role\` = 'student' OR \`email\` IN ('faculty@mvgrce.edu.in', 'student@mvgrce.edu.in', '23331a4745@mvgrce.edu.in');
 
--- 5. Seed Users
--- Passwords:
--- Admin: AdminPassword@123!
--- Test Student: 23331A4745
--- Test Faculty / Default: Password@789
+-- Clean up dummy subjects so admin/faculty can add their own
+DELETE FROM \`subjects\`;
+
+-- 4. Seed Users: Administrator and 33 Faculty Members
 `;
 
 const adminHash = bcrypt.hashSync('AdminPassword@123!', 10);
-const studentHash = bcrypt.hashSync('23331A4745', 10);
-const defaultPassHash = bcrypt.hashSync('Password@789', 10);
 
 sql += `
--- System Admin
+-- System Administrator
 INSERT INTO \`users\` (\`id\`, \`email\`, \`password_hash\`, \`name\`, \`role\`, \`status\`, \`first_login_pending\`) VALUES
 ('00000000-0000-0000-0000-000000000001', 'admin@mvgrce.edu.in', '${adminHash}', 'System Administrator', 'admin', 'active', 0)
 ON DUPLICATE KEY UPDATE \`password_hash\` = VALUES(\`password_hash\`), \`name\` = VALUES(\`name\`), \`role\` = 'admin';
 
--- Test Student
-INSERT INTO \`users\` (\`id\`, \`email\`, \`password_hash\`, \`name\`, \`role\`, \`status\`, \`branch\`, \`academic_year\`, \`current_semester\`, \`roll_number\`, \`first_login_pending\`) VALUES
-('00000000-0000-0000-0000-000000000002', '23331a4745@mvgrce.edu.in', '${studentHash}', 'Test Student', 'student', 'active', 'CSD', 2023, 4, '23331A4745', 0),
-('00000000-0000-0000-0000-000000000003', 'student@mvgrce.edu.in', '${defaultPassHash}', 'Demo Student', 'student', 'active', 'CIC', 2023, 3, '23331A4701', 0)
-ON DUPLICATE KEY UPDATE \`password_hash\` = VALUES(\`password_hash\`), \`branch\` = VALUES(\`branch\`);
-
--- Generic Test Faculty
-INSERT INTO \`users\` (\`id\`, \`email\`, \`password_hash\`, \`name\`, \`role\`, \`status\`, \`designation\`, \`first_login_pending\`) VALUES
-('00000000-0000-0000-0000-000000000004', 'faculty@mvgrce.edu.in', '${defaultPassHash}', 'Department Faculty', 'faculty', 'active', 'Assistant Professor', 0)
-ON DUPLICATE KEY UPDATE \`password_hash\` = VALUES(\`password_hash\`);
-
--- 33 Faculty Members
+-- 33 Official Department Faculty Members
 `;
 
 facultyList.forEach((fac, idx) => {
@@ -134,4 +101,4 @@ ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`), \`password_hash\` = VALUES(
 });
 
 fs.writeFileSync(path.join(__dirname, 'seed.sql'), sql, 'utf8');
-console.log('Successfully generated seed.sql with 33 faculty members, admin, and test students!');
+console.log('Successfully generated seed.sql with ONLY System Admin and 33 Faculty Staff!');

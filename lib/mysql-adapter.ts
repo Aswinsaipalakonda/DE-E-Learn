@@ -559,14 +559,9 @@ export class MySQLClient {
             const regNo = cleanEmail.split('@')[0].toUpperCase();
             const phoneSuffix = user.phone ? user.phone.slice(-4) : null;
             const validDefaults = [
-              regNo,
-              regNo.toUpperCase(),
-              regNo.toLowerCase(),
-              user.roll_number,
-              phoneSuffix ? `MVGRDE@${phoneSuffix}` : null,
-              'Password@789',
-              'AdminPassword@123!',
-              'ChangeMe1234!'
+              user.role === 'student' ? regNo : null,
+              user.role === 'student' && user.roll_number ? user.roll_number.toUpperCase() : null,
+              user.role === 'faculty' && phoneSuffix ? `MVGRDE@${phoneSuffix}` : null,
             ].filter(Boolean);
 
             if (validDefaults.includes(password)) {
