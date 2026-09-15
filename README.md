@@ -1,194 +1,207 @@
-# MVGR Data Engineering E-Learning Portal (DE E-Learn)
+# DataDock • Academic Learning Cloud
+> **Department of Data Engineering | Maharaj Vijayaram Gajapathi Raj (MVGR) College of Engineering (Autonomous)**
 
-Welcome to the **MVGR Data Engineering E-Learning Portal** (`MVGR DE E-learn`), a production-grade academic resource distribution, curriculum management, and analytics system built for the students, faculty, and administration of the **Department of Data Engineering** at **MVGR College of Engineering (Autonomous)**.
+[![Next.js](https://img.shields.io/badge/Next.js-16.2.10-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.4-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Express](https://img.shields.io/badge/Express-5.2-000000?logo=express)](https://expressjs.com/)
+[![License](https://img.shields.io/badge/License-Institutional-blue.svg)](#institutional-governance)
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ System Overview
 
-DE E-Learn is built on a decoupled, self-hosted modern architecture designed for maximum performance, data privacy, and unlimited file storage capacity without cloud vendor lock-in.
+**DataDock** is an institutional-grade, high-performance academic resource cloud and curriculum governance platform engineered exclusively for the **Department of Data Engineering** at **MVGR College of Engineering (Autonomous)**.
+
+DataDock centralizes all autonomous curriculum assets, verified lecture notes, laboratory manuals, and previous question papers across specialized data engineering tracks, providing seamless access for students, faculty contributors, and academic administrators.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                       MVGR DE E-Learn Platform                          │
+│                       DataDock Academic Cloud                           │
 ├────────────────────┬───────────────────────────────┬────────────────────┤
-│   Student Portal   │         Faculty Portal        │    Admin Suite     │
-│  - Syllabus Hub    │  - Multi-File Distribution    │  - Governance      │
-│  - In-Browser View │  - Engagement Analytics       │  - Roster CSV      │
-│  - Bookmarks & DL  │  - Material Lifecycle (Draft) │  - Exam Lockouts   │
+│   Student Vault    │         Faculty Studio        │  Admin Governance  │
+│  - Curriculum Hub  │  - Material Publishing Engine │  - Role Management │
+│  - Document Stream │  - Readership Analytics       │  - Exam Lockouts   │
+│  - Quick Bookmarks │  - Cohort Notice Board        │  - Taxonomy CRUD   │
 └────────────────────┴───────────────┬───────────────┴────────────────────┘
                                      │
-                        Node.js & Express REST API
-                      (Authentication, RBAC, Multer)
+                    Next.js App Router & Express API
+              (JWT HttpOnly Auth, RBAC, Rate-Limiting, Multer)
                                      │
              ┌───────────────────────┴───────────────────────┐
              ▼                                               ▼
-       MySQL Database                              Disk Storage Engine
-    (XAMPP / Hostinger)                        (server/uploads/materials/)
+       MySQL Database                               Hot Storage Vault
+ (Hostinger Production / XAMPP)                 (server/uploads/materials/)
 ```
 
 ---
 
 ## 🚀 Key Modules & Capabilities
 
-### 👨‍🎓 1. Student Academic Hub
-* **Curriculum Exploration:** Filter lecture notes, presentations, lab manuals, question banks, and reference materials by Autonomous Regulation (`R23`, `R20`, `R19`, `A2`), Department Branch (`CIC`, `CSD`, `CSM`), and Semester (`Sem 1` – `Sem 8`).
-* **In-Browser Document Preview & Download:** High-speed streaming downloads and preview modal for PDF, Word, PowerPoint, and lab files.
-* **Personalized Bookmarking:** Save materials to a private, persistent library for rapid exam revision.
-* **Support Inquiries:** Submit academic queries directly to department coordinators.
-* **Exam Lockout Compliance:** Automated UI lockdown during scheduled examination windows to prevent unauthorized material access.
+### 👨‍🎓 1. Student Academic Vault
+* **Autonomous Curriculum Navigator**: Filter study materials by Autonomous Regulations (`R23`, `R20`, `R19`, `A2`), Department Specializations (`CIC`, `CSD`, `CSM`), and Semesters (`Sem 1` to `Sem 8`).
+* **In-Browser Document Streaming**: High-speed, responsive viewer and downloads for PDF, Word documents, PowerPoint presentations, and lab guides.
+* **Revision Vault (Bookmarks)**: Save lecture units to a personalized, persistent revision library for targeted semester exam prep.
+* **Examination Mode Lockout**: Automatically hides question banks and revision materials during active exam windows to uphold academic integrity.
 
-### 👩‍🏫 2. Faculty Distribution & Analytics
-* **Course Material Publisher:** Multi-file drag-and-drop uploader supporting PDF, Word (.doc/.docx), PowerPoint (.ppt/.pptx), and TXT files up to 100 MB per file.
-* **State Management:** Publish immediately or save drafts for later review and scheduling.
-* **Engagement Telemetry:** Dashboards monitoring total published resources, download counts, and unique student readers.
-* **Cohort Isolation:** Direct material publishing scoped to specific branches or cross-listed cohorts.
-* **Broadcast Circulars:** Post targeted departmental announcements and notice board updates.
+### 👩‍🏫 2. Faculty Studio & Telemetry
+* **Course Publisher**: Multi-file drag-and-drop document upload pipeline with format validation and secure server-side storage.
+* **State Management**: Draft and publish materials with instant visibility toggling across specific batches or semesters.
+* **Readership Telemetry**: Visual telemetry dashboards monitoring published materials, student download volumes, and active engagement.
+* **Department Circulars**: Post targeted announcements and broadcast urgent notices directly to student dashboards.
 
 ### 🛠️ 3. Administrative Governance Suite
-* **Student Roster & Cohort Management:** Single student enrollment with 10-digit roll number validation, auto-generated institutional emails, and bulk CSV roster imports.
-* **Academic Taxonomy Manager:** Dynamic CRUD operations for Autonomous Regulations, Department Branches, Semesters, and Subjects.
-* **Examination Lockout Scheduler:** Schedule timed material lockouts for specific branches, semesters, and subject codes.
-* **Security & Immutable Audit Logs:** Append-only logging tracking user lifecycle, authentication events, password resets, and curriculum adjustments.
+* **Roster Management**: Manage department user directories, student roll numbers, faculty designations, and institutional email associations.
+* **Curriculum Taxonomy Engine**: Dynamic CRUD operations for Autonomous Regulations, Department Branches, Semesters, and Subject Codes.
+* **Examination Lockout Scheduler**: Schedule time-bounded material lockdowns for designated branches, cohorts, and subjects.
+* **Audit Trail**: Security event logging capturing authentication attempts, credential changes, and material publications.
+* **Automated Daily Backups**: Built-in, zero-downtime hot backup engine that executes scheduled database exports daily at **12:20 AM IST** with automated 30-day retention pruning.
 
 ---
 
 ## 🏢 Departmental Specializations Supported
 
-* **CIC:** *Cyber Security, IoT with BlockChain Technology*
-* **CSD:** *Data Science*
-* **CSM:** *Artificial Intelligence and Machine Learning*
+| Branch Code | Department Specialization | Focus Areas |
+| :--- | :--- | :--- |
+| **CIC** | Cyber Security and IoT with Blockchain | Network Security, Cryptography, Distributed Ledgers, Smart IoT Systems |
+| **CSD** | Data Science | Big Data Engineering, Statistical Modeling, Data Warehousing, Mining |
+| **CSM** | Artificial Intelligence & Machine Learning | Deep Learning, NLP, Computer Vision, Autonomous Systems |
 
 ---
 
-## 🔐 Role-Based Access Control (RBAC)
+## 💻 Technology Stack
 
-The platform enforces strict role-based access:
-* **Administrators:** Full system governance, taxonomy, roster imports, system logs, and exam schedules.
-* **Faculty Members:** Publishing materials, viewing engagement telemetry, and posting announcements.
-* **Students:** Accessing enrolled semester materials, bookmarking documents, and submitting inquiries.
-
----
-
-## 🛠️ Technology Stack
-
-* **Frontend:** Next.js 16 (React 19, App Router, Server Actions)
-* **Backend:** Node.js & Express 5 (REST API, layered architecture)
-* **Database:** MySQL 8.x / MariaDB (managed via connection pooling with `mysql2/promise`)
-* **Storage Engine:** Local / Hostinger Disk Storage via `multer` (bypassing 500MB cloud limits)
-* **Authentication:** Stateless JWT (`jsonwebtoken`) with salted bcrypt hashes (`bcryptjs`) & HTTP-only cookies
-* **Styling & UI:** Tailwind CSS v4, Lucide React icons, and custom design tokens
+* **Frontend Framework**: Next.js 16 (App Router, Turbopack, React 19 Server Components)
+* **Styling & UI**: Vanilla Tailwind CSS v4, Lucide Icons, Smooth Lenis Kinetic Scroll
+* **Backend Runtime**: Node.js, Express 5 REST API, Multer Storage Pipeline
+* **Database**: MySQL 8.0 with Connection Pooling and Failover Recovery
+* **Authentication**: Stateless JWT in Secure `HttpOnly` Cookies with Role-Based Access Control (RBAC)
+* **SEO & Metadata**: Dynamic OpenGraph, JSON-LD Schema.org Structured Data, Automated Sitemaps & RSS Feeds
 
 ---
 
-## 💻 Local Development Setup
+## 📦 Project Directory Structure
 
-### 1. Prerequisites
-* **Node.js** (v20.x or higher) and **npm**
-* **XAMPP** (or MySQL server running locally on port `3306`)
-
-### 2. Configure Environment Variables
-Verify or create `.env.local` in the project root:
-
-```env
-# Local MySQL Database Configuration
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=de_elearn
-
-# Express Server Port
-PORT=5000
-
-# Security & JWT Token Secret
-JWT_SECRET=de-elearn-mvgrce-super-secure-jwt-secret-key-2026
-JWT_EXPIRES_IN=7d
-
-# API Endpoint URL
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
+├── app/                      # Next.js 16 App Router (Pages, Layouts, Server Actions)
+│   ├── (public)/             # Public routes (Landing, About, Contact, Privacy, Terms)
+│   ├── admin/                # Administrator Governance Suite & Telemetry
+│   ├── faculty/              # Faculty Studio & Material Publishing
+│   ├── student/              # Student Academic Vault & Bookmarks
+│   ├── login/                # Unified Role-Based Authentication
+│   ├── error.tsx             # Global Application Error Boundary
+│   ├── layout.tsx            # Root Layout with Fontshare Satoshi & Lenis Smooth Scroll
+│   └── page.tsx              # DataDock Landing Page
+├── components/               # Modular UI Components & Design System
+├── lib/                      # Core Adapters, MySQL Database Pool, and Utilities
+│   ├── db.ts                 # Production MySQL Connection Pool
+│   └── mysql-adapter.ts      # Type-safe Supabase-compatible Query Builder for MySQL
+├── public/                   # Static Brand Assets, Manifest, and Icons
+├── server/                   # Express Backend Architecture
+│   ├── config/               # JWT & Environment Configuration
+│   ├── controllers/          # Business Logic & Request Handlers
+│   ├── database/             # Schema Migrations, Production Seeds, and Backup Engine
+│   │   ├── backup.js         # Automated Daily 12:20 AM IST Backup Scheduler
+│   │   ├── init-db.js        # Automated DB Initialization Script
+│   │   ├── schema.sql        # Normalized MySQL Database Schema
+│   │   └── seed.sql          # Seed Roster, Faculty Directory, and Curriculum
+│   ├── middleware/           # RBAC Verification, Upload Pipeline, Security
+│   ├── routes/               # Modular REST API Route Handlers
+│   └── index.js              # Express API Server Entry Point
+├── utils/                    # Shared Helper Functions, SEO, and Security Modules
+├── proxy.ts                  # High-Speed Edge Middleware & Route Guard
+└── package.json              # Project Dependencies and Build Scripts
 ```
 
-### 3. Initialize & Seed MySQL Database
-Make sure Apache & MySQL are running in your **XAMPP Control Panel**, then run:
+---
+
+## 🛠️ Local Development Setup
+
+### 1. Prerequisites
+* **Node.js**: `v20.x` or `v22.x` (LTS)
+* **MySQL**: MySQL 8.0+ or MariaDB (e.g. XAMPP, Docker, or native service)
+* **npm**: `v10.x` or higher
+
+### 2. Installation
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/Aswinsaipalakonda/DE-E-Learn.git
+cd DE-E-Learn
+npm install
+```
+
+### 3. Environment Configuration
+Create your local configuration file from the template:
+
+```bash
+cp .env.example .env.local
+```
+
+Configure your local database credentials:
+```env
+NODE_ENV="development"
+DB_HOST="localhost"
+DB_PORT="3306"
+DB_USER="root"
+DB_PASSWORD="your_mysql_password"
+DB_NAME="de_elearn"
+JWT_SECRET="your_secure_random_jwt_secret_key"
+JWT_EXPIRES_IN="7d"
+FRONTEND_URL="http://localhost:3000"
+NEXT_PUBLIC_API_URL="/api"
+```
+
+### 4. Initialize Database
+Create database tables and apply curriculum seed data:
 
 ```bash
 npm run db:init
 ```
-*This automatically connects to MySQL, creates the database `de_elearn`, executes `schema.sql`, and seeds initial branches, semesters, regulations, subjects, all 33 faculty members, and test accounts.*
 
-### 4. Start the Application
-Run both the Express API backend and Next.js frontend concurrently:
+### 5. Launch Development Server
+Run both the Express API and Next.js frontend concurrently:
 
 ```bash
 npm run dev:all
 ```
 
-Or run them individually:
-* **Terminal 1 (Express API)**: `npm run server` (runs at `http://localhost:5000`)
-* **Terminal 2 (Next.js Frontend)**: `npm run dev` (runs at `http://localhost:3000`)
-
-Open your browser at **[http://localhost:3000](http://localhost:3000)**.
+Access the application in your browser:
+* **Web Application**: `http://localhost:3000`
+* **API Health Check**: `http://localhost:5000/api/health`
 
 ---
 
-## 🔑 Default Seed Credentials & Academic Dataset
+## 🔒 Security & Best Practices
 
-The platform is pre-loaded with official institutional data from `R23_Regulation Details.xlsx`:
-* **Curriculum**: **213 R23 Autonomous Regulation Subjects** across Semesters 1 to 8 for branches `CSM`, `CSD`, and `CIC`.
-* **Faculty Staff**: **33 Department Faculty Members** with designations, branches, and contact numbers.
-* **Student Roster**: **70 CSM Section A Students** (64 Regular 4-year B.Tech + 6 Lateral Entry Diploma students).
-
-| Role | Name / Group | Login Email | Password | Scope & Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| **System Admin** | System Administrator | `admin@mvgrce.edu.in` | `AdminPassword@123!` | Full governance, roster management, taxonomy, exam schedules (`/admin`). |
-| **Faculty #1** | Dr. G. Satyanarayana Reddy | `satyanarayanareddy@mvgrce.edu.in` | `MVGRDE@5686` | Associate Professor (`/faculty`). Rule: `MVGRDE@<last-4-digits-of-mobile>`. |
-| **Faculty #7** | Dr. V. Jyothi (HOD) | `jyothi@mvgrce.edu.in` | `MVGRDE@2756` | HOD & Associate Professor (`/faculty`). |
-| **Faculty (All 33)** | *Department Faculty Staff* | *`<name>@mvgrce.edu.in`* | `MVGRDE@<last4>` | All 33 official faculty accounts are active. |
-| **Regular Student** | Adhya Naidu Chokkakula | `23331a4201@mvgrce.edu.in` | `23331A4201` | 2023 Regular B.Tech CSM Sem 1 Sec A. Password is uppercase roll number. |
-| **Regular Student** | Sanjay Yandava | `23331a4266@mvgrce.edu.in` | `23331A4266` | 2023 Regular B.Tech CSM Sem 1 Sec A. Password is uppercase roll number. |
-| **Lateral Student** | Darapu Varshini | `24335a4201@mvgrce.edu.in` | `24335A4201` | Lateral Entry Diploma student. Password is uppercase roll number (`24335A4201`). |
-| **Lateral Student** | Chukkala Yaswanth Sai | `24335a4206@mvgrce.edu.in` | `24335A4206` | Lateral Entry Diploma student. Password is uppercase roll number (`24335A4206`). |
-
-> **Student Login Rule**: Every student account has an institutional email `<roll_number_lower>@mvgrce.edu.in` and their default password is their **exact uppercase roll number** (e.g. `23331A4201` or `24335A4201`). Lateral entry students completed Diploma and study the B.Tech curriculum together with the class.
+* **Zero Plaintext Passwords**: All user passwords utilize `bcrypt` cryptographic hashing with minimum work factor 10.
+* **HttpOnly Session Tokens**: Authentication tokens are strictly stored in `SameSite=Lax`, `HttpOnly` cookies, fully insulated from Cross-Site Scripting (XSS).
+* **Multi-Layer RBAC**: Route guards (`proxy.ts`), server-side component validations, and Express API middleware enforce strict role boundaries (`admin`, `faculty`, `student`).
+* **Rate Limiting**: Critical endpoints (such as login) feature dynamic token-bucket rate limiting to mitigate brute-force attacks.
+* **SQL Injection Prevention**: All database interactions use prepared statements with parameterized inputs.
 
 ---
 
-### 📊 Ingesting & Re-importing Excel Spreadsheets
+## 🌐 Production Deployment Architecture
 
-To re-ingest or update data directly from `R23_Regulation Details.xlsx`:
-```bash
-node server/database/import-excel-data.js
-```
-This script strictly validates each row and column:
-1. **Curriculum Sheet (`Regulation(R23)`)**: Maps `ICB` -> `CIC`, converts Roman numeral semesters (`I`–`VIII`) to integers (`1`–`8`), disambiguates duplicate codes in Sem 8, and upserts 213 subjects.
-2. **Student Cohort Sheet (`Sheet2`)**: Validates roll number structure, assigns college emails, computes bcrypt hashes for roll numbers, and provisions all regular and lateral entry students.
+DataDock is optimized for modern containerized hosting environments (such as Hostinger Node.js Web Apps) with custom domain routing:
 
----
-
-## 🌐 Production Deployment (Hostinger)
-
-For complete, step-by-step instructions on deploying the Node.js/Express backend, MySQL database, and Next.js frontend to **Hostinger Web Hosting (cPanel / hPanel)**, see the dedicated deployment guide:
-
-📖 **[HOSTINGER_DEPLOYMENT.md](./HOSTINGER_DEPLOYMENT.md)**
-
----
-
-## 🧪 Testing & Verification
-
-Run the automated integration test suite to verify the database connection, authentication, file storage, and analytics:
+* **Production URL**: `https://datadock.aswinsai.tech`
+* **Static Assets**: Automated Next.js build optimization and image compression.
+* **Database Backups**: Self-running background scheduler exporting daily hot backups to `backups/` at 12:20 AM IST.
 
 ```bash
-node server/test-integration.js
-```
-
-Validate production bundle compilation:
-```bash
+# Production Build
 npm run build
+
+# Production Server Start
+npm run start
 ```
 
 ---
 
-## 📄 Institutional Rights
+## 📄 Institutional Governance
 
-Developed for the **Department of Data Engineering**, **MVGR College of Engineering (Autonomous)**, Vizianagaram, Andhra Pradesh, India.
+Designed and maintained for the **Department of Data Engineering**, **MVGR College of Engineering (Autonomous)**, Vizianagaram, Andhra Pradesh, India.
+All academic materials, curriculum structures, and institutional datasets remain the exclusive property of the institution.

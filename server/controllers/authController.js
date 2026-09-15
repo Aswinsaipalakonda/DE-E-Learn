@@ -11,12 +11,40 @@ async function login(req, res) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
 
     // Query user
-    const [users] = await pool.query(
+    let [users] = await pool.query(
       'SELECT * FROM users WHERE email = ? LIMIT 1',
       [cleanEmail]
     );
+
+    // Seamless onboarding for institutional MVGR students (e.g., 23331a4745@mvgrce.edu.in)
+    if (!users.length && cleanEmail.endsWith('@mvgrce.edu.in')) {
+      const emailPrefix = cleanEmail.split('@')[0];
+      const studentRollRegex = /^([0-9]{2})33([15])A([0-9a-zA-Z]{2})([0-9a-zA-Z]{2})$/i;
+      const match = emailPrefix.match(studentRollRegex);
+      if (match) {
+        const rollUpper = emailPrefix.toUpperCase();
+        if (cleanPassword.toUpperCase() === rollUpper) {
+          const yearPrefix = parseInt(match[1], 10);
+          const branchMap = { '47': 'CIC', '44': 'CSD', '42': 'CSM' };
+          const branchCode = branchMap[match[3].toUpperCase()] || 'CIC';
+          const academicYear = 2000 + yearPrefix;
+          const newUserId = crypto.randomUUID();
+          const defaultHash = await bcrypt.hash(rollUpper, 10);
+
+          await pool.query(
+            `INSERT INTO users (id, email, password_hash, name, role, status, branch, academic_year, current_semester, section, roll_number, first_login_pending) 
+             VALUES (?, ?, ?, ?, 'student', 'active', ?, ?, 3, 'A', ?, 1)`,
+            [newUserId, cleanEmail, defaultHash, `Student ${rollUpper}`, branchCode, academicYear, rollUpper]
+          );
+
+          const [created] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [newUserId]);
+          users = created;
+        }
+      }
+    }
 
     if (!users.length) {
       return res.status(401).json({ error: 'Invalid email or password.' });
@@ -28,10 +56,16 @@ async function login(req, res) {
       return res.status(403).json({ error: 'This account has been deactivated. Please contact your administrator.' });
     }
 
-    // Check bcrypt password
-    let isValid = await bcrypt.compare(password, user.password_hash);
+    // 1. Direct and case-normalized comparison
+    let isValid = await bcrypt.compare(cleanPassword, user.password_hash);
+    if (!isValid && cleanPassword !== cleanPassword.toUpperCase()) {
+      isValid = await bcrypt.compare(cleanPassword.toUpperCase(), user.password_hash);
+    }
+    if (!isValid && cleanPassword !== cleanPassword.toLowerCase()) {
+      isValid = await bcrypt.compare(cleanPassword.toLowerCase(), user.password_hash);
+    }
 
-    // If initial password check failed, check default credential conventions for newly added users
+    // 2. Fallback check for default roll numbers or faculty keys
     if (!isValid) {
       const regNo = cleanEmail.split('@')[0].toUpperCase();
       const phoneSuffix = user.phone ? user.phone.slice(-4) : null;
@@ -41,9 +75,10 @@ async function login(req, res) {
         user.role === 'faculty' && phoneSuffix ? `MVGRDE@${phoneSuffix}` : null,
       ].filter(Boolean);
 
-      if (validDefaults.includes(password)) {
+      const upperInput = cleanPassword.toUpperCase();
+      if (validDefaults.some(d => d.toUpperCase() === upperInput)) {
         isValid = true;
-        const newHash = await bcrypt.hash(password, 10);
+        const newHash = await bcrypt.hash(upperInput, 10);
         await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
       }
     }
