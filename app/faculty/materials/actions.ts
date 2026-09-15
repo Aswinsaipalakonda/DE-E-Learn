@@ -16,7 +16,7 @@ export async function toggleMaterialState(id: string, newState: "draft" | "publi
     .from("materials")
     .update({ state: newState })
     .eq("id", id)
-    .eq("owner", user.id);
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
@@ -36,7 +36,7 @@ export async function deleteMaterial(id: string) {
     .from("materials")
     .update({ state: "deleted" })
     .eq("id", id)
-    .eq("owner", user.id);
+    .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 

@@ -76,7 +76,7 @@ export async function searchPortalAction(query: string): Promise<SearchResult> {
     materialsQuery = materialsQuery.eq("state", "published");
   } else if (isFaculty) {
     // Faculty sees all published resources, plus their own draft materials
-    materialsQuery = materialsQuery.or(`state.eq.published,owner.eq.${user.id}`);
+    materialsQuery = materialsQuery.or(`state.eq.published,owner_id.eq.${user.id}`);
   } else {
     // Admin sees everything except soft-deleted
     materialsQuery = materialsQuery.neq("state", "deleted");

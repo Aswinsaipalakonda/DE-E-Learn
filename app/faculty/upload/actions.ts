@@ -128,7 +128,7 @@ export async function uploadMaterialAction(formData: FormData) {
         semester,
         type: normalizedType,
         state,
-        owner: user.id,
+        owner_id: user.id,
         tags,
       })
       .select("id")

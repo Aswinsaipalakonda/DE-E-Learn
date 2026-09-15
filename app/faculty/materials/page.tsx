@@ -75,7 +75,7 @@ export default async function FacultyMaterialsPage() {
           storage_ref
         )
       `)
-      .eq("owner", user.id)
+      .eq("owner_id", user.id)
       .neq("state", "deleted")
       .order("created_at", { ascending: false }),
     supabase

@@ -150,6 +150,11 @@ class MySQLQueryBuilder {
 
         for (const row of rows) {
           const rowData = { ...row };
+          if (this.tableName === 'materials' && 'owner' in rowData) {
+            rowData.owner_id = rowData.owner;
+            delete rowData.owner;
+          }
+
           if (!rowData.id && (this.tableName === 'users' || this.tableName === 'materials' || this.tableName === 'material_files' || this.tableName === 'activity_events' || this.tableName === 'audit_logs' || this.tableName === 'bookmarks' || this.tableName === 'announcements' || this.tableName === 'notifications' || this.tableName === 'support_inquiries' || this.tableName === 'exam_schedules')) {
             rowData.id = crypto.randomUUID();
           }
@@ -182,6 +187,11 @@ class MySQLQueryBuilder {
         const rows = Array.isArray(this.mutationData) ? this.mutationData : [this.mutationData];
         for (const row of rows) {
           const rowData = { ...row };
+          if (this.tableName === 'materials' && 'owner' in rowData) {
+            rowData.owner_id = rowData.owner;
+            delete rowData.owner;
+          }
+
           for (const key of Object.keys(rowData)) {
             if (typeof rowData[key] === 'object' && rowData[key] !== null && !(rowData[key] instanceof Date)) {
               rowData[key] = JSON.stringify(rowData[key]);
@@ -204,6 +214,11 @@ class MySQLQueryBuilder {
       // 3. Handle UPDATE
       if (this.mutationType === 'update') {
         const updateData = { ...this.mutationData };
+        if (this.tableName === 'materials' && 'owner' in updateData) {
+          updateData.owner_id = updateData.owner;
+          delete updateData.owner;
+        }
+
         for (const key of Object.keys(updateData)) {
           if (typeof updateData[key] === 'object' && updateData[key] !== null && !(updateData[key] instanceof Date)) {
             updateData[key] = JSON.stringify(updateData[key]);
@@ -318,6 +333,14 @@ class MySQLQueryBuilder {
         }
       }
 
+      if (this.tableName === 'materials') {
+        rows.forEach((r: any) => {
+          if (r.owner_id && !r.owner) {
+            r.owner = r.owner_id;
+          }
+        });
+      }
+
       if (this.isSingle) {
         if (!rows.length) {
           return { data: null, count: 0, error: { message: 'Row not found' } };
@@ -343,46 +366,54 @@ class MySQLQueryBuilder {
 
   private buildWhere(whereParts: string[], params: any[]) {
     for (const f of this.filters) {
+      let colName = f.column;
+      if (this.tableName === 'materials' && colName === 'owner') {
+        colName = 'owner_id';
+      }
+
       if (f.type === 'eq') {
-        whereParts.push(`\`${f.column}\` = ?`);
+        whereParts.push(`\`${colName}\` = ?`);
         params.push(f.value);
       } else if (f.type === 'neq') {
-        whereParts.push(`\`${f.column}\` != ?`);
+        whereParts.push(`\`${colName}\` != ?`);
         params.push(f.value);
       } else if (f.type === 'in') {
         if (Array.isArray(f.value) && f.value.length) {
-          whereParts.push(`\`${f.column}\` IN (?)`);
+          whereParts.push(`\`${colName}\` IN (?)`);
           params.push(f.value);
         } else {
           whereParts.push('1 = 0');
         }
       } else if (f.type === 'lte') {
-        whereParts.push(`\`${f.column}\` <= ?`);
+        whereParts.push(`\`${colName}\` <= ?`);
         params.push(f.value);
       } else if (f.type === 'gte') {
-        whereParts.push(`\`${f.column}\` >= ?`);
+        whereParts.push(`\`${colName}\` >= ?`);
         params.push(f.value);
       } else if (f.type === 'lt') {
-        whereParts.push(`\`${f.column}\` < ?`);
+        whereParts.push(`\`${colName}\` < ?`);
         params.push(f.value);
       } else if (f.type === 'gt') {
-        whereParts.push(`\`${f.column}\` > ?`);
+        whereParts.push(`\`${colName}\` > ?`);
         params.push(f.value);
       } else if (f.type === 'like') {
-        whereParts.push(`\`${f.column}\` LIKE ?`);
+        whereParts.push(`\`${colName}\` LIKE ?`);
         params.push(f.value);
       } else if (f.type === 'or' && f.rawOr) {
-        // Parse Supabase or strings e.g. "scope_branch.is.null,scope_branch.eq.CIC" or "id.eq.1,email.eq.foo@bar"
+        // Parse Supabase or strings e.g. "scope_branch.is.null,scope_branch.eq.CIC" or "owner.eq.1,email.eq.foo@bar"
         const conditions = f.rawOr.split(',').map(cond => cond.trim());
         const subParts: string[] = [];
 
         for (const cond of conditions) {
           if (cond.includes('.is.null')) {
-            const col = cond.split('.is.null')[0].trim();
+            let col = cond.split('.is.null')[0].trim();
+            if (this.tableName === 'materials' && col === 'owner') col = 'owner_id';
             subParts.push(`\`${col}\` IS NULL`);
           } else if (cond.includes('.eq.')) {
-            const [col, val] = cond.split('.eq.');
-            subParts.push(`\`${col.trim()}\` = ?`);
+            let [col, val] = cond.split('.eq.');
+            col = col.trim();
+            if (this.tableName === 'materials' && col === 'owner') col = 'owner_id';
+            subParts.push(`\`${col}\` = ?`);
             params.push(val.trim());
           }
         }

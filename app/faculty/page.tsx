@@ -50,7 +50,7 @@ export default async function FacultyDashboardPage() {
   const { data: materialsData } = await supabase
     .from("materials")
     .select("id, title, type, state, created_at, subject, material_files(size)")
-    .or(`owner.eq.${user.id},owner.eq.${user.email}`)
+    .eq("owner_id", user.id)
     .neq("state", "deleted")
     .order("created_at", { ascending: false });
 
