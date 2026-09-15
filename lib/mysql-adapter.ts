@@ -141,25 +141,48 @@ class MySQLQueryBuilder {
     return this;
   }
 
+  private stripNestedRelations(rawCols: string): string[] {
+    let depth = 0;
+    let result = '';
+    const s = rawCols.replace(/[\r\n]+/g, ' ');
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (ch === '(') {
+        depth++;
+        let j = result.length - 1;
+        while (j >= 0 && result[j] === ' ') j--;
+        while (j >= 0 && result[j] !== ',') j--;
+        result = result.slice(0, j + 1);
+      } else if (ch === ')') {
+        depth = Math.max(0, depth - 1);
+      } else if (depth === 0) {
+        result += ch;
+      }
+    }
+    return result
+      .split(',')
+      .map(c => c.trim())
+      .filter(Boolean);
+  }
+
   async execute(): Promise<{ data: any; count: number | null; error: any }> {
     try {
       // 1. Handle INSERT
       if (this.mutationType === 'insert') {
         const rows = Array.isArray(this.mutationData) ? this.mutationData : [this.mutationData];
-        const insertedResults: any[] = [];
+        if (!rows.length) return { data: [], count: 0, error: null };
 
         for (const row of rows) {
           const rowData = { ...row };
+          if (!rowData.id && (this.tableName === 'users' || this.tableName === 'materials' || this.tableName === 'material_files' || this.tableName === 'activity_events' || this.tableName === 'audit_logs' || this.tableName === 'bookmarks' || this.tableName === 'announcements' || this.tableName === 'notifications' || this.tableName === 'support_inquiries' || this.tableName === 'exam_schedules')) {
+            rowData.id = crypto.randomUUID();
+          }
+
           if (this.tableName === 'materials' && 'owner' in rowData) {
             rowData.owner_id = rowData.owner;
             delete rowData.owner;
           }
 
-          if (!rowData.id && (this.tableName === 'users' || this.tableName === 'materials' || this.tableName === 'material_files' || this.tableName === 'activity_events' || this.tableName === 'audit_logs' || this.tableName === 'bookmarks' || this.tableName === 'announcements' || this.tableName === 'notifications' || this.tableName === 'support_inquiries' || this.tableName === 'exam_schedules')) {
-            rowData.id = crypto.randomUUID();
-          }
-
-          // Handle array/object properties as JSON
           for (const key of Object.keys(rowData)) {
             if (typeof rowData[key] === 'object' && rowData[key] !== null && !(rowData[key] instanceof Date)) {
               rowData[key] = JSON.stringify(rowData[key]);
@@ -172,21 +195,21 @@ class MySQLQueryBuilder {
 
           const sql = `INSERT INTO \`${this.tableName}\` (${cols}) VALUES (${placeholders})`;
           await pool.query(sql, values);
-          insertedResults.push(rowData);
         }
-
-        return {
-          data: Array.isArray(this.mutationData) ? insertedResults : insertedResults[0],
-          count: insertedResults.length,
-          error: null,
-        };
+        return { data: this.mutationData, count: rows.length, error: null };
       }
 
       // 2. Handle UPSERT
       if (this.mutationType === 'upsert') {
         const rows = Array.isArray(this.mutationData) ? this.mutationData : [this.mutationData];
+        if (!rows.length) return { data: [], count: 0, error: null };
+
         for (const row of rows) {
           const rowData = { ...row };
+          if (!rowData.id && (this.tableName === 'users' || this.tableName === 'materials' || this.tableName === 'material_files' || this.tableName === 'activity_events' || this.tableName === 'audit_logs' || this.tableName === 'bookmarks' || this.tableName === 'announcements' || this.tableName === 'notifications' || this.tableName === 'support_inquiries' || this.tableName === 'exam_schedules')) {
+            rowData.id = crypto.randomUUID();
+          }
+
           if (this.tableName === 'materials' && 'owner' in rowData) {
             rowData.owner_id = rowData.owner;
             delete rowData.owner;
@@ -270,11 +293,8 @@ class MySQLQueryBuilder {
       // Base select
       let selectClause = '*';
       if (this.selectedCols && this.selectedCols !== '*') {
-        // Strip nested relation selectors like subjects(...) for basic query
-        const cleanCols = this.selectedCols
-          .split(',')
-          .map(c => c.trim())
-          .filter(c => !c.includes('(') && !c.includes(')'))
+        // Strip nested relation selectors like subjects(...) or users(...) for basic query
+        const cleanCols = this.stripNestedRelations(this.selectedCols)
           .map(c => `\`${c}\``)
           .join(', ');
         if (cleanCols) selectClause = cleanCols;
@@ -320,6 +340,26 @@ class MySQLQueryBuilder {
         }
       }
 
+      // Handle joined material_files if requested in materials table
+      if (this.tableName === 'materials' && this.selectedCols.includes('material_files')) {
+        const matIds = [...new Set(rows.map((r: any) => r.id).filter(Boolean))];
+        if (matIds.length) {
+          const [files]: any = await pool.query(
+            'SELECT id, material_id, file_name, mime_type, size, version, storage_path, storage_ref FROM material_files WHERE material_id IN (?)',
+            [matIds]
+          );
+          const filesMap = new Map<string, any[]>();
+          files.forEach((f: any) => {
+            f.storage_ref = f.storage_ref || f.storage_path;
+            if (!filesMap.has(f.material_id)) filesMap.set(f.material_id, []);
+            filesMap.get(f.material_id)!.push(f);
+          });
+          rows.forEach((r: any) => {
+            r.material_files = filesMap.get(r.id) || [];
+          });
+        }
+      }
+
       // Handle joined users/owner
       if (this.tableName === 'materials' && this.selectedCols.includes('users(')) {
         const ownerIds = [...new Set(rows.map((r: any) => r.owner_id).filter(Boolean))];
@@ -329,6 +369,61 @@ class MySQLQueryBuilder {
           users.forEach((u: any) => userMap.set(u.id, u));
           rows.forEach((r: any) => {
             r.users = userMap.get(r.owner_id) || null;
+          });
+        }
+      }
+
+      // Handle joined materials in bookmarks table
+      if (this.tableName === 'bookmarks' && this.selectedCols.includes('materials')) {
+        const matIds = [...new Set(rows.map((r: any) => r.material_id).filter(Boolean))];
+        if (matIds.length) {
+          const [materials]: any = await pool.query(
+            'SELECT id, title, description, type, subject, branch, semester, regulation, owner_id FROM materials WHERE id IN (?)',
+            [matIds]
+          );
+
+          if (this.selectedCols.includes('subjects') || this.selectedCols.includes('users')) {
+            const subjCodes = [...new Set(materials.map((m: any) => m.subject).filter(Boolean))];
+            const ownerIds = [...new Set(materials.map((m: any) => m.owner_id).filter(Boolean))];
+
+            let subjMap = new Map();
+            if (subjCodes.length) {
+              const [subjs]: any = await pool.query('SELECT code, title FROM subjects WHERE code IN (?)', [subjCodes]);
+              subjs.forEach((s: any) => subjMap.set(s.code, s));
+            }
+
+            let userMap = new Map();
+            if (ownerIds.length) {
+              const [users]: any = await pool.query('SELECT id, name FROM users WHERE id IN (?)', [ownerIds]);
+              users.forEach((u: any) => userMap.set(u.id, u));
+            }
+
+            materials.forEach((m: any) => {
+              m.subjects = subjMap.get(m.subject) || null;
+              m.users = userMap.get(m.owner_id) || null;
+            });
+          }
+
+          const matMap = new Map();
+          materials.forEach((m: any) => matMap.set(m.id, m));
+          rows.forEach((r: any) => {
+            r.materials = matMap.get(r.material_id) || null;
+          });
+        }
+      }
+
+      // Handle joined users in activity_events table
+      if (this.tableName === 'activity_events' && (this.selectedCols.includes('users') || this.selectedCols.includes('actor_id'))) {
+        const actorIds = [...new Set(rows.map((r: any) => r.actor_id).filter(Boolean))];
+        if (actorIds.length) {
+          const [users]: any = await pool.query(
+            'SELECT id, name, email, role, branch, current_semester, section, roll_number FROM users WHERE id IN (?)',
+            [actorIds]
+          );
+          const userMap = new Map();
+          users.forEach((u: any) => userMap.set(u.id, u));
+          rows.forEach((r: any) => {
+            r.users = userMap.get(r.actor_id) || null;
           });
         }
       }

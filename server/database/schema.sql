@@ -42,6 +42,7 @@ CREATE TABLE `subjects` (
     `title` VARCHAR(255) NOT NULL,
     `branch` VARCHAR(20) NOT NULL,
     `semester` INT NOT NULL,
+    `description` TEXT NULL,
     `regulation` VARCHAR(20) NOT NULL DEFAULT 'R23',
     `active` TINYINT(1) NOT NULL DEFAULT 1,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -113,6 +114,7 @@ CREATE TABLE `material_files` (
     `size` BIGINT NOT NULL,
     `version` INT NOT NULL DEFAULT 1,
     `storage_path` VARCHAR(500) NOT NULL,
+    `storage_ref` VARCHAR(500) NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_files_material` (`material_id`),
     CONSTRAINT `fk_files_material` FOREIGN KEY (`material_id`) REFERENCES `materials`(`id`) ON DELETE CASCADE
@@ -218,6 +220,7 @@ CREATE TABLE `exam_schedules` (
     `start_time` DATETIME NOT NULL,
     `end_time` DATETIME NOT NULL,
     `lockout_enabled` TINYINT(1) NOT NULL DEFAULT 1,
+    `active` TINYINT(1) NOT NULL DEFAULT 1,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_exam_time` (`start_time`, `end_time`),
     CONSTRAINT `fk_exam_branch` FOREIGN KEY (`branch`) REFERENCES `branches`(`code`) ON UPDATE CASCADE ON DELETE RESTRICT,

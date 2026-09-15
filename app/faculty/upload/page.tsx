@@ -17,11 +17,22 @@ interface SubjectOption {
   regulation?: string;
 }
 
+interface BranchOption {
+  code: string;
+  name: string;
+}
+
 const FALLBACK_REGULATIONS: RegulationOption[] = [
   { code: "R23", name: "R23 Autonomous Regulation" },
   { code: "R20", name: "R20 Autonomous Regulation" },
   { code: "R19", name: "R19 Autonomous Regulation" },
   { code: "A2", name: "A2 Autonomous Regulation" },
+];
+
+const FALLBACK_BRANCHES: BranchOption[] = [
+  { code: "CSM", name: "Artificial Intelligence and Machine Learning" },
+  { code: "CIC", name: "Cyber Security, IoT with BlockChain Technology" },
+  { code: "CSD", name: "Data Science" },
 ];
 
 const FALLBACK_SUBJECTS: SubjectOption[] = [];
@@ -30,10 +41,11 @@ export default async function FacultyUploadPage() {
   const { user, supabase } = await getCachedUserProfile();
   if (!user) redirect("/login");
 
-  // Fetch active regulations and subjects in parallel
-  const [regulationsRes, subjectsRes] = await Promise.all([
+  // Fetch active regulations, subjects, and branches in parallel
+  const [regulationsRes, subjectsRes, branchesRes] = await Promise.all([
     supabase.from("regulations").select("code, name").eq("active", true).order("code"),
     supabase.from("subjects").select("code, title, branch, semester, regulation").eq("active", true).order("code"),
+    supabase.from("branches").select("code, name").eq("active", true).order("code"),
   ]);
 
   const activeRegulations = (regulationsRes.data && regulationsRes.data.length > 0)
@@ -41,6 +53,10 @@ export default async function FacultyUploadPage() {
     : FALLBACK_REGULATIONS;
 
   const activeSubjects = (subjectsRes.data as SubjectOption[]) || [];
+
+  const activeBranches = (branchesRes.data && branchesRes.data.length > 0)
+    ? (branchesRes.data as BranchOption[])
+    : FALLBACK_BRANCHES;
 
   return (
     <div className="space-y-6 sm:space-y-7 w-full max-w-5xl pb-10">
@@ -61,7 +77,11 @@ export default async function FacultyUploadPage() {
         </p>
       </header>
 
-      <UploadForm regulations={activeRegulations} subjects={activeSubjects} />
+      <UploadForm 
+        regulations={activeRegulations} 
+        subjects={activeSubjects} 
+        branches={activeBranches}
+      />
     </div>
   );
 }

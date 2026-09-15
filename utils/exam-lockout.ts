@@ -94,8 +94,7 @@ export async function getActiveExamLockout(
       const supabase = createClient(cookieStore);
       const { data } = await supabase
         .from("exam_schedules")
-        .select("*")
-        .eq("active", true);
+        .select("*");
       if (data && Array.isArray(data)) {
         dbSchedules = data as ExamSchedule[];
         cachedDbSchedules = { schedules: dbSchedules, expiresAt: nowMs + 30_000 };
@@ -103,7 +102,7 @@ export async function getActiveExamLockout(
     } catch {}
   }
 
-  const allSchedules = [...localSchedules, ...dbSchedules].filter((s) => s.active);
+  const allSchedules = [...localSchedules, ...dbSchedules].filter((s) => (s as any).lockout_enabled ?? s.active ?? true);
   const now = new Date();
 
   // Parse Indian Standard Time (IST) components

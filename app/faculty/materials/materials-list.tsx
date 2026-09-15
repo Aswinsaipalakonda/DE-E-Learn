@@ -298,7 +298,7 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" suppressHydrationWarning>
       {/* ========================================================================= */}
       {/* LEVEL 1: ASSIGNED COURSE SUBJECTS GRID (DEFAULT VIEW) */}
       {/* ========================================================================= */}
@@ -523,6 +523,9 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                           {m.type}
+                        </span>
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                          Section: {m.branch || "All"}
                         </span>
                         <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                           m.state === "published"

@@ -36,9 +36,15 @@ interface SubjectOption {
   regulation?: string;
 }
 
+interface BranchOption {
+  code: string;
+  name: string;
+}
+
 interface UploadFormProps {
   regulations: RegulationOption[];
   subjects: SubjectOption[];
+  branches?: BranchOption[];
 }
 
 const MATERIAL_TYPES = [
@@ -64,7 +70,7 @@ function formatOptionLabel(code: string, rawTitle: string, branches: string[]) {
   return `${cleanCode} - ${truncatedTitle} ${branchTag}`.trim();
 }
 
-export default function UploadForm({ regulations, subjects }: UploadFormProps) {
+export default function UploadForm({ regulations, subjects, branches = [] }: UploadFormProps) {
   // 4-Step Progressive Workflow:
   // Step 1: Regulation & Semester
   // Step 2: Subject & Branch Allocation
@@ -75,6 +81,17 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const defaultDepartmentBranches: BranchOption[] = [
+    { code: "CSM", name: "Artificial Intelligence and Machine Learning" },
+    { code: "CIC", name: "Cyber Security, IoT with BlockChain Technology" },
+    { code: "CSD", name: "Data Science" },
+  ];
+
+  const activeBranchesList = useMemo(() => {
+    if (branches && branches.length > 0) return branches;
+    return defaultDepartmentBranches;
+  }, [branches]);
 
   // Step 1 State: Regulation & Semester
   const defaultReg = regulations.find(r => r.code === "R23")?.code || regulations[0]?.code || "R23";
@@ -163,15 +180,20 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
     setTargetBranches([]);
   };
 
-  // Subject selection handler (defaults to selecting all branches of that course)
+  // Subject selection handler
   const handleSubjectChange = (code: string) => {
     setSelectedSubjectCode(code);
     const sub = groupedSubjects.find(s => s.code === code);
     if (sub && sub.branches.length > 0) {
       setTargetBranches([...sub.branches]);
     } else {
-      setTargetBranches([]);
+      setTargetBranches(activeBranchesList.map(b => b.code));
     }
+  };
+
+  // Isolate allocation to a single specific branch (e.g. CSM students only)
+  const isolateToBranch = (bCode: string) => {
+    setTargetBranches([bCode]);
   };
 
   // Target Branch checkbox toggle
@@ -188,11 +210,11 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
 
   // Toggle All Branches for current subject
   const selectAllBranches = () => {
-    if (!currentSubject) return;
-    if (targetBranches.length === currentSubject.branches.length) {
-      setTargetBranches([currentSubject.branches[0]]);
+    const allCodes = activeBranchesList.map(b => b.code);
+    if (targetBranches.length === allCodes.length) {
+      setTargetBranches(["CSM"]);
     } else {
-      setTargetBranches([...currentSubject.branches]);
+      setTargetBranches([...allCodes]);
     }
   };
 
@@ -599,8 +621,8 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
 
           {/* Section / Branch Allocation (Appears once subject is selected) */}
           {currentSubject && (
-            <div className="p-5 bg-gradient-to-br from-blue-50/60 to-indigo-50/50 rounded-2xl border border-blue-200/80 space-y-4 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="p-5 sm:p-6 bg-gradient-to-br from-blue-50/70 to-indigo-50/60 rounded-3xl border border-blue-200/90 space-y-4 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
                     <Users className="h-4 w-4 text-blue-700" />
@@ -611,51 +633,123 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
                   </p>
                 </div>
 
-                {currentSubject.branches.length > 1 && (
+                {/* Quick Presets */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => isolateToBranch("CSM")}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                      targetBranches.length === 1 && targetBranches[0] === "CSM"
+                        ? "bg-purple-600 text-white border-purple-600 shadow-2xs"
+                        : "bg-white text-purple-700 border-purple-200 hover:bg-purple-50"
+                    }`}
+                    title="Target only CSM students"
+                  >
+                    Target Only CSM
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => isolateToBranch("CIC")}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                      targetBranches.length === 1 && targetBranches[0] === "CIC"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                        : "bg-white text-blue-700 border-blue-200 hover:bg-blue-50"
+                    }`}
+                    title="Target only CIC students"
+                  >
+                    Only CIC
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => isolateToBranch("CSD")}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                      targetBranches.length === 1 && targetBranches[0] === "CSD"
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
+                        : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                    }`}
+                    title="Target only CSD students"
+                  >
+                    Only CSD
+                  </button>
+
                   <button
                     type="button"
                     onClick={selectAllBranches}
-                    className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline cursor-pointer"
+                    className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline cursor-pointer px-1 py-1"
                   >
-                    {targetBranches.length === currentSubject.branches.length ? "Deselect All" : "Select All Sections"}
+                    {targetBranches.length === activeBranchesList.length ? "Deselect All" : "Select All"}
                   </button>
-                )}
+                </div>
               </div>
 
-              {/* Branch / Section Badges */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                {currentSubject.branches.map((bCode) => {
-                  const isSelected = targetBranches.includes(bCode);
+              {/* Branch / Section Selection Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {activeBranchesList.map((branchItem) => {
+                  const isSelected = targetBranches.includes(branchItem.code);
                   return (
                     <button
-                      key={bCode}
+                      key={branchItem.code}
                       type="button"
-                      onClick={() => toggleBranch(bCode)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                      onClick={() => toggleBranch(branchItem.code)}
+                      className={`p-3.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2.5 border text-left ${
                         isSelected
                           ? "bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/20"
-                          : "bg-white text-slate-700 border-slate-300 hover:border-blue-400 hover:bg-blue-50/50"
+                          : "bg-white text-slate-700 border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/50"
                       }`}
                     >
-                      {isSelected ? (
-                        <Check className="h-3.5 w-3.5" />
-                      ) : (
-                        <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {isSelected ? (
+                          <div className="w-4 h-4 rounded-full bg-white text-blue-600 flex items-center justify-center shrink-0">
+                            <Check className="h-3 w-3 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <span className="w-4 h-4 rounded-full border-2 border-slate-300 inline-block shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <span className="block font-bold">Section {branchItem.code}</span>
+                          <span className={`text-[10px] font-normal block truncate ${isSelected ? "text-blue-100" : "text-slate-500"}`}>
+                            {branchItem.name}
+                          </span>
+                        </div>
+                      </div>
+                      {branchItem.code === "CSM" && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                          isSelected ? "bg-white/20 text-white" : "bg-purple-50 text-purple-700 border border-purple-200"
+                        }`}>
+                          AI & ML
+                        </span>
                       )}
-                      <span>Section {bCode}</span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Isolation Confirmation Badge */}
-              <div className="p-3 bg-white/95 rounded-xl border border-blue-100 flex items-center gap-2.5 text-xs text-slate-700">
-                <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span>
-                  <span className="font-bold text-slate-900">Isolation Active:</span> Uploading for{" "}
-                  <span className="font-bold text-blue-700">{targetBranches.join(", ")}</span> (Sem {currentSubject.semester} • {selectedRegulation}).
-                </span>
-              </div>
+              {/* Dynamic Isolation Confirmation Banner */}
+              {targetBranches.length === 1 && targetBranches[0] === "CSM" ? (
+                <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-2.5 text-xs text-emerald-900 animate-in fade-in">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>Strict CSM Isolation Active:</strong> Uploading exclusively for <strong>Section CSM (AI & ML) students</strong>. Students in CIC and CSD sections will have zero access.
+                  </span>
+                </div>
+              ) : targetBranches.length === 1 ? (
+                <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-2.5 text-xs text-emerald-900 animate-in fade-in">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>Strict Isolation Active:</strong> Uploading exclusively for <strong>Section {targetBranches[0]} students</strong>.
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 bg-white/95 rounded-2xl border border-blue-100 flex items-center gap-2.5 text-xs text-slate-700">
+                  <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" />
+                  <span>
+                    <span className="font-bold text-slate-900">Multi-Section Delivery:</span> Uploading for{" "}
+                    <span className="font-bold text-blue-700">{targetBranches.join(", ")}</span> ({targetBranches.length} sections).
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -897,9 +991,20 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
               </div>
               <div className="p-3 bg-white rounded-xl border border-slate-200/70">
                 <span className="text-slate-400 block text-[10px] uppercase font-semibold">Destination Sections</span>
-                <span className="font-bold text-blue-700 text-sm mt-0.5 block">{targetBranches.join(", ")}</span>
+                <span className="font-bold text-blue-700 text-sm mt-0.5 block">
+                  {targetBranches.join(", ")} ({targetBranches.length} {targetBranches.length === 1 ? "section" : "sections"})
+                </span>
               </div>
             </div>
+
+            {targetBranches.length === 1 && (
+              <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-2.5 text-xs text-emerald-900 animate-in fade-in">
+                <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Strict Section Isolation:</strong> Target Branches set to <strong>{targetBranches[0]} (1 section)</strong>. This material will strictly be delivered to students of <strong>Section {targetBranches[0]}</strong> only.
+                </span>
+              </div>
+            )}
 
             {description && (
               <div className="p-3.5 bg-white rounded-xl border border-slate-200/70 text-xs">
