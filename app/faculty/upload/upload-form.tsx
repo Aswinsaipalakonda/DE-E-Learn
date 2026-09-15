@@ -53,6 +53,17 @@ const MATERIAL_TYPES = [
   { label: "Other Resources", value: "Other Resources" },
 ];
 
+function formatOptionLabel(code: string, rawTitle: string, branches: string[]) {
+  const cleanCode = code.replace(/[\r\n]+/g, " ").trim();
+  const cleanTitle = rawTitle.replace(/[\uF0B7\uF0A7\u2022]/g, "•").replace(/\s+/g, " ").trim();
+  const branchTag = branches.length > 0 ? `(${branches.join(", ")})` : "";
+  const maxLen = 50;
+  const truncatedTitle = cleanTitle.length > maxLen 
+    ? cleanTitle.slice(0, maxLen).trim() + "..." 
+    : cleanTitle;
+  return `${cleanCode} - ${truncatedTitle} ${branchTag}`.trim();
+}
+
 export default function UploadForm({ regulations, subjects }: UploadFormProps) {
   // 4-Step Progressive Workflow:
   // Step 1: Regulation & Semester
@@ -544,40 +555,45 @@ export default function UploadForm({ regulations, subjects }: UploadFormProps) {
               </span>
             </div>
 
-            <select
-              id="subject-select"
-              value={selectedSubjectCode}
-              onChange={(e) => handleSubjectChange(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
-            >
-              <option value="">-- Choose Subject ({groupedSubjects.length} Available in Semester {selectedSemester}) --</option>
-              {groupedSubjects.map((s) => (
-                <option key={s.code} value={s.code}>
-                  {s.code} - {s.title} ({s.branches.join(", ")})
-                </option>
-              ))}
-            </select>
+            <div className="relative w-full max-w-full overflow-hidden">
+              <select
+                id="subject-select"
+                value={selectedSubjectCode}
+                onChange={(e) => handleSubjectChange(e.target.value)}
+                className="w-full max-w-full truncate px-4 py-3.5 pr-10 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+                title={currentSubject ? `${currentSubject.code} - ${currentSubject.title}` : undefined}
+              >
+                <option value="">-- Choose Subject ({groupedSubjects.length} Available in Semester {selectedSemester}) --</option>
+                {groupedSubjects.map((s) => (
+                  <option 
+                    key={s.code} 
+                    value={s.code}
+                    title={`${s.code} - ${s.title} (${s.branches.join(", ")})`}
+                  >
+                    {formatOptionLabel(s.code, s.title, s.branches)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Selected Course Confirmation Card */}
           {currentSubject && (
-            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-start justify-between gap-3 animate-in fade-in duration-150">
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold bg-blue-600 text-white px-2 py-0.5 rounded-md">
-                    {currentSubject.code}
-                  </span>
-                  <span className="text-xs font-bold text-blue-900">
-                    Semester {currentSubject.semester}
-                  </span>
-                </div>
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
-                  {currentSubject.title}
-                </h4>
-                <p className="text-[11px] text-slate-600">
-                  Applicable Branches: <strong className="text-slate-800">{currentSubject.branches.join(", ")}</strong>
-                </p>
+            <div className="p-4 sm:p-5 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-1.5 animate-in fade-in duration-150 w-full max-w-full overflow-hidden">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-xs font-bold bg-blue-600 text-white px-2 py-0.5 rounded-md shrink-0">
+                  {currentSubject.code.replace(/[\r\n]+/g, " ")}
+                </span>
+                <span className="text-xs font-bold text-blue-900">
+                  Semester {currentSubject.semester}
+                </span>
               </div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-relaxed break-words">
+                {currentSubject.title}
+              </h4>
+              <p className="text-[11px] text-slate-600 pt-0.5">
+                Applicable Branches: <strong className="text-slate-800">{currentSubject.branches.join(", ")}</strong>
+              </p>
             </div>
           )}
 
