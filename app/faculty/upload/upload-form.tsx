@@ -597,6 +597,9 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
                 ))}
               </select>
             </div>
+            <p className="text-[11px] text-slate-500 font-normal flex items-center gap-1.5">
+              <span>💡 Theory courses and companion lab practicals are unified into a single subject. You can designate whether your upload is Lecture Notes, a Lab Manual, or an Assignment in Step 3.</span>
+            </p>
           </div>
 
           {/* Selected Course Confirmation Card */}

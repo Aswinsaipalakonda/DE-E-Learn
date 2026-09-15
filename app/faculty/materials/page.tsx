@@ -226,19 +226,30 @@ export default async function FacultyMaterialsPage() {
     };
   });
 
-  // Combine DB subjects with default seed subjects & any custom subject codes in materials
+  // Only include subjects that have at least one uploaded material by this faculty
+  const uploadedSubjectCodes = new Set(
+    materials.map((m) => (m.subject || "").toUpperCase()).filter(Boolean)
+  );
+
   const subjectsMap = new Map<string, SubjectItem>();
-  DEFAULT_SUBJECTS.forEach((s) => subjectsMap.set(s.code, s));
-  dbSubjects.forEach((s) => subjectsMap.set(s.code, s));
-  
-  // Ensure every material's subject code exists in subjects map
+
+  // 1. Add DB subjects that match this faculty's uploaded materials
+  dbSubjects.forEach((s) => {
+    if (uploadedSubjectCodes.has(s.code.toUpperCase())) {
+      subjectsMap.set(s.code.toUpperCase(), s);
+    }
+  });
+
+  // 2. Ensure every material's subject code exists in subjects map (even if custom or unseeded)
   materials.forEach((m) => {
-    if (m.subject && !subjectsMap.has(m.subject)) {
-      subjectsMap.set(m.subject, {
+    const codeUpper = (m.subject || "").toUpperCase();
+    if (codeUpper && !subjectsMap.has(codeUpper)) {
+      const dbMatch = dbSubjects.find((s) => s.code.toUpperCase() === codeUpper);
+      subjectsMap.set(codeUpper, {
         code: m.subject,
-        title: m.subject,
-        branch: m.branch || "CIC",
-        semester: m.semester || 3,
+        title: dbMatch?.title || m.subject,
+        branch: m.branch || dbMatch?.branch || "CIC",
+        semester: m.semester || dbMatch?.semester || 3,
       });
     }
   });

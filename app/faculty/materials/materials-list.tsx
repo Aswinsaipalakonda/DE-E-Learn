@@ -24,6 +24,7 @@ import {
   BookOpen,
   ArrowLeft,
   Search,
+  ChevronLeft,
   ChevronRight,
   Layers,
   Sparkles,
@@ -77,6 +78,22 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
   const [selectedSubjectCode, setSelectedSubjectCode] = useState<string | null>(null);
   const [subjectSearchQuery, setSubjectSearchQuery] = useState("");
   const [materialSearchQuery, setMaterialSearchQuery] = useState("");
+
+  // Pagination & Resource Type Filter States
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [subjectPage, setSubjectPage] = useState(1);
+  const [materialPage, setMaterialPage] = useState(1);
+  const SUBJECTS_PER_PAGE = 6;
+  const MATERIALS_PER_PAGE = 6;
+
+  // Reset pagination on search or filter changes
+  useEffect(() => {
+    setSubjectPage(1);
+  }, [subjectSearchQuery]);
+
+  useEffect(() => {
+    setMaterialPage(1);
+  }, [materialSearchQuery, activeTab, typeFilter, selectedSubjectCode]);
 
   // Replace file version modal state
   const [replaceTarget, setReplaceTarget] = useState<{
@@ -162,6 +179,13 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
     );
   }, [subjectStats, subjectSearchQuery]);
 
+  // Level 1 Subject Pagination
+  const totalSubjectPages = Math.ceil(filteredSubjects.length / SUBJECTS_PER_PAGE) || 1;
+  const paginatedSubjects = useMemo(() => {
+    const start = (subjectPage - 1) * SUBJECTS_PER_PAGE;
+    return filteredSubjects.slice(start, start + SUBJECTS_PER_PAGE);
+  }, [filteredSubjects, subjectPage]);
+
   // Current active subject object
   const currentSubject = useMemo(() => {
     if (!selectedSubjectCode) return null;
@@ -187,17 +211,31 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
     );
   }, [materials, selectedSubjectCode]);
 
-  // Filter materials by tab & search query
+  // Distinct resource types in active subject (e.g. Lecture Notes, Lab Manuals)
+  const availableTypes = useMemo(() => {
+    const types = new Set(subjectMaterials.map((m) => m.type).filter(Boolean));
+    return Array.from(types);
+  }, [subjectMaterials]);
+
+  // Filter materials by tab, typeFilter & search query
   const displayedMaterials = useMemo(() => {
     return subjectMaterials.filter((m) => {
       if (activeTab !== "all" && m.state !== activeTab) return false;
+      if (typeFilter !== "all" && m.type !== typeFilter) return false;
       if (materialSearchQuery.trim()) {
         const q = materialSearchQuery.toLowerCase();
         return m.title.toLowerCase().includes(q) || m.type.toLowerCase().includes(q);
       }
       return true;
     });
-  }, [subjectMaterials, activeTab, materialSearchQuery]);
+  }, [subjectMaterials, activeTab, typeFilter, materialSearchQuery]);
+
+  // Level 2 Material Pagination
+  const totalMaterialPages = Math.ceil(displayedMaterials.length / MATERIALS_PER_PAGE) || 1;
+  const paginatedMaterials = useMemo(() => {
+    const start = (materialPage - 1) * MATERIALS_PER_PAGE;
+    return displayedMaterials.slice(start, start + MATERIALS_PER_PAGE);
+  }, [displayedMaterials, materialPage]);
 
   // Smooth open drawer
   const openInspectModal = (material: MaterialItem) => {
@@ -304,105 +342,200 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
       {/* ========================================================================= */}
       {!selectedSubjectCode ? (
         <div className="space-y-6">
-          {/* Controls Bar */}
-          <div className="p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Assigned Teaching Portfolios
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200">
-                  {subjects.length} Subjects
-                </span>
+          {subjects.length === 0 ? (
+            <div className="py-20 text-center bg-white border border-slate-200/90 rounded-3xl p-8 space-y-4 shadow-2xs">
+              <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center mx-auto shadow-sm">
+                <FolderOpen className="h-8 w-8" />
               </div>
-              <p className="text-xs text-slate-500 font-normal">
-                Click on any course subject card below to view, upload, and inspect learning materials.
-              </p>
-            </div>
-
-            <div className="relative sm:w-72">
-              <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-slate-400" />
-              <input
-                placeholder="Search subject by code or name..."
-                value={subjectSearchQuery}
-                onChange={(e) => setSubjectSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:border-primary text-slate-900 placeholder:text-slate-400 transition-all font-normal"
-              />
-              {subjectSearchQuery && (
-                <button
-                  onClick={() => setSubjectSearchQuery("")}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-700 p-0.5"
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-bold text-slate-900">No Course Materials Uploaded Yet</h3>
+                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+                  You haven&apos;t uploaded syllabus notes, lab manuals, or lecture slides yet. Once you publish resources for your assigned subjects, they will appear here.
+                </p>
+              </div>
+              <div className="pt-2">
+                <Link
+                  href="/faculty/upload"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-md hover:shadow-lg"
                 >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+                  <Plus className="h-4 w-4" />
+                  <span>Upload Your First Course Material</span>
+                </Link>
+              </div>
             </div>
-          </div>
-
-          {/* Subjects Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredSubjects.map((sub) => {
-              const hasMaterials = sub.materialsCount > 0;
-
-              return (
-                <div
-                  key={sub.code}
-                  onClick={() => setSelectedSubjectCode(sub.code)}
-                  className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer flex flex-col justify-between space-y-5 group"
-                >
-                  {/* Top Badges */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold font-mono">
-                        {sub.code}
-                      </span>
-                      <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium">
-                        {sub.branch} • Sem {sub.semester}
-                      </span>
-                    </div>
-
-                    <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200 group-hover:scale-110 transition-transform">
-                      <BookOpen className="h-4.5 w-4.5" />
-                    </div>
+          ) : (
+            <>
+              {/* Controls Bar */}
+              <div className="p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Assigned Teaching Portfolios
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200">
+                      {subjects.length} Subjects With Materials
+                    </span>
                   </div>
+                  <p className="text-xs text-slate-500 font-normal">
+                    Click on any course subject card below to view, upload, and inspect learning materials.
+                  </p>
+                </div>
 
-                  {/* Subject Title */}
-                  <div className="space-y-1">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-primary transition-colors leading-snug">
-                      {sub.title}
-                    </h2>
-                    <p className="text-xs text-slate-500 font-normal">
-                      Department of Data Engineering Syllabus
-                    </p>
+                <div className="relative sm:w-72">
+                  <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    placeholder="Search subject by code or name..."
+                    value={subjectSearchQuery}
+                    onChange={(e) => setSubjectSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:border-primary text-slate-900 placeholder:text-slate-400 transition-all font-normal"
+                  />
+                  {subjectSearchQuery && (
+                    <button
+                      onClick={() => setSubjectSearchQuery("")}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-700 p-0.5"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Subjects Grid or Empty Search State */}
+              {filteredSubjects.length === 0 ? (
+                <div className="py-16 text-center bg-white border border-slate-200/90 rounded-3xl p-8 space-y-3 shadow-2xs">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Search className="h-6 w-6" />
                   </div>
-
-                  {/* Metrics Statistics */}
-                  <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">
-                    <div>
-                      <span className="block text-base font-bold text-slate-900">{sub.materialsCount}</span>
-                      <span className="text-[10px] text-slate-500 font-medium block">Materials</span>
-                    </div>
-                    <div className="border-x border-slate-200">
-                      <span className="block text-base font-bold text-blue-700">{sub.totalViews}</span>
-                      <span className="text-[10px] text-slate-500 font-medium block">Views</span>
-                    </div>
-                    <div>
-                      <span className="block text-base font-bold text-emerald-700">{sub.totalDownloads}</span>
-                      <span className="text-[10px] text-slate-500 font-medium block">Downloads</span>
-                    </div>
-                  </div>
-
-                  {/* Action Link Footer */}
-                  <div className="pt-2 flex items-center justify-between border-t border-slate-100 text-xs font-semibold text-primary group-hover:text-blue-700">
-                    <span>{hasMaterials ? "View Uploaded Materials" : "Open Subject Workspace"}</span>
-                    <div className="p-1 rounded-full bg-blue-50 text-blue-700 group-hover:bg-primary group-hover:text-white transition-colors">
-                      <ChevronRight className="h-4 w-4" />
-                    </div>
+                  <h3 className="text-sm font-bold text-slate-900">No Subjects Match &quot;{subjectSearchQuery}&quot;</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    We couldn&apos;t find any subject with materials matching your search query.
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setSubjectSearchQuery("")}
+                      className="px-4 py-2 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      Clear Search Filter
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {paginatedSubjects.map((sub) => {
+                    const hasMaterials = sub.materialsCount > 0;
+
+                    return (
+                      <div
+                        key={sub.code}
+                        onClick={() => {
+                          setSelectedSubjectCode(sub.code);
+                          setMaterialPage(1);
+                          setTypeFilter("all");
+                        }}
+                        className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer flex flex-col justify-between space-y-5 group"
+                      >
+                        {/* Top Badges */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold font-mono">
+                              {sub.code}
+                            </span>
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium">
+                              {sub.branch} • Sem {sub.semester}
+                            </span>
+                          </div>
+
+                          <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200 group-hover:scale-110 transition-transform">
+                            <BookOpen className="h-4.5 w-4.5" />
+                          </div>
+                        </div>
+
+                        {/* Subject Title */}
+                        <div className="space-y-1">
+                          <h2 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-primary transition-colors leading-snug">
+                            {sub.title}
+                          </h2>
+                          <p className="text-xs text-slate-500 font-normal">
+                            Department of Data Engineering Syllabus
+                          </p>
+                        </div>
+
+                        {/* Metrics Statistics */}
+                        <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">
+                          <div>
+                            <span className="block text-base font-bold text-slate-900">{sub.materialsCount}</span>
+                            <span className="text-[10px] text-slate-500 font-medium block">Materials</span>
+                          </div>
+                          <div className="border-x border-slate-200">
+                            <span className="block text-base font-bold text-blue-700">{sub.totalViews}</span>
+                            <span className="text-[10px] text-slate-500 font-medium block">Views</span>
+                          </div>
+                          <div>
+                            <span className="block text-base font-bold text-emerald-700">{sub.totalDownloads}</span>
+                            <span className="text-[10px] text-slate-500 font-medium block">Downloads</span>
+                          </div>
+                        </div>
+
+                        {/* Action Link Footer */}
+                        <div className="pt-2 flex items-center justify-between border-t border-slate-100 text-xs font-semibold text-primary group-hover:text-blue-700">
+                          <span>{hasMaterials ? "View Uploaded Materials" : "Open Subject Workspace"}</span>
+                          <div className="p-1 rounded-full bg-blue-50 text-blue-700 group-hover:bg-primary group-hover:text-white transition-colors">
+                            <ChevronRight className="h-4 w-4" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Level 1 Pagination Toolbar */}
+              {totalSubjectPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
+                  <div className="text-xs text-slate-500">
+                    Showing <span className="font-semibold text-slate-800">{(subjectPage - 1) * SUBJECTS_PER_PAGE + 1}</span> to{" "}
+                    <span className="font-semibold text-slate-800">{Math.min(subjectPage * SUBJECTS_PER_PAGE, filteredSubjects.length)}</span> of{" "}
+                    <span className="font-semibold text-slate-800">{filteredSubjects.length}</span> course subjects
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setSubjectPage((p) => Math.max(1, p - 1))}
+                      disabled={subjectPage === 1}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs font-semibold flex items-center gap-1 shadow-2xs"
+                      aria-label="Previous subjects page"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      <span>Prev</span>
+                    </button>
+                    {Array.from({ length: totalSubjectPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setSubjectPage(pageNum)}
+                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                          subjectPage === pageNum
+                            ? "bg-primary text-white shadow-xs"
+                            : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                        }`}
+                        aria-label={`Go to page ${pageNum}`}
+                        aria-current={subjectPage === pageNum ? "page" : undefined}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setSubjectPage((p) => Math.min(totalSubjectPages, p + 1))}
+                      disabled={subjectPage === totalSubjectPages}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs font-semibold flex items-center gap-1 shadow-2xs"
+                      aria-label="Next subjects page"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       ) : (
         /* ========================================================================= */
@@ -462,57 +595,98 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
             </div>
           </div>
 
-          {/* Filter Tabs & Search for Materials */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 p-1.5 bg-white border border-slate-200/90 rounded-2xl shadow-2xs w-full sm:w-fit overflow-x-auto">
-              {(["all", "published", "draft", "archived"] as const).map(tab => {
-                const count = tab === "all" ? subjectMaterials.length : subjectMaterials.filter(m => m.state === tab).length;
-                const isActive = activeTab === tab;
+          {/* Filter Tabs, Resource Type Pills & Search for Materials */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 p-1.5 bg-white border border-slate-200/90 rounded-2xl shadow-2xs w-full sm:w-fit overflow-x-auto">
+                {(["all", "published", "draft", "archived"] as const).map(tab => {
+                  const count = tab === "all" ? subjectMaterials.length : subjectMaterials.filter(m => m.state === tab).length;
+                  const isActive = activeTab === tab;
 
-                return (
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 ${
+                        isActive
+                          ? "bg-primary text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{tab}</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                        isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="relative sm:w-64">
+                <Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  placeholder="Search materials..."
+                  value={materialSearchQuery}
+                  onChange={(e) => setMaterialSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-full focus:outline-none focus:border-primary text-slate-900 placeholder:text-slate-400 font-normal transition-all"
+                />
+                {materialSearchQuery && (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 ${
-                      isActive
-                        ? "bg-primary text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                    }`}
+                    onClick={() => setMaterialSearchQuery("")}
+                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 p-0.5"
                   >
-                    <span>{tab}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
-                    }`}>
-                      {count}
-                    </span>
+                    <X className="h-3 w-3" />
                   </button>
-                );
-              })}
+                )}
+              </div>
             </div>
 
-            <div className="relative sm:w-64">
-              <Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <input
-                placeholder="Search materials..."
-                value={materialSearchQuery}
-                onChange={(e) => setMaterialSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-full focus:outline-none focus:border-primary text-slate-900 placeholder:text-slate-400 font-normal transition-all"
-              />
-              {materialSearchQuery && (
+            {/* Resource Type Filter Pills (Useful for Theory vs Lab unified workspaces) */}
+            {availableTypes.length > 1 && (
+              <div className="flex items-center gap-1.5 p-1 bg-white/70 border border-slate-200/80 rounded-2xl w-full sm:w-fit overflow-x-auto">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">Type:</span>
                 <button
-                  onClick={() => setMaterialSearchQuery("")}
-                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 p-0.5"
+                  onClick={() => setTypeFilter("all")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+                    typeFilter === "all"
+                      ? "bg-slate-900 text-white font-bold shadow-2xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
                 >
-                  <X className="h-3 w-3" />
+                  All Types ({subjectMaterials.length})
                 </button>
-              )}
-            </div>
+                {availableTypes.map((t) => {
+                  const count = subjectMaterials.filter((m) => m.type === t).length;
+                  const isSelected = typeFilter === t;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setTypeFilter(t)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                        isSelected
+                          ? "bg-slate-900 text-white font-bold shadow-2xs"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span>{t}</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                        isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Materials List Under This Subject */}
           <div className="space-y-4">
             {displayedMaterials.length > 0 ? (
-              displayedMaterials.map(m => (
+              paginatedMaterials.map(m => (
                 <div 
                   key={m.id} 
                   className="p-5 sm:p-7 bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-5 hover:shadow-md transition-all group"
@@ -703,11 +877,29 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <FolderOpen className="h-6 w-6" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">No Materials in {activeTab} State</h3>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {materialSearchQuery || typeFilter !== "all" || activeTab !== "all"
+                    ? "No Materials Found Matching Filters"
+                    : `No Materials in ${activeTab} State`}
+                </h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  You haven&apos;t uploaded any study materials for {currentSubject?.code} ({currentSubject?.title}) under this category yet.
+                  {materialSearchQuery || typeFilter !== "all" || activeTab !== "all"
+                    ? "Try clearing your search query or switching resource type and state filters."
+                    : `You haven't uploaded any study materials for ${currentSubject?.code} (${currentSubject?.title}) under this category yet.`}
                 </p>
-                <div className="pt-2">
+                <div className="pt-2 flex items-center justify-center gap-2 flex-wrap">
+                  {(materialSearchQuery || typeFilter !== "all" || activeTab !== "all") && (
+                    <button
+                      onClick={() => {
+                        setMaterialSearchQuery("");
+                        setTypeFilter("all");
+                        setActiveTab("all");
+                      }}
+                      className="px-4 py-2 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+                    >
+                      Reset All Filters
+                    </button>
+                  )}
                   <Link
                     href="/faculty/upload"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
@@ -715,6 +907,52 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                     <Plus className="h-4 w-4" />
                     <span>Upload Notes for {currentSubject?.code}</span>
                   </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Level 2 Materials Pagination Toolbar */}
+            {totalMaterialPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
+                <div className="text-xs text-slate-500">
+                  Showing <span className="font-semibold text-slate-800">{(materialPage - 1) * MATERIALS_PER_PAGE + 1}</span> to{" "}
+                  <span className="font-semibold text-slate-800">{Math.min(materialPage * MATERIALS_PER_PAGE, displayedMaterials.length)}</span> of{" "}
+                  <span className="font-semibold text-slate-800">{displayedMaterials.length}</span> materials
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setMaterialPage((p) => Math.max(1, p - 1))}
+                    disabled={materialPage === 1}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs font-semibold flex items-center gap-1 shadow-2xs"
+                    aria-label="Previous materials page"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <span>Prev</span>
+                  </button>
+                  {Array.from({ length: totalMaterialPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setMaterialPage(pageNum)}
+                      className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                        materialPage === pageNum
+                          ? "bg-primary text-white shadow-xs"
+                          : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      }`}
+                      aria-label={`Go to page ${pageNum}`}
+                      aria-current={materialPage === pageNum ? "page" : undefined}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setMaterialPage((p) => Math.min(totalMaterialPages, p + 1))}
+                    disabled={materialPage === totalMaterialPages}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs font-semibold flex items-center gap-1 shadow-2xs"
+                    aria-label="Next materials page"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
             )}

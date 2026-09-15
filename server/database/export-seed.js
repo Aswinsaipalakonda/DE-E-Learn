@@ -50,7 +50,7 @@ SET FOREIGN_KEY_CHECKS = 0;
   const [subjects] = await conn.query('SELECT code, title, branch, semester, regulation, active FROM subjects ORDER BY regulation, branch, semester, code');
   sql += `-- 4. Subjects (${subjects.length} Records)\n`;
   sql += 'INSERT INTO `subjects` (`code`, `title`, `branch`, `semester`, `regulation`, `active`) VALUES\n';
-  sql += subjects.map(s => `  ('${s.code}', '${s.title.replace(/'/g, "''")}', '${s.branch}', ${s.semester}, '${s.regulation}', ${s.active})`).join(',\n') + '\nON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `active` = 1;\n\n';
+  sql += subjects.map(s => `  ('${s.code}', '${s.title.replace(/'/g, "''")}', '${s.branch}', ${s.semester}, '${s.regulation}', ${s.active})`).join(',\n') + '\nON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `active` = VALUES(`active`);\n\n';
 
   // Users
   const [users] = await conn.query('SELECT id, email, password_hash, name, role, status, branch, academic_year, current_semester, section, designation, phone, roll_number, first_login_pending FROM users ORDER BY role, email');
