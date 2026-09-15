@@ -22,6 +22,7 @@ import {
   BookOpen,
   CheckCircle2
 } from "lucide-react";
+import { formatSubjectTitle } from "@/lib/utils";
 
 interface RegulationOption {
   code: string;
@@ -29,11 +30,13 @@ interface RegulationOption {
 }
 
 interface SubjectOption {
+  id?: string;
   code: string;
   title: string;
   branch: string;
   semester: number;
   regulation?: string;
+  active?: boolean;
 }
 
 interface BranchOption {
@@ -44,12 +47,11 @@ interface BranchOption {
 interface UploadFormProps {
   regulations: RegulationOption[];
   subjects: SubjectOption[];
-  branches?: BranchOption[];
+  branches?: { code: string; name: string }[];
 }
 
 const MATERIAL_TYPES = [
-  { label: "Lecture Notes", value: "Notes" },
-  { label: "Lecture Slides", value: "Lecture Slides" },
+  { label: "Lecture Notes", value: "Lecture Notes" },
   { label: "Lab Manuals", value: "Lab Manuals" },
   { label: "Assignments", value: "Assignments" },
   { label: "Question Banks", value: "Question Banks" },
@@ -61,7 +63,7 @@ const MATERIAL_TYPES = [
 
 function formatOptionLabel(code: string, rawTitle: string, branches: string[]) {
   const cleanCode = code.replace(/[\r\n]+/g, " ").trim();
-  const cleanTitle = rawTitle.replace(/[\uF0B7\uF0A7\u2022]/g, "•").replace(/\s+/g, " ").trim();
+  const cleanTitle = formatSubjectTitle(rawTitle);
   const branchTag = branches.length > 0 ? `(${branches.join(", ")})` : "";
   const maxLen = 50;
   const truncatedTitle = cleanTitle.length > maxLen 

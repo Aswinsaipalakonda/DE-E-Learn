@@ -41,6 +41,14 @@ async function initDatabase() {
     await connection.query(seedSql);
     console.log('✓ Seed data inserted successfully.');
 
+    // 4. Normalize subject titles (sanitize any bullet or encoding issues to clean pipe separators)
+    await connection.query(`
+      UPDATE \`subjects\` 
+      SET \`title\` = REPLACE(REPLACE(REPLACE(\`title\`, 'â€¢', ' | '), '•', ' | '), '–', '-')
+      WHERE \`title\` LIKE '%â€¢%' OR \`title\` LIKE '%•%' OR \`title\` LIKE '%–%';
+    `);
+    console.log('✓ Subject titles normalized with clean pipe separators.');
+
     console.log('\n=========================================');
     console.log('🎉 Database initialization complete!');
     console.log('System Admin: admin@mvgrce.edu.in');

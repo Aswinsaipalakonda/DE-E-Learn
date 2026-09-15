@@ -20,17 +20,18 @@ import {
   FolderOpen, 
   Users, 
   X, 
-  GraduationCap,
-  BookOpen,
-  ArrowLeft,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Layers,
-  Sparkles,
-  CheckCircle2,
-  Filter
+  GraduationCap, 
+  BookOpen, 
+  ArrowLeft, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight, 
+  Layers, 
+  Sparkles, 
+  CheckCircle2, 
+  Filter 
 } from "lucide-react";
+import { formatSubjectTitle } from "@/lib/utils";
 
 interface FileItem {
   id: string;
@@ -453,7 +454,7 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                         {/* Subject Title */}
                         <div className="space-y-1">
                           <h2 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-primary transition-colors leading-snug">
-                            {sub.title}
+                            {formatSubjectTitle(sub.title)}
                           </h2>
                           <p className="text-xs text-slate-500 font-normal">
                             Department of Data Engineering Syllabus
@@ -573,7 +574,7 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                   </span>
                 </div>
                 <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                  {currentSubject?.title}
+                  {formatSubjectTitle(currentSubject?.title)}
                 </h1>
               </div>
 

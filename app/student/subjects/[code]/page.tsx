@@ -15,6 +15,7 @@ import {
 
 import { getActiveExamLockout } from "@/utils/exam-lockout";
 import { Clock, Lock } from "lucide-react";
+import { formatSubjectTitle } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ code: string }>;
@@ -146,7 +147,7 @@ export default async function SubjectDetailPage(props: PageProps) {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            {subject.title}
+            {formatSubjectTitle(subject.title)}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-normal">
             Curated syllabus materials uploaded by faculty specifically for <span className="font-semibold text-slate-700">Section {studentBranch}</span>.

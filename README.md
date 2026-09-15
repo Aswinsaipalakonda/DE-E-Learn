@@ -58,6 +58,8 @@ DataDock centralizes all autonomous curriculum assets, verified lecture notes, l
 * **Audit Trail**: Security event logging capturing authentication attempts, credential changes, and material publications.
 * **Automated Daily Backups**: Built-in, zero-downtime hot backup engine that executes scheduled database exports daily at **12:20 AM IST** with automated 30-day retention pruning.
 
+![DataDock Academic Operations Command](public/admin.png)
+
 ---
 
 ## 🏢 Departmental Specializations Supported

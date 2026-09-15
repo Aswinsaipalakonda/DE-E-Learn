@@ -37,6 +37,7 @@ import {
   CheckSquare,
   Award
 } from "lucide-react";
+import { formatSubjectTitle } from "@/lib/utils";
 
 interface Branch {
   code: string;
@@ -1002,7 +1003,7 @@ export default function TaxonomyClient({
 
                         {/* Title */}
                         <td className="py-3.5 px-4 font-semibold text-primary text-sm leading-snug group-hover:text-secondary transition-colors">
-                          {sub.title}
+                          {formatSubjectTitle(sub.title)}
                         </td>
 
                         {/* Branch */}

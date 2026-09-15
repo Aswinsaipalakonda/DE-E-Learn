@@ -1,6 +1,7 @@
 import { getCachedUserProfile } from "@/utils/supabase/cached-auth";
 import Link from "next/link";
 import { FolderOpen, ArrowRight, BookOpen, Sparkles, Layers, ChevronRight } from "lucide-react";
+import { formatSubjectTitle } from "@/lib/utils";
 
 interface SubjectItem {
   code: string;
@@ -56,7 +57,7 @@ export default async function StudentSubjectsPage() {
 
     return {
       code: sub.code,
-      title: sub.title,
+      title: formatSubjectTitle(sub.title),
       branch: sub.branch,
       semester: sub.semester,
       regulation: sub.regulation || "R23",
