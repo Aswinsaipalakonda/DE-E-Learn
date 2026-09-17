@@ -23,6 +23,7 @@ import {
   Loader2
 } from "lucide-react";
 import { updatePasswordAction, signOutUserAction } from "@/app/profile/actions";
+import { getBranchFullName } from "@/lib/utils";
 
 interface StudentProfileClientProps {
   profile: {
@@ -132,7 +133,9 @@ export default function StudentProfileClient({ profile }: StudentProfileClientPr
               </div>
               <div className="min-w-0">
                 <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Academic Branch</span>
-                <span className="text-xs font-bold text-slate-800 block">{profile.branch || "CIC"} (Cyber Security & IoT)</span>
+                <span className="text-xs font-bold text-slate-800 block">
+                  {profile.branch || "CIC"} ({getBranchFullName(profile.branch)})
+                </span>
               </div>
             </div>
 

@@ -19,6 +19,7 @@ import {
 import { StudentBookmarkHeroPill, StudentBookmarkShortcutCard } from "@/components/student-bookmark-pill";
 import { getStudentBookmarks } from "@/utils/bookmarks";
 import { getActiveExamLockout } from "@/utils/exam-lockout";
+import { getBranchFullName } from "@/lib/utils";
 
 interface SubjectInfo {
   title: string;
@@ -50,6 +51,7 @@ export default async function StudentDashboard({
 
   const studentName = profile?.name || user.user_metadata?.name || user.email?.split("@")[0] || "Student";
   const branch = profile?.branch || "CIC";
+  const branchFullName = getBranchFullName(branch);
   const rollNumber = profile?.roll_number || (user.email?.includes("@") ? user.email.split("@")[0].toUpperCase() : "23331A4701");
   
   // Enforce student constraint: Student can access only up to their current enrolled semester
@@ -76,7 +78,17 @@ export default async function StudentDashboard({
 
   const announcements = (dbAnnouncements && dbAnnouncements.length > 0) ? dbAnnouncements : FALLBACK_ANNOUNCEMENTS;
 
-  // 3. Fetch latest uploads in student scope matching selected semester (if not in Exam Lockout)
+  // 3. Fetch active enrolled semester subjects count
+  const { count: enrolledSubjectsCount } = await supabase
+    .from("subjects")
+    .select("code", { count: "exact", head: true })
+    .eq("branch", branch)
+    .eq("semester", maxAllowedSemester)
+    .eq("active", true);
+
+  const subjectsCount = enrolledSubjectsCount ?? 0;
+
+  // 4. Fetch latest uploads in student scope matching selected semester (if not in Exam Lockout)
   let latestUploads: MaterialItem[] = [];
   if (!examLockout.isLocked) {
     const { data: dbLatestUploads } = await supabase
@@ -103,7 +115,7 @@ export default async function StudentDashboard({
       : (FALLBACK_STUDENT_MATERIALS[selectedSemester] || FALLBACK_STUDENT_MATERIALS[3] || []);
   }
 
-  // 4. Read dynamic bookmarks from unified source
+  // 5. Read dynamic bookmarks from unified source
   const { count: displayBookmarksCount } = await getStudentBookmarks(supabase, user.id, cookieStore);
 
   // Generate semester tab numbers constrained up to the student's current semester
@@ -157,7 +169,9 @@ export default async function StudentDashboard({
           </div>
           <div>
             <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{branch}</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Cyber Security & IoT</span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block truncate" title={branchFullName}>
+              {branchFullName}
+            </span>
           </div>
         </div>
 
@@ -179,19 +193,30 @@ export default async function StudentDashboard({
           </div>
         </div>
 
-        {/* Card 3: Syllabus Materials */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">
+        {/* Card 3: Subjects Shortcut Tile */}
+        <Link
+          href={`/student/subjects?sem=${maxAllowedSemester}`}
+          className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md hover:border-primary/40 transition-all group cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Materials</span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-              <FileText className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-primary transition-colors">
+              Subjects
+            </span>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
+              <BookOpen className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
             </div>
           </div>
           <div>
-            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{latestUploads.length} Units</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 block">Sem {selectedSemester} Study Notes</span>
+            <span className="block text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {subjectsCount} {subjectsCount === 1 ? "Subject" : "Subjects"}
+            </span>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 flex items-center gap-1">
+              <span>Sem {maxAllowedSemester} Active Courses</span>
+              <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            </span>
           </div>
-        </div>
+        </Link>
+
 
         {/* Card 4: Roll Number & Identity */}
         <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-all group">

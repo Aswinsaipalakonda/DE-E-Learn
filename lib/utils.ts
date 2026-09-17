@@ -16,3 +16,18 @@ export function formatSubjectTitle(title: string | null | undefined): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+export const BRANCH_NAMES: Record<string, string> = {
+  CIC: "Cyber Security & IoT",
+  CSD: "Data Science",
+  CSM: "Artificial Intelligence & Machine Learning",
+};
+
+/**
+ * Returns the full official department name for a branch code (e.g., CSM -> Artificial Intelligence & Machine Learning).
+ */
+export function getBranchFullName(branchCode: string | null | undefined): string {
+  if (!branchCode) return "Academic Department";
+  const upper = branchCode.toUpperCase().trim();
+  return BRANCH_NAMES[upper] || `${upper} Department`;
+}
