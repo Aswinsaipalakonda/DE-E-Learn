@@ -416,8 +416,8 @@ class MySQLQueryBuilder {
         }
       }
 
-      // Handle joined users in activity_events table
-      if (this.tableName === 'activity_events' && (this.selectedCols.includes('users') || this.selectedCols.includes('actor_id'))) {
+      // Handle joined users in audit_logs or activity_events table
+      if ((this.tableName === 'audit_logs' || this.tableName === 'activity_events') && (this.selectedCols.includes('users') || this.selectedCols.includes('actor_id'))) {
         const actorIds = [...new Set(rows.map((r: any) => r.actor_id).filter(Boolean))];
         if (actorIds.length) {
           const [users]: any = await pool.query(
@@ -741,6 +741,20 @@ export class MySQLClient {
               path: '/',
             });
           }
+
+          // Record login audit event
+          try {
+            await pool.query(
+              'INSERT INTO audit_logs (id, action, actor_id, object_id, after_summary) VALUES (?, ?, ?, ?, ?)',
+              [
+                crypto.randomUUID(),
+                'USER_LOGIN',
+                user.id,
+                user.email,
+                JSON.stringify({ role: user.role, name: user.name })
+              ]
+            );
+          } catch {}
 
           const authUser = {
             id: user.id,

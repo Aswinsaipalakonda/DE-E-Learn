@@ -12,11 +12,11 @@ export async function logAuditAction(
     const supabase = createClient(cookieStore);
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const actorId = user?.id || "00000000-0000-0000-0000-000000000001";
 
     await supabase.from("audit_logs").insert({
       action,
-      actor_id: user.id,
+      actor_id: actorId,
       object_id: objectId,
       before_summary: beforeSummary,
       after_summary: afterSummary,

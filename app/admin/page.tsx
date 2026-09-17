@@ -21,15 +21,36 @@ import {
 interface ActivityEvent {
   id: string;
   created_at: string;
-  type: string;
-  user_email: string;
-  metadata: {
-    title?: string;
-    subject?: string;
-  };
+  action: string;
+  friendlyTitle: string;
+  objectId: string;
+  badge: { bg: string; label: string };
+  performer: string;
 }
 
-const FALLBACK_EVENTS: ActivityEvent[] = [];
+function getActionBadge(action: string) {
+  const act = (action || "").toLowerCase();
+  if (act.includes("create") || act.includes("register") || act.includes("batch")) {
+    return { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "Created" };
+  }
+  if (act.includes("delete") || act.includes("remove")) {
+    return { bg: "bg-rose-50 text-rose-700 border-rose-200", label: "Removed" };
+  }
+  if (act.includes("login") || act.includes("auth") || act.includes("password") || act.includes("reset")) {
+    return { bg: "bg-purple-50 text-purple-700 border-purple-200", label: "Security" };
+  }
+  if (act.includes("upload") || act.includes("material") || act.includes("subject")) {
+    return { bg: "bg-blue-50 text-blue-700 border-blue-200", label: "Curriculum" };
+  }
+  return { bg: "bg-amber-50 text-amber-700 border-amber-200", label: "Updated" };
+}
+
+function formatActionTitle(action: string) {
+  return (action || "")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export default async function AdminDashboardPage() {
   const { user, supabase } = await getCachedUserProfile();
@@ -49,14 +70,17 @@ export default async function AdminDashboardPage() {
     supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "faculty"),
     supabase.from("materials").select("id", { count: "exact", head: true }),
     supabase.from("material_files").select("size"),
-    supabase.from("activity_events").select(`
+    supabase.from("audit_logs").select(`
       id,
+      action,
+      object_id,
+      before_summary,
+      after_summary,
       created_at,
-      type,
-      metadata,
       users:actor_id (
+        name,
         email,
-        name
+        role
       )
     `).order("created_at", { ascending: false }).limit(6),
     supabase.from("branches").select("code", { count: "exact", head: true }),
@@ -89,14 +113,21 @@ export default async function AdminDashboardPage() {
     return (mb / 1024).toFixed(2) + " GB";
   };
 
-  const rawEvents = ((eventsRes.data || []) as Record<string, unknown>[]).map((ev) => {
-    const userObj = ev.users as { email?: string; name?: string } | null;
+  const rawEvents: ActivityEvent[] = ((eventsRes.data || []) as Record<string, unknown>[]).map((ev: any) => {
+    const userObj = ev.users as { email?: string; name?: string; role?: string } | null;
+    const action = String(ev.action || "SYSTEM_EVENT");
+    const objectId = String(ev.object_id || "");
+    const badge = getActionBadge(action);
+    const friendlyTitle = formatActionTitle(action);
+
     return {
       id: String(ev.id || ""),
       created_at: String(ev.created_at || ""),
-      type: String(ev.type || ""),
-      user_email: userObj?.email || userObj?.name || "User",
-      metadata: (ev.metadata as { title?: string; subject?: string }) || {},
+      action,
+      friendlyTitle,
+      badge,
+      objectId,
+      performer: userObj?.name || userObj?.email || "System Administrator",
     };
   });
 
@@ -234,16 +265,21 @@ export default async function AdminDashboardPage() {
               {events.map((ev) => (
                 <div key={ev.id} className="py-3.5 flex items-start justify-between gap-3 group">
                   <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 uppercase">
-                        {ev.type.replace(/_/g, " ")}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${ev.badge.bg}`}>
+                        {ev.badge.label}
                       </span>
-                      <span className="text-xs font-semibold text-slate-900 truncate">
-                        {ev.metadata?.title || ev.user_email || "System Operation"}
+                      <span className="text-xs font-bold text-slate-900 truncate">
+                        {ev.friendlyTitle}
                       </span>
+                      {ev.objectId && (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-semibold text-slate-600 truncate max-w-[180px]">
+                          {ev.objectId}
+                        </span>
+                      )}
                     </div>
                     <span className="text-[11px] text-slate-500 font-normal block truncate">
-                      Triggered by {ev.user_email}
+                      By {ev.performer}
                     </span>
                   </div>
                   <span className="text-[11px] text-slate-400 font-normal shrink-0">
