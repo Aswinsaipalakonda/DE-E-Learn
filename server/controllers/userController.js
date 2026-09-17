@@ -48,8 +48,24 @@ async function createUser(req, res) {
       return res.status(400).json({ error: 'Email and name are required.' });
     }
 
+    let sanitizedPhone = null;
+    if (phone) {
+      sanitizedPhone = String(phone).replace(/\D/g, '').trim();
+      if (sanitizedPhone.length !== 10) {
+        return res.status(400).json({ error: `Mobile number must be exactly 10 digits (received ${sanitizedPhone.length}).` });
+      }
+    }
+
+    let formattedRollNumber = null;
+    if (roll_number) {
+      formattedRollNumber = String(roll_number).toUpperCase().trim();
+      if (!/^\d{2}33[0-9A-Z]{6}$/.test(formattedRollNumber)) {
+        return res.status(400).json({ error: `Invalid roll number "${formattedRollNumber}". Must be 10 characters matching college format.` });
+      }
+    }
+
     const cleanEmail = email.trim().toLowerCase();
-    const defaultPassword = password || (role === 'student' ? (roll_number || cleanEmail.split('@')[0].toUpperCase()) : 'Password@789');
+    const defaultPassword = password || (role === 'student' ? (formattedRollNumber || cleanEmail.split('@')[0].toUpperCase()) : (sanitizedPhone && sanitizedPhone.length >= 4 ? `MVGRDE@${sanitizedPhone.slice(-4)}` : 'Password@789'));
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
     const userId = crypto.randomUUID();
 
@@ -66,8 +82,8 @@ async function createUser(req, res) {
         current_semester ? parseInt(current_semester, 10) : null,
         section || null,
         designation || null,
-        phone || null,
-        roll_number || null,
+        sanitizedPhone || null,
+        formattedRollNumber || null,
       ]
     );
 
@@ -100,8 +116,32 @@ async function updateUser(req, res) {
     if (current_semester !== undefined) { updates.push('current_semester = ?'); params.push(current_semester ? parseInt(current_semester, 10) : null); }
     if (section !== undefined) { updates.push('section = ?'); params.push(section || null); }
     if (designation !== undefined) { updates.push('designation = ?'); params.push(designation || null); }
-    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone || null); }
-    if (roll_number !== undefined) { updates.push('roll_number = ?'); params.push(roll_number || null); }
+    if (phone !== undefined) {
+      if (phone && phone.trim() !== '') {
+        const sanitized = String(phone).replace(/\D/g, '').trim();
+        if (sanitized.length !== 10) {
+          return res.status(400).json({ error: `Mobile number must be exactly 10 digits (received ${sanitized.length}).` });
+        }
+        updates.push('phone = ?');
+        params.push(sanitized);
+      } else {
+        updates.push('phone = ?');
+        params.push(null);
+      }
+    }
+    if (roll_number !== undefined) {
+      if (roll_number && roll_number.trim() !== '') {
+        const formatted = String(roll_number).toUpperCase().trim();
+        if (!/^\d{2}33[0-9A-Z]{6}$/.test(formatted)) {
+          return res.status(400).json({ error: `Invalid roll number "${formatted}". Must be 10 characters matching college format.` });
+        }
+        updates.push('roll_number = ?');
+        params.push(formatted);
+      } else {
+        updates.push('roll_number = ?');
+        params.push(null);
+      }
+    }
 
     if (!updates.length) {
       return res.json({ success: true, message: 'No fields to update.' });

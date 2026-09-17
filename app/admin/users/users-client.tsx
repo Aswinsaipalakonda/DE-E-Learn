@@ -88,6 +88,13 @@ function isValidRollNumber(roll: string): boolean {
   return regex.test(upper);
 }
 
+// Validate 10-digit Indian standard mobile number
+function isValidPhoneNumber(phone: string): boolean {
+  if (!phone) return false;
+  const digits = phone.replace(/\D/g, "");
+  return digits.length === 10;
+}
+
 export default function UsersClient({ initialUsers, branches, semesters }: UsersClientProps) {
   const [users, setUsers] = useState<UserItem[]>(initialUsers);
 
@@ -238,7 +245,7 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
 
   // Student Roll Number change handler (auto-generates official college email)
   const handleRollNumberChange = (val: string) => {
-    const upper = val.toUpperCase().trim();
+    const upper = val.toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 10);
     setRollNumber(upper);
     if (formRole === "student" && upper) {
       setEmail(`${upper.toLowerCase()}@mvgrce.edu.in`);
@@ -361,8 +368,21 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
     }
 
     if (formRole === "faculty") {
-      if (!phone.trim()) {
+      const cleanPhone = phone.replace(/\D/g, "");
+      if (!cleanPhone) {
         addToast("error", "Validation Error", "Contact Mobile Number is required for faculty accounts.");
+        return;
+      }
+      if (cleanPhone.length !== 10) {
+        addToast("error", "Validation Error", `Contact Mobile Number must be exactly 10 digits (currently ${cleanPhone.length} digits).`);
+        return;
+      }
+    }
+
+    if (formRole === "admin" && phone.trim()) {
+      const cleanPhone = phone.replace(/\D/g, "");
+      if (cleanPhone.length !== 10) {
+        addToast("error", "Validation Error", `Contact Mobile Number must be exactly 10 digits (currently ${cleanPhone.length} digits).`);
         return;
       }
     }
@@ -565,11 +585,13 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
         const rowName = row["name"] || row["facultyname"] || cols[0] || "";
         const rowEmail = row["email"] || row["emailaddress"] || cols[1] || "";
         const rowDesig = row["designation"] || row["desig"] || cols[2] || "Assistant Professor";
-        const rowPhone = row["phone"] || row["phonenumber"] || row["mobile"] || cols[3] || "";
+        const rawPhone = row["phone"] || row["phonenumber"] || row["mobile"] || cols[3] || "";
+        const rowPhone = rawPhone.replace(/\D/g, "").slice(0, 10);
         const rowBranch = row["branch"] || row["department"] || cols[4] || "";
 
         if (!rowName) errors.push(`Row ${i}: Missing Faculty Name`);
         if (!rowEmail || !rowEmail.includes("@")) errors.push(`Row ${i}: Invalid or missing Email (${rowEmail || "empty"})`);
+        if (!rowPhone || rowPhone.length !== 10) errors.push(`Row ${i}: Invalid Mobile Number (${rawPhone || "empty"}). Must be exactly 10 digits.`);
 
         previewList.push({
           name: rowName,
@@ -1541,18 +1563,28 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Contact Mobile Number <span className="text-red-500">*</span>
                       </label>
-                      <span className="text-[11px] text-slate-400">Format: 10 digits</span>
+                      <span className="text-[11px] text-slate-400">Format: 10 digits ({phone.replace(/\D/g, "").length}/10)</span>
                     </div>
                     <input
                       type="tel"
                       required
+                      maxLength={10}
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                       placeholder="Enter 10-digit mobile number"
-                      className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900 placeholder:text-slate-400 font-normal transition-all"
+                      className={`w-full px-4 py-2.5 text-sm bg-white border rounded-full focus:outline-none transition-all ${
+                        phone.length > 0 && phone.replace(/\D/g, "").length < 10
+                          ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-900"
+                          : "border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800 text-slate-900"
+                      }`}
                     />
+                    {phone.length > 0 && phone.replace(/\D/g, "").length < 10 && (
+                      <p className="text-[11px] text-amber-600 font-medium">
+                        Mobile number must be exactly 10 digits (entered {phone.replace(/\D/g, "").length} digits).
+                      </p>
+                    )}
                     <p className="text-[11px] text-slate-500 font-medium">
-                      Default Password: <span className="font-mono font-semibold text-slate-800">{phone.trim().length >= 4 ? `MVGRDE@${phone.trim().slice(-4)}` : "MVGRDE@<last 4 digits>"}</span>
+                      Default Password: <span className="font-mono font-semibold text-slate-800">{phone.replace(/\D/g, "").length >= 4 ? `MVGRDE@${phone.replace(/\D/g, "").slice(-4)}` : "MVGRDE@<last 4 digits>"}</span>
                     </p>
                   </div>
                 )}

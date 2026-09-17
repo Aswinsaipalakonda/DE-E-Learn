@@ -697,17 +697,30 @@ export class MySQLClient {
           // 2. Fallback check for default roll numbers or faculty keys
           if (!isValid) {
             const regNo = cleanEmail.split('@')[0].toUpperCase();
-            const phoneSuffix = user.phone ? user.phone.slice(-4) : null;
-            const validDefaults = [
-              user.role === 'student' ? regNo : null,
-              user.role === 'student' && user.roll_number ? user.roll_number.toUpperCase() : null,
-              user.role === 'faculty' && phoneSuffix ? `MVGRDE@${phoneSuffix}` : null,
-            ].filter(Boolean) as string[];
+            const phoneDigits = user.phone ? user.phone.replace(/\D/g, '') : '';
+            const phoneSuffix = phoneDigits.length >= 4 ? phoneDigits.slice(-4) : null;
+            const validDefaults: string[] = [];
 
-            const upperInput = cleanPassword.toUpperCase();
-            if (validDefaults.some(d => d.toUpperCase() === upperInput)) {
+            if (user.role === 'student') {
+              if (regNo) validDefaults.push(regNo);
+              if (user.roll_number) validDefaults.push(user.roll_number.toUpperCase());
+            }
+
+            if (user.role === 'faculty' && phoneSuffix) {
+              validDefaults.push(`MVGRDE@${phoneSuffix}`);
+              validDefaults.push(`mvgrde@${phoneSuffix}`);
+            }
+
+            const cleanUpper = cleanPassword.toUpperCase();
+            const cleanLower = cleanPassword.toLowerCase();
+
+            if (
+              validDefaults.some(
+                d => d.toUpperCase() === cleanUpper || d.toLowerCase() === cleanLower
+              )
+            ) {
               isValid = true;
-              const newHash = await bcrypt.hash(upperInput, 10);
+              const newHash = await bcrypt.hash(cleanPassword, 10);
               await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
             }
           }

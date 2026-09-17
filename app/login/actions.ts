@@ -9,7 +9,7 @@ const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 export async function login(formData: FormData) {
   try {
     const email = (formData.get("email") as string)?.trim().toLowerCase();
-    const password = formData.get("password") as string;
+    const password = (formData.get("password") as string)?.trim() || "";
 
     if (!email || !password) {
       return { error: "Email and password are required." };

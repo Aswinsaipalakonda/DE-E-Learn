@@ -36,6 +36,20 @@ export async function createUserAction(
 
   const normalizedEmail = email.trim().toLowerCase();
   const formattedRollNumber = rollNumber ? rollNumber.toUpperCase().trim() : null;
+  const cleanPhone = phone ? phone.replace(/\D/g, "").slice(0, 10) : null;
+
+  // Validation constraints
+  if (role === "student") {
+    if (!formattedRollNumber || !/^\d{2}33[0-9A-Z]{6}$/i.test(formattedRollNumber)) {
+      return { error: "Please enter a valid 10-digit MVGR roll number (e.g. 23331A4205)." };
+    }
+  }
+
+  if (role === "faculty") {
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      return { error: "Contact Mobile Number must be exactly 10 digits." };
+    }
+  }
 
   // 2. Check for duplicate roll number or email before creating
   if (role === "student" && formattedRollNumber) {
@@ -162,6 +176,22 @@ export async function updateUserAction(
   const isStudent = updates.role === "student";
   const isFaculty = updates.role === "faculty";
 
+  let formattedRollNumber: string | null = null;
+  if (isStudent && updates.rollNumber) {
+    formattedRollNumber = updates.rollNumber.toUpperCase().trim();
+    if (!/^\d{2}33[0-9A-Z]{6}$/.test(formattedRollNumber)) {
+      return { error: `Invalid Roll Number format "${formattedRollNumber}". Must be 10 characters matching college standard (e.g., 23331A4745).` };
+    }
+  }
+
+  let sanitizedPhone: string | null = null;
+  if (updates.phone !== undefined && updates.phone !== null && updates.phone.trim() !== "") {
+    sanitizedPhone = updates.phone.replace(/\D/g, "").trim();
+    if (sanitizedPhone.length !== 10) {
+      return { error: `Mobile number must be exactly 10 digits (received ${sanitizedPhone.length} digits).` };
+    }
+  }
+
   const updatePayload: Record<string, unknown> = {
     name: updates.name.trim(),
     role: updates.role,
@@ -170,8 +200,8 @@ export async function updateUserAction(
     current_semester: isStudent ? (updates.semester || null) : null,
     section: isStudent ? (updates.section ? updates.section.toUpperCase().trim() : "A") : null,
     designation: isFaculty ? (updates.designation ? updates.designation.trim() : "Assistant Professor") : null,
-    phone: updates.phone !== undefined ? (updates.phone ? updates.phone.trim() : null) : undefined,
-    roll_number: isStudent ? (updates.rollNumber ? updates.rollNumber.toUpperCase().trim() : null) : null,
+    phone: updates.phone !== undefined ? sanitizedPhone : undefined,
+    roll_number: isStudent ? formattedRollNumber : null,
   };
 
   // Remove undefined properties
