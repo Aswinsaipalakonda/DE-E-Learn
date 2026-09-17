@@ -674,34 +674,7 @@ export class MySQLClient {
         try {
           const cleanEmail = email.trim().toLowerCase();
           const cleanPassword = password.trim();
-          let [users]: any = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [cleanEmail]);
-
-          // Seamless onboarding for institutional MVGR students (e.g., 23331a4745@mvgrce.edu.in)
-          if (!users.length && cleanEmail.endsWith('@mvgrce.edu.in')) {
-            const emailPrefix = cleanEmail.split('@')[0];
-            const studentRollRegex = /^([0-9]{2})33([15])A([0-9a-zA-Z]{2})([0-9a-zA-Z]{2})$/i;
-            const match = emailPrefix.match(studentRollRegex);
-            if (match) {
-              const rollUpper = emailPrefix.toUpperCase();
-              if (cleanPassword.toUpperCase() === rollUpper) {
-                const yearPrefix = parseInt(match[1], 10);
-                const branchMap: Record<string, string> = { '47': 'CIC', '44': 'CSD', '42': 'CSM' };
-                const branchCode = branchMap[match[3].toUpperCase()] || 'CIC';
-                const academicYear = 2000 + yearPrefix;
-                const newUserId = crypto.randomUUID();
-                const defaultHash = await bcrypt.hash(rollUpper, 10);
-
-                await pool.query(
-                  `INSERT INTO users (id, email, password_hash, name, role, status, branch, academic_year, current_semester, section, roll_number, first_login_pending) 
-                   VALUES (?, ?, ?, ?, 'student', 'active', ?, ?, 3, 'A', ?, 1)`,
-                  [newUserId, cleanEmail, defaultHash, `Student ${rollUpper}`, branchCode, academicYear, rollUpper]
-                );
-
-                const [created]: any = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [newUserId]);
-                users = created;
-              }
-            }
-          }
+          const [users]: any = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [cleanEmail]);
 
           if (!users.length) {
             return { data: { user: null, session: null }, error: { message: 'Invalid email or password.' } };
