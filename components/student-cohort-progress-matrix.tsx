@@ -12,6 +12,9 @@ import {
   MinusCircle, 
   X, 
   ChevronRight, 
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   Users, 
   Layers, 
   LayoutGrid, 
@@ -317,6 +320,9 @@ export default function StudentCohortProgressMatrix({
   const viewPct = totalCount > 0 ? Math.round((viewedCount / totalCount) * 100) : 0;
   const pendingPct = totalCount > 0 ? Math.round((pendingCount / totalCount) * 100) : 0;
 
+  const [cohortPage, setCohortPage] = useState(1);
+  const [cohortPageSize, setCohortPageSize] = useState(24);
+
   const filteredCohort = useMemo(() => {
     return cohortRecords.filter((r) => {
       if (statusFilter === "downloaded" && !r.hasDownloaded) return false;
@@ -332,6 +338,14 @@ export default function StudentCohortProgressMatrix({
       return true;
     });
   }, [cohortRecords, statusFilter, searchQuery]);
+
+  const totalCohortPages = Math.max(1, Math.ceil(filteredCohort.length / cohortPageSize));
+  const validCohortPage = Math.min(cohortPage, totalCohortPages);
+
+  const paginatedCohort = useMemo(() => {
+    const start = (validCohortPage - 1) * cohortPageSize;
+    return filteredCohort.slice(start, start + cohortPageSize);
+  }, [filteredCohort, validCohortPage, cohortPageSize]);
 
   // Export Matrix to CSV
   const handleExportMatrixCSV = () => {
@@ -622,13 +636,23 @@ export default function StudentCohortProgressMatrix({
       {viewMode === "grid" ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-            <span>Showing {filteredCohort.length} of {totalCount} Students</span>
+            <span>
+              Showing{" "}
+              <strong className="text-slate-900 font-semibold">
+                {filteredCohort.length > 0 ? (validCohortPage - 1) * cohortPageSize + 1 : 0}
+              </strong>{" "}
+              to{" "}
+              <strong className="text-slate-900 font-semibold">
+                {Math.min(validCohortPage * cohortPageSize, filteredCohort.length)}
+              </strong>{" "}
+              of <strong className="text-slate-900 font-semibold">{filteredCohort.length}</strong> Students (Cohort: {totalCount})
+            </span>
             <span className="text-[11px] text-slate-400">Click any card to inspect file details</span>
           </div>
 
           {filteredCohort.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-2 bg-slate-50/50 rounded-2xl border border-slate-200/80">
-              {filteredCohort.map((student) => {
+              {paginatedCohort.map((student) => {
                 const isDownloaded = student.hasDownloaded;
                 const isViewed = student.hasViewed;
 
@@ -713,7 +737,7 @@ export default function StudentCohortProgressMatrix({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                {filteredCohort.map((student) => {
+                {paginatedCohort.map((student) => {
                   const isDownloaded = student.hasDownloaded;
                   const isViewed = student.hasViewed;
 
@@ -762,6 +786,99 @@ export default function StudentCohortProgressMatrix({
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Cohort Pagination Controls */}
+      {filteredCohort.length > 0 && totalCohortPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-normal">
+            <span>
+              Page <strong className="text-slate-900 font-semibold">{validCohortPage}</strong> of <strong className="text-slate-900 font-semibold">{totalCohortPages}</strong>
+            </span>
+
+            <div className="flex items-center gap-1.5 ml-2">
+              <label htmlFor="cohortPageSize" className="text-slate-400 text-[11px]">Per page:</label>
+              <select
+                id="cohortPageSize"
+                value={cohortPageSize}
+                onChange={(e) => {
+                  setCohortPageSize(parseInt(e.target.value, 10));
+                  setCohortPage(1);
+                }}
+                className="px-2 py-0.5 text-xs font-medium bg-slate-50 border border-slate-200 rounded-full text-slate-900 focus:outline-none cursor-pointer"
+              >
+                <option value={12}>12</option>
+                <option value={24}>24</option>
+                <option value={48}>48</option>
+                <option value={96}>96</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCohortPage(1)}
+              disabled={validCohortPage === 1}
+              className="p-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+              title="First Page"
+            >
+              <ChevronsLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setCohortPage((p) => Math.max(1, p - 1))}
+              disabled={validCohortPage === 1}
+              className="p-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+              title="Previous Page"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+
+            <div className="flex items-center gap-1 px-1">
+              {Array.from({ length: totalCohortPages }, (_, i) => i + 1)
+                .filter((p) => {
+                  if (totalCohortPages <= 5) return true;
+                  if (p === 1 || p === totalCohortPages) return true;
+                  return Math.abs(p - validCohortPage) <= 1;
+                })
+                .map((p, idx, arr) => {
+                  const prev = arr[idx - 1];
+                  const hasGap = prev && p - prev > 1;
+                  return (
+                    <div key={p} className="flex items-center gap-1">
+                      {hasGap && <span className="text-slate-400 text-xs px-0.5">...</span>}
+                      <button
+                        onClick={() => setCohortPage(p)}
+                        className={`min-w-[26px] h-6 px-1.5 text-xs rounded-full font-semibold transition-all cursor-pointer ${
+                          validCohortPage === p
+                            ? "bg-slate-900 text-white shadow-xs"
+                            : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <button
+              onClick={() => setCohortPage((p) => Math.min(totalCohortPages, p + 1))}
+              disabled={validCohortPage === totalCohortPages}
+              className="p-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+              title="Next Page"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setCohortPage(totalCohortPages)}
+              disabled={validCohortPage === totalCohortPages}
+              className="p-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+              title="Last Page"
+            >
+              <ChevronsRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       )}

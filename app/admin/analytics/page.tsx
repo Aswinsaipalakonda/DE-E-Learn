@@ -258,6 +258,9 @@ export default async function AdminAnalyticsPage() {
     };
   });
 
+  // Sort materials with newest at top and oldest at bottom
+  materialsWithMetrics.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+
   const totalViews = materialsWithMetrics.reduce((acc, curr) => acc + curr.views, 0);
   const totalDownloads = materialsWithMetrics.reduce((acc, curr) => acc + curr.downloads, 0);
 

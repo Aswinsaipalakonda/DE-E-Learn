@@ -12,6 +12,8 @@ import {
   Users, 
   ChevronRight, 
   ChevronLeft, 
+  ChevronsLeft,
+  ChevronsRight,
   X, 
   GraduationCap 
 } from "lucide-react";
@@ -137,7 +139,7 @@ export default function AnalyticsClient({
   };
 
   const filtered = useMemo(() => {
-    return materials.filter((m) => {
+    const list = materials.filter((m) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const titleMatch = m.title.toLowerCase().includes(q);
@@ -163,14 +165,20 @@ export default function AnalyticsClient({
 
       return true;
     });
+
+    // Ensure recent materials at top, old at bottom
+    return list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
   }, [materials, searchQuery, selectedBranch, selectedSemester, selectedType]);
 
-  const paginatedMaterials = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, currentPage, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
 
-  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  // Auto-clamp current page if filters reduce total pages
+  const validCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedMaterials = useMemo(() => {
+    const start = (validCurrentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, validCurrentPage, pageSize]);
 
   const handleExportAllCSV = async () => {
     if (filtered.length === 0) {
@@ -465,11 +473,11 @@ export default function AnalyticsClient({
               <span>
                 Showing{" "}
                 <span className="text-slate-900 font-semibold">
-                  {Math.min((currentPage - 1) * pageSize + 1, filtered.length)}
+                  {Math.min((validCurrentPage - 1) * pageSize + 1, filtered.length)}
                 </span>{" "}
                 to{" "}
                 <span className="text-slate-900 font-semibold">
-                  {Math.min(currentPage * pageSize, filtered.length)}
+                  {Math.min(validCurrentPage * pageSize, filtered.length)}
                 </span>{" "}
                 of <span className="text-slate-900 font-semibold">{filtered.length}</span> materials
               </span>
@@ -488,31 +496,83 @@ export default function AnalyticsClient({
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
+                  <option value={100}>100</option>
                 </select>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5">
+              {/* Jump to First Page */}
               <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-40 transition-all cursor-pointer disabled:cursor-not-allowed"
-                aria-label="Previous Page"
+                onClick={() => setCurrentPage(1)}
+                disabled={validCurrentPage === 1}
+                className="p-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+                title="First Page"
+                aria-label="First Page"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronsLeft className="h-3.5 w-3.5" />
               </button>
 
-              <span className="text-xs font-semibold px-2 text-slate-700">
-                Page {currentPage} of {totalPages}
-              </span>
+              {/* Previous Page */}
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={validCurrentPage === 1}
+                className="p-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+                title="Previous Page"
+                aria-label="Previous Page"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
 
+              {/* Numbered Page Buttons */}
+              <div className="flex items-center gap-1 px-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => {
+                    if (totalPages <= 7) return true;
+                    if (p === 1 || p === totalPages) return true;
+                    return Math.abs(p - validCurrentPage) <= 1;
+                  })
+                  .map((p, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const hasGap = prev && p - prev > 1;
+                    return (
+                      <div key={p} className="flex items-center gap-1">
+                        {hasGap && <span className="text-slate-400 text-xs px-0.5">...</span>}
+                        <button
+                          onClick={() => setCurrentPage(p)}
+                          className={`min-w-[28px] h-7 px-2 text-xs rounded-full font-semibold transition-all cursor-pointer ${
+                            validCurrentPage === p
+                              ? "bg-slate-900 text-white shadow-xs"
+                              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Next Page */}
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-40 transition-all cursor-pointer disabled:cursor-not-allowed"
+                disabled={validCurrentPage === totalPages}
+                className="p-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+                title="Next Page"
                 aria-label="Next Page"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+
+              {/* Jump to Last Page */}
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={validCurrentPage === totalPages}
+                className="p-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+                title="Last Page"
+                aria-label="Last Page"
+              >
+                <ChevronsRight className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
