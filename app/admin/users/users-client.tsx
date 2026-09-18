@@ -1703,59 +1703,80 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                   </select>
                 </div>
 
-                {/* 10. EDIT MODE: Password Reset Card (Classic Amber Style) */}
-                {editingUser && (
-                  <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/90 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <KeyRound className="h-4 w-4 text-amber-700" />
-                        <span className="text-xs font-bold text-amber-950">Credential Recovery</span>
+                {/* 10. EDIT MODE: Password Reset Card (Dynamic Role Credential) */}
+                {editingUser && (() => {
+                  const currentPhoneDigits = (phone || editingUser.phone || "").replace(/\D/g, "");
+                  const currentRoll = (rollNumber || editingUser.roll_number || (editingUser.email?.includes("@") ? editingUser.email.split("@")[0] : "")).toUpperCase().trim();
+                  const dynamicPassword =
+                    formRole === "student"
+                      ? (currentRoll || "ROLL_NUMBER")
+                      : formRole === "faculty"
+                      ? (currentPhoneDigits.length >= 4 ? `MVGRDE@${currentPhoneDigits.slice(-4)}` : "MVGRDE@<phone4>")
+                      : "Password@789";
+
+                  const ruleExplanation =
+                    formRole === "student"
+                      ? `University Roll Number: ${currentRoll || "Required for student login"}`
+                      : formRole === "faculty"
+                      ? `Format: MVGRDE@ + last 4 digits of phone (${currentPhoneDigits.length >= 4 ? currentPhoneDigits.slice(-4) : "Enter 10-digit phone above"})`
+                      : "Standard Administrator fallback password";
+
+                  return (
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/90 to-amber-100/40 border border-amber-200/90 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <KeyRound className="h-4 w-4 text-amber-700" />
+                          <span className="text-xs font-bold text-amber-950">Credential Recovery</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-full border border-amber-300 uppercase tracking-wide">
+                          {formRole} Default
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
-                        Default Reset
-                      </span>
-                    </div>
-                    {(() => {
-                      const phoneDigits = editingUser.phone ? editingUser.phone.replace(/\D/g, '') : '';
-                      const expectedDefault =
-                        editingUser.role === 'student' && editingUser.roll_number
-                          ? editingUser.roll_number.toUpperCase().trim()
-                          : editingUser.role === 'faculty' && phoneDigits.length >= 4
-                          ? `MVGRDE@${phoneDigits.slice(-4)}`
-                          : 'Password@789';
-                      return (
-                        <p className="text-[11px] text-amber-900/85 font-normal leading-relaxed">
-                          If this user forgot their password, click below to reset their password to their institutional default credential (<strong>&quot;{expectedDefault}&quot;</strong>).
+
+                      <div className="p-2.5 rounded-xl bg-white/90 border border-amber-200/70 space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-500 font-medium">Reset Target Password:</span>
+                          <span className="font-mono font-bold text-xs text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-200">
+                            {dynamicPassword}
+                          </span>
+                        </div>
+                        <p className="text-[10.5px] text-amber-800/90 font-normal">
+                          {ruleExplanation}
                         </p>
-                      );
-                    })()}
-                    <div className="pt-1">
-                      <button
-                        type="button"
-                        onClick={handleResetPassword}
-                        disabled={isResettingPassword}
-                        className="w-full py-2.5 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs hover:shadow-md cursor-pointer disabled:opacity-50"
-                      >
-                        {isResettingPassword ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            <span>Resetting Password...</span>
-                          </>
-                        ) : resetPasswordResult ? (
-                          <>
-                            <Check className="h-3.5 w-3.5 text-emerald-400" />
-                            <span>Reset to {resetPasswordResult} (Copied)</span>
-                          </>
-                        ) : (
-                          <>
-                            <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
-                            <span>Reset Password</span>
-                          </>
-                        )}
-                      </button>
+                      </div>
+
+                      <p className="text-[11px] text-amber-900/85 font-normal leading-relaxed">
+                        Click below to immediately reset this user&apos;s password to their role-based credential and enforce a password update on their next login.
+                      </p>
+
+                      <div className="pt-0.5">
+                        <button
+                          type="button"
+                          onClick={handleResetPassword}
+                          disabled={isResettingPassword}
+                          className="w-full py-2.5 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs hover:shadow-md cursor-pointer disabled:opacity-50"
+                        >
+                          {isResettingPassword ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>Resetting to {dynamicPassword}...</span>
+                            </>
+                          ) : resetPasswordResult ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-400" />
+                              <span>Reset to {resetPasswordResult} (Copied)</span>
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
+                              <span>Reset Password to &quot;{dynamicPassword}&quot;</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </form>
 
               {/* Drawer Footer (Fixed at Bottom) */}

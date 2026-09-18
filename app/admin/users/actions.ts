@@ -264,11 +264,14 @@ export async function adminResetUserPassword(userId: string, email: string) {
     .or(`id.eq.${userId},email.eq.${normalizedEmail}`)
     .single();
 
+  const targetPhoneDigits = targetUser?.phone ? targetUser.phone.replace(/\D/g, '') : '';
+  const targetRoll = (targetUser?.roll_number || (targetUser?.email?.includes('@') ? targetUser.email.split('@')[0] : '')).toUpperCase().trim();
+
   const defaultPassword = 
-    targetUser?.role === "student" && targetUser?.roll_number
-      ? targetUser.roll_number.toUpperCase().trim()
-      : targetUser?.role === "faculty" && targetUser?.phone && targetUser.phone.trim().length >= 4
-      ? `MVGRDE@${targetUser.phone.trim().slice(-4)}`
+    targetUser?.role === "student" && targetRoll
+      ? targetRoll
+      : targetUser?.role === "faculty" && targetPhoneDigits.length >= 4
+      ? `MVGRDE@${targetPhoneDigits.slice(-4)}`
       : "Password@789";
 
   // 1. Reset password via admin client
