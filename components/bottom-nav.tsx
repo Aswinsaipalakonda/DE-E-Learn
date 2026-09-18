@@ -45,7 +45,7 @@ export default function BottomNav({ userRole, signOutAction }: BottomNavProps) {
   const navItems = navigation[userRole] || [];
 
   return (
-    <nav className="lg:hidden fixed bottom-4 left-3 right-3 z-50 max-w-md mx-auto bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.12)] px-2 py-1.5 flex items-center justify-around gap-1">
+    <nav className="lg:hidden fixed bottom-3 sm:bottom-4 left-3 right-3 z-50 max-w-sm sm:max-w-md mx-auto bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.12)] p-1.5 flex items-center justify-between gap-1">
       {navItems.map((item) => {
         const isRootRole = item.href === `/${userRole}`;
         const isActive = isRootRole 
@@ -59,16 +59,16 @@ export default function BottomNav({ userRole, signOutAction }: BottomNavProps) {
             key={item.name}
             href={item.href}
             prefetch={true}
-            className={`flex flex-col items-center justify-center flex-1 py-1.5 px-2 rounded-full transition-all duration-200 cursor-pointer ${
+            className={`flex flex-col items-center justify-center flex-1 min-w-0 py-1.5 px-1.5 rounded-full transition-all duration-200 cursor-pointer ${
               isActive 
                 ? "bg-primary text-white shadow-xs" 
                 : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
             }`}
           >
-            <Icon className={`h-5 w-5 mb-0.5 transition-all ${
+            <Icon className={`h-4.5 w-4.5 mb-0.5 shrink-0 transition-all ${
               isActive ? "text-white stroke-[2.2px]" : "text-slate-400 stroke-[1.8px]"
             }`} />
-            <span className={`text-[10px] sm:text-[11px] leading-tight ${
+            <span className={`text-[10px] sm:text-[11px] leading-tight truncate ${
               isActive ? "font-bold text-white" : "font-medium text-slate-500"
             }`}>
               {item.name}
