@@ -1715,9 +1715,20 @@ export default function UsersClient({ initialUsers, branches, semesters }: Users
                         Default Reset
                       </span>
                     </div>
-                    <p className="text-[11px] text-amber-900/85 font-normal leading-relaxed">
-                      If this user forgot their password, click below to immediately reset their password to the default credential (&quot;Password@789&quot;).
-                    </p>
+                    {(() => {
+                      const phoneDigits = editingUser.phone ? editingUser.phone.replace(/\D/g, '') : '';
+                      const expectedDefault =
+                        editingUser.role === 'student' && editingUser.roll_number
+                          ? editingUser.roll_number.toUpperCase().trim()
+                          : editingUser.role === 'faculty' && phoneDigits.length >= 4
+                          ? `MVGRDE@${phoneDigits.slice(-4)}`
+                          : 'Password@789';
+                      return (
+                        <p className="text-[11px] text-amber-900/85 font-normal leading-relaxed">
+                          If this user forgot their password, click below to reset their password to their institutional default credential (<strong>&quot;{expectedDefault}&quot;</strong>).
+                        </p>
+                      );
+                    })()}
                     <div className="pt-1">
                       <button
                         type="button"

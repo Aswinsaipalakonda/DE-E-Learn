@@ -162,12 +162,24 @@ async function resetPassword(req, res) {
     const { id } = req.params;
     const { newPassword } = req.body;
 
-    const passwordToSet = newPassword || 'Password@789';
+    let passwordToSet = newPassword;
+    if (!passwordToSet) {
+      const [targetRows] = await pool.query('SELECT role, roll_number, phone FROM users WHERE id = ? LIMIT 1', [id]);
+      const targetUser = targetRows && targetRows[0];
+      const phoneDigits = targetUser?.phone ? targetUser.phone.replace(/\D/g, '') : '';
+      passwordToSet =
+        targetUser?.role === 'student' && targetUser?.roll_number
+          ? targetUser.roll_number.toUpperCase().trim()
+          : targetUser?.role === 'faculty' && phoneDigits.length >= 4
+          ? `MVGRDE@${phoneDigits.slice(-4)}`
+          : 'Password@789';
+    }
+
     const passwordHash = await bcrypt.hash(passwordToSet, 10);
 
     await pool.query('UPDATE users SET password_hash = ?, first_login_pending = 1, updated_at = NOW() WHERE id = ?', [passwordHash, id]);
 
-    return res.json({ success: true, message: `Password reset successfully to: ${passwordToSet}` });
+    return res.json({ success: true, message: `Password reset successfully to: ${passwordToSet}`, defaultPassword: passwordToSet });
   } catch (err) {
     console.error('resetPassword error:', err);
     return res.status(500).json({ error: 'Failed to reset password.' });
