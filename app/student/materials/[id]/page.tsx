@@ -35,8 +35,6 @@ export default async function MaterialDetailsPage(props: PageProps) {
   const userRole = profile?.role || user.user_metadata?.role || "student";
   const isFaculty = userRole === "faculty";
   const isAdmin = userRole === "admin";
-  const returnUrl = isFaculty ? "/faculty" : isAdmin ? "/admin/analytics" : "/student";
-  const returnLabel = isFaculty ? "Return to Faculty Dashboard" : isAdmin ? "Return to Analytics" : "Return to Dashboard";
 
   // Query database for material details
   const { data: dbMaterial } = await supabase
@@ -88,12 +86,28 @@ export default async function MaterialDetailsPage(props: PageProps) {
 
   const material = dbMaterial;
 
+  const returnUrl = isFaculty 
+    ? "/faculty" 
+    : isAdmin 
+    ? "/admin/analytics" 
+    : material?.subject 
+    ? `/student/subjects/${material.subject}` 
+    : "/student/subjects";
+
+  const returnLabel = isFaculty 
+    ? "Return to Faculty Dashboard" 
+    : isAdmin 
+    ? "Return to Analytics" 
+    : material?.subject 
+    ? `← Back to ${material.subject}` 
+    : "← Back to Subjects";
+
   if (!material) {
     return (
-      <div className="p-8 max-w-xl mx-auto space-y-4">
+      <div className="p-4 sm:p-8 max-w-xl mx-auto space-y-4">
         <Link 
           href={returnUrl} 
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs transition-all shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs transition-all shadow-sm"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>{returnLabel}</span>
@@ -178,26 +192,26 @@ export default async function MaterialDetailsPage(props: PageProps) {
       </div>
 
       {/* Main Material Card */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] space-y-6">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5 border-b border-slate-100 pb-6">
-          <div className="space-y-2.5 max-w-2xl">
+      <div className="bg-white p-4 sm:p-8 rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.04)] space-y-5 sm:space-y-6">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 sm:gap-5 border-b border-slate-100 pb-5 sm:pb-6">
+          <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700">
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700">
                 {material.type}
               </span>
-              <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
                 {subjectCode}
               </span>
-              <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700">
                 Sem {material.semester || 3}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug">
               {material.title}
             </h1>
 
-            <p className="text-xs sm:text-sm text-slate-500 font-normal flex items-center gap-2 flex-wrap">
+            <p className="text-xs sm:text-sm text-slate-500 font-normal flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <span>{subjectTitle}</span>
               <span>•</span>
               <span>Uploaded by {facultyName}</span>
