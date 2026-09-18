@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { attachFileToMaterial, ALLOWED_EXTENSIONS } from "./actions";
+import { attachFileToMaterial } from "./actions";
+import { ALLOWED_EXTENSIONS } from "@/lib/file-constants";
 import { X, Upload, Loader2, FileCheck, AlertCircle } from "lucide-react";
 
 interface AttachFileDialogProps {

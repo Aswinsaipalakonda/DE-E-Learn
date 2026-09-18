@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { replaceFileVersion, ALLOWED_EXTENSIONS } from "./actions";
+import { replaceFileVersion } from "./actions";
+import { ALLOWED_EXTENSIONS } from "@/lib/file-constants";
 import { X, Upload, Loader2, AlertCircle, FileCheck } from "lucide-react";
 
 interface ReplaceDialogProps {

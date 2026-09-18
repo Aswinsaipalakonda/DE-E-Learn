@@ -4,19 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { logAuditAction } from "@/utils/audit-logger";
-
-export const ALLOWED_EXTENSIONS = [
-  // Documents & Presentations
-  ".pdf", ".ppt", ".pptx", ".doc", ".docx", ".txt", ".md", ".rtf", ".odt",
-  // Spreadsheets & Data
-  ".xls", ".xlsx", ".csv",
-  // Coding & Source Files
-  ".py", ".java", ".c", ".cpp", ".h", ".cs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".json", ".sql", ".ipynb", ".sh", ".xml", ".yaml", ".yml",
-  // Archives
-  ".zip", ".rar", ".7z", ".tar", ".gz",
-  // Images
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"
-];
+import { ALLOWED_EXTENSIONS } from "@/lib/file-constants";
 
 function normalizeMaterialType(rawType: string): string {
   const lower = (rawType || "").toLowerCase().trim();
