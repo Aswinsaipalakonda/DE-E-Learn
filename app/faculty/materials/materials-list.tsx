@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { toggleMaterialState, deleteMaterial, getFacultyFilePreviewUrl } from "./actions";
 import ReplaceDialog from "./replace-dialog";
+import AttachFileDialog from "./attach-file-dialog";
 import FilePreviewModal from "@/components/file-preview-modal";
 import { StudentEngagementLog } from "./page";
 import StudentCohortProgressMatrix, { RegisteredStudent } from "@/components/student-cohort-progress-matrix";
@@ -29,7 +30,13 @@ import {
   Layers, 
   Sparkles, 
   CheckCircle2, 
-  Filter 
+  Filter,
+  Code,
+  Table,
+  Presentation,
+  FileArchive,
+  Image as ImageIcon,
+  AlertCircle
 } from "lucide-react";
 import { formatSubjectTitle } from "@/lib/utils";
 
@@ -71,6 +78,50 @@ interface MaterialsListProps {
   students?: RegisteredStudent[];
 }
 
+function getFileTypeDetails(fileName: string) {
+  const ext = "." + (fileName.split(".").pop() || "").toLowerCase();
+  if ([".py", ".java", ".c", ".cpp", ".h", ".cs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".json", ".sql", ".ipynb", ".sh", ".xml", ".yaml", ".yml"].includes(ext)) {
+    return {
+      label: `${ext.slice(1).toUpperCase()} Code`,
+      icon: <Code className="h-4 w-4 text-purple-600" />,
+      bg: "bg-purple-50 text-purple-700 border-purple-200",
+    };
+  }
+  if ([".xls", ".xlsx", ".csv"].includes(ext)) {
+    return {
+      label: "Excel Spreadsheet",
+      icon: <Table className="h-4 w-4 text-emerald-600" />,
+      bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    };
+  }
+  if ([".ppt", ".pptx"].includes(ext)) {
+    return {
+      label: "PowerPoint Slides",
+      icon: <Presentation className="h-4 w-4 text-amber-600" />,
+      bg: "bg-amber-50 text-amber-700 border-amber-200",
+    };
+  }
+  if ([".zip", ".rar", ".7z", ".tar", ".gz"].includes(ext)) {
+    return {
+      label: "ZIP Archive",
+      icon: <FileArchive className="h-4 w-4 text-indigo-600" />,
+      bg: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    };
+  }
+  if ([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"].includes(ext)) {
+    return {
+      label: "Image Asset",
+      icon: <ImageIcon className="h-4 w-4 text-pink-600" />,
+      bg: "bg-pink-50 text-pink-700 border-pink-200",
+    };
+  }
+  return {
+    label: ext === ".doc" || ext === ".docx" ? "Word Document" : ext === ".txt" || ext === ".md" ? "Text Document" : "PDF Document",
+    icon: <FileText className="h-4 w-4 text-blue-600" />,
+    bg: "bg-blue-50 text-blue-700 border-blue-200",
+  };
+}
+
 export default function MaterialsList({ initialMaterials, subjects, students }: MaterialsListProps) {
   const [materials, setMaterials] = useState<MaterialItem[]>(initialMaterials);
   const [activeTab, setActiveTab] = useState<"all" | "published" | "draft" | "archived">("all");
@@ -103,6 +154,9 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
     fileName: string;
   } | null>(null);
 
+  // Attach study file dialog state
+  const [attachTarget, setAttachTarget] = useState<{ materialId: string; materialTitle: string } | null>(null);
+
   // File preview modal state
   const [previewingFile, setPreviewingFile] = useState<{
     fileName: string;
@@ -123,7 +177,7 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
 
   // Body scroll locking when drawer or modal is open
   useEffect(() => {
-    if (isDrawerMounted || isPreviewOpen || replaceTarget) {
+    if (isDrawerMounted || isPreviewOpen || replaceTarget || attachTarget) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -131,7 +185,7 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isDrawerMounted, isPreviewOpen, replaceTarget]);
+  }, [isDrawerMounted, isPreviewOpen, replaceTarget, attachTarget]);
 
   // Focus scroll container when drawer becomes visible
   useEffect(() => {
@@ -280,48 +334,28 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
     }
   };
 
-  const handlePreview = async (file: FileItem) => {
+  const handlePreview = (file: FileItem) => {
+    const previewUrl = `/api/materials/file/${file.storage_ref}?filename=${encodeURIComponent(file.file_name)}`;
     setPreviewingFile({
       fileName: file.file_name,
-      fileUrl: null,
+      fileUrl: previewUrl,
       mimeType: file.mime_type,
       storageRef: file.storage_ref,
     });
     setIsPreviewOpen(true);
-
-    try {
-      const res = await getFacultyFilePreviewUrl(file.storage_ref);
-      if (res.error) {
-        alert(res.error);
-        setIsPreviewOpen(false);
-        return;
-      }
-      if (res.previewUrl) {
-        setPreviewingFile(prev => prev ? { ...prev, fileUrl: res.previewUrl } : null);
-      }
-    } catch {
-      alert("Failed to load preview.");
-      setIsPreviewOpen(false);
-    }
   };
 
-  const handleDownload = async (storageRef: string, fileName: string) => {
+  const handleDownload = (storageRef: string, fileName: string) => {
     setDownloadingRef(storageRef);
     try {
-      const res = await getFacultyFilePreviewUrl(storageRef);
-      if (res.error) {
-        alert(res.error);
-        return;
-      }
-      if (res.previewUrl) {
-        const link = document.createElement("a");
-        link.href = res.previewUrl;
-        link.download = fileName;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+      const downloadUrl = `/api/materials/file/${storageRef}?download=1&filename=${encodeURIComponent(fileName)}`;
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch {
       alert("Failed to download file.");
     } finally {
@@ -728,7 +762,7 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                             className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
                           >
                             <Eye className="h-3 w-3" />
-                            <span>{m.views || 0} Views</span>
+                            <span>{m.views || 0} {m.views === 1 ? "Student View" : "Student Views"}</span>
                           </button>
 
                           <button
@@ -795,9 +829,18 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
 
                   {/* Attached Files List */}
                   <div className="border-t border-slate-100 pt-4 space-y-3">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Attached Study Files ({m.material_files?.length || 0}):
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Attached Study Files ({m.material_files?.length || 0}):
+                      </span>
+                      <button
+                        onClick={() => setAttachTarget({ materialId: m.id, materialTitle: m.title })}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span>Add File</span>
+                      </button>
+                    </div>
 
                     <div className="space-y-2">
                       {m.material_files && m.material_files.length > 0 ? (
@@ -805,14 +848,15 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                           .filter((f, idx, self) => self.findIndex(t => t.file_name === f.file_name) === idx)
                           .map(file => {
                             const isDownloading = downloadingRef === file.storage_ref;
+                            const fileType = getFileTypeDetails(file.file_name);
                             return (
                               <div 
                                 key={file.id} 
                                 className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 text-xs gap-3 hover:bg-slate-100/80 transition-all"
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200">
-                                    <FileText className="h-4 w-4" />
+                                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${fileType.bg}`}>
+                                    {fileType.icon}
                                   </div>
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -824,7 +868,7 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                                       </span>
                                     </div>
                                     <span className="text-slate-500 text-[11px]">
-                                      {formatSize(file.size)} • PDF Document
+                                      {formatSize(file.size)} • {fileType.label}
                                     </span>
                                   </div>
                                 </div>
@@ -867,7 +911,19 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
                             );
                           })
                       ) : (
-                        <span className="text-xs text-slate-400">No files registered.</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-amber-50/70 border border-dashed border-amber-200 rounded-2xl text-xs gap-3">
+                          <div className="flex items-center gap-2 text-amber-900">
+                            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                            <span>No study files registered. Attach a file so enrolled students can view and download.</span>
+                          </div>
+                          <button
+                            onClick={() => setAttachTarget({ materialId: m.id, materialTitle: m.title })}
+                            className="px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-white text-xs font-semibold rounded-full flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all shrink-0 self-start sm:self-auto"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>Attach Study File</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -959,6 +1015,15 @@ export default function MaterialsList({ initialMaterials, subjects, students }: 
             )}
           </div>
         </div>
+      )}
+
+      {/* Render Attach File Dialog */}
+      {attachTarget && (
+        <AttachFileDialog
+          materialId={attachTarget.materialId}
+          materialTitle={attachTarget.materialTitle}
+          onClose={() => setAttachTarget(null)}
+        />
       )}
 
       {/* Render Replace File Version Dialog */}

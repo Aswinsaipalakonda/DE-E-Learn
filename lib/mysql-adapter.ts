@@ -176,6 +176,7 @@ class MySQLQueryBuilder {
         const rows = Array.isArray(this.mutationData) ? this.mutationData : [this.mutationData];
         if (!rows.length) return { data: [], count: 0, error: null };
 
+        const insertedRows: any[] = [];
         for (const row of rows) {
           const rowData = { ...row };
           if (!rowData.id && (this.tableName === 'users' || this.tableName === 'materials' || this.tableName === 'material_files' || this.tableName === 'activity_events' || this.tableName === 'audit_logs' || this.tableName === 'bookmarks' || this.tableName === 'announcements' || this.tableName === 'notifications' || this.tableName === 'support_inquiries' || this.tableName === 'exam_schedules')) {
@@ -185,6 +186,15 @@ class MySQLQueryBuilder {
           if (this.tableName === 'materials' && 'owner' in rowData) {
             rowData.owner_id = rowData.owner;
             delete rowData.owner;
+          }
+
+          if (this.tableName === 'material_files') {
+            if (!rowData.storage_path && rowData.storage_ref) {
+              rowData.storage_path = rowData.storage_ref;
+            }
+            if (!rowData.storage_ref && rowData.storage_path) {
+              rowData.storage_ref = rowData.storage_path;
+            }
           }
 
           for (const key of Object.keys(rowData)) {
@@ -199,8 +209,14 @@ class MySQLQueryBuilder {
 
           const sql = `INSERT INTO \`${this.tableName}\` (${cols}) VALUES (${placeholders})`;
           await pool.query(sql, values);
+          insertedRows.push(rowData);
         }
-        return { data: this.mutationData, count: rows.length, error: null };
+
+        let returnData: any = Array.isArray(this.mutationData) ? insertedRows : insertedRows[0];
+        if (this.isSingle) {
+          returnData = insertedRows[0] || null;
+        }
+        return { data: returnData, count: rows.length, error: null };
       }
 
       // 2. Handle UPSERT
@@ -208,6 +224,7 @@ class MySQLQueryBuilder {
         const rows = Array.isArray(this.mutationData) ? this.mutationData : [this.mutationData];
         if (!rows.length) return { data: [], count: 0, error: null };
 
+        const insertedRows: any[] = [];
         for (const row of rows) {
           const rowData = { ...row };
           if (!rowData.id && (this.tableName === 'users' || this.tableName === 'materials' || this.tableName === 'material_files' || this.tableName === 'activity_events' || this.tableName === 'audit_logs' || this.tableName === 'bookmarks' || this.tableName === 'announcements' || this.tableName === 'notifications' || this.tableName === 'support_inquiries' || this.tableName === 'exam_schedules')) {
@@ -217,6 +234,15 @@ class MySQLQueryBuilder {
           if (this.tableName === 'materials' && 'owner' in rowData) {
             rowData.owner_id = rowData.owner;
             delete rowData.owner;
+          }
+
+          if (this.tableName === 'material_files') {
+            if (!rowData.storage_path && rowData.storage_ref) {
+              rowData.storage_path = rowData.storage_ref;
+            }
+            if (!rowData.storage_ref && rowData.storage_path) {
+              rowData.storage_ref = rowData.storage_path;
+            }
           }
 
           for (const key of Object.keys(rowData)) {
@@ -234,8 +260,14 @@ class MySQLQueryBuilder {
           const values = Object.values(rowData);
           const sql = `INSERT INTO \`${this.tableName}\` (${cols}) VALUES (${placeholders}) ON DUPLICATE KEY UPDATE ${updatePart}`;
           await pool.query(sql, values);
+          insertedRows.push(rowData);
         }
-        return { data: this.mutationData, count: rows.length, error: null };
+
+        let returnData: any = Array.isArray(this.mutationData) ? insertedRows : insertedRows[0];
+        if (this.isSingle) {
+          returnData = insertedRows[0] || null;
+        }
+        return { data: returnData, count: rows.length, error: null };
       }
 
       // 3. Handle UPDATE
@@ -562,7 +594,7 @@ class MySQLStorageBucket {
     // In local / Hostinger setup, return streaming URL
     return {
       data: {
-        signedUrl: `/api/materials/file/${storageRef}/download`,
+        signedUrl: `/api/materials/file/${storageRef}`,
       },
       error: null as { message: string } | null,
     };

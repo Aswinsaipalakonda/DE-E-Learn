@@ -31,6 +31,7 @@ router.delete('/:id', authenticate, authorizeRoles('faculty', 'admin'), material
 
 // File download & bookmarks
 router.get('/file/:fileId/download', optionalAuth, materialController.downloadFile);
+router.get('/file/*', optionalAuth, materialController.downloadFile);
 router.post('/:materialId/bookmark', authenticate, materialController.toggleBookmark);
 
 module.exports = router;

@@ -58,19 +58,31 @@ export default async function MaterialDetailsPage(props: PageProps) {
     .eq("id", id)
     .maybeSingle();
 
-  // If real material found in database, track view event only for students
+  // If real material found in database, track view event only for students (debounced by 1 hour session)
   if (user && dbMaterial && userRole === "student") {
     try {
-      await supabase.from("activity_events").insert({
-        type: "view",
-        actor_id: user.id,
-        target_id: dbMaterial.id,
-        metadata: {
-          action: "material_page_view",
-          material_title: dbMaterial.title,
-          subject: dbMaterial.subject,
-        },
-      });
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const { data: recentViews } = await supabase
+        .from("activity_events")
+        .select("id")
+        .eq("type", "view")
+        .eq("actor_id", user.id)
+        .eq("target_id", dbMaterial.id)
+        .gte("created_at", oneHourAgo.toISOString())
+        .limit(1);
+
+      if (!recentViews || recentViews.length === 0) {
+        await supabase.from("activity_events").insert({
+          type: "view",
+          actor_id: user.id,
+          target_id: dbMaterial.id,
+          metadata: {
+            action: "material_page_view",
+            material_title: dbMaterial.title,
+            subject: dbMaterial.subject,
+          },
+        });
+      }
     } catch {}
   }
 

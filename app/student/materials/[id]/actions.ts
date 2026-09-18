@@ -162,21 +162,14 @@ export async function trackDownloadAndGetUrl(fileId: string, materialId: string,
   revalidatePath("/admin/analytics");
   revalidatePath("/faculty/materials");
 
-  // If storageRef is mock "#", provide simulated download link
+  // If storageRef is mock "#", provide fallback
   if (!storageRef || storageRef === "#") {
-    return { downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" };
+    return { error: "No physical file attached to this reference." };
   }
 
-  // Get signed URL for the protected file in storage bucket
-  const { data, error } = await supabase.storage
-    .from("materials")
-    .createSignedUrl(storageRef, 60);
-
-  if (error || !data) {
-    return { error: error?.message || "Failed to generate download URL." };
-  }
-
-  return { downloadUrl: data.signedUrl };
+  // Get signed URL or API route for the protected file
+  const downloadUrl = `/api/materials/file/${storageRef}?download=1&filename=${encodeURIComponent(targetFileName)}`;
+  return { downloadUrl };
 }
 
 // Log Preview Activity and Get Storage Link for In-Browser Viewing
@@ -229,16 +222,9 @@ export async function trackPreviewAndGetUrl(fileId: string, materialId: string, 
   revalidatePath("/faculty/materials");
 
   if (!storageRef || storageRef === "#") {
-    return { previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" };
+    return { error: "No physical file attached to this reference." };
   }
 
-  const { data, error } = await supabase.storage
-    .from("materials")
-    .createSignedUrl(storageRef, 60);
-
-  if (error || !data) {
-    return { error: error?.message || "Failed to generate preview URL." };
-  }
-
-  return { previewUrl: data.signedUrl };
+  const previewUrl = `/api/materials/file/${storageRef}?filename=${encodeURIComponent(targetFileName)}`;
+  return { previewUrl };
 }

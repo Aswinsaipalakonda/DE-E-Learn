@@ -5,6 +5,19 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { logAuditAction } from "@/utils/audit-logger";
 
+export const ALLOWED_EXTENSIONS = [
+  // Documents & Presentations
+  ".pdf", ".ppt", ".pptx", ".doc", ".docx", ".txt", ".md", ".rtf", ".odt",
+  // Spreadsheets & Data
+  ".xls", ".xlsx", ".csv",
+  // Coding & Source Files
+  ".py", ".java", ".c", ".cpp", ".h", ".cs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".json", ".sql", ".ipynb", ".sh", ".xml", ".yaml", ".yml",
+  // Archives
+  ".zip", ".rar", ".7z", ".tar", ".gz",
+  // Images
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"
+];
+
 function normalizeMaterialType(rawType: string): string {
   const lower = (rawType || "").toLowerCase().trim();
   if (lower === "notes" || lower.includes("note")) return "Notes";
@@ -43,7 +56,7 @@ export async function uploadMaterialAction(formData: FormData) {
   const targetBranches = rawBranches.length > 0 ? rawBranches : [singleBranch || "CIC"];
   const semester = parseInt(formData.get("semester") as string, 10) || 3;
   const rawType = (formData.get("type") as string)?.trim();
-  const state = formData.get("state") as "draft" | "published";
+  const state = (formData.get("state") as "draft" | "published") || "published";
   const tagsStr = formData.get("tags") as string;
   const tags = tagsStr ? tagsStr.split(",").map(t => t.trim()).filter(Boolean) : [];
 
@@ -61,14 +74,14 @@ export async function uploadMaterialAction(formData: FormData) {
     return { error: "At least one valid file is required to create a material." };
   }
 
-  // Allowed: PDF, DOC, DOCX, PPT, PPTX, TXT. (No zip, rar, etc.)
-  const allowedExtensions = [".pdf", ".ppt", ".pptx", ".doc", ".docx", ".txt"];
   const maxFileSize = 100 * 1024 * 1024; // 100 MB
 
   for (const file of validFiles) {
     const ext = "." + file.name.split(".").pop()?.toLowerCase();
-    if (!allowedExtensions.includes(ext)) {
-      return { error: `File type "${ext}" is not supported. Please upload PDF, Word (.doc/.docx), or PowerPoint (.ppt/.pptx) files.` };
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return { 
+        error: `File type "${ext}" is not supported. Supported: PDF, PPT, Word, Excel, Coding files, ZIP, TXT, and Images.` 
+      };
     }
     if (file.size > maxFileSize) {
       return { error: `File "${file.name}" exceeds the maximum limit of 100 MB.` };
@@ -117,56 +130,64 @@ export async function uploadMaterialAction(formData: FormData) {
       console.warn("Taxonomy prep notice:", fkErr);
     }
 
-    // 2. Insert Material record
-    const { data: material, error: insertError } = await supabase
+    // 2. Pre-generate deterministic UUID for material
+    const materialId = crypto.randomUUID();
+
+    const { error: insertError } = await supabase
       .from("materials")
       .insert({
+        id: materialId,
         title,
         description,
         subject,
         branch,
         semester,
+        regulation,
         type: normalizedType,
         state,
         owner_id: user.id,
         tags,
-      })
-      .select("id")
-      .single();
+      });
 
-    if (insertError || !material) {
-      return { error: insertError?.message || "Failed to create material record." };
+    if (insertError) {
+      return { error: insertError.message || "Failed to create material record." };
     }
 
-    // 3. Upload files to Storage & record in material_files
+    // 3. Upload files to Storage & record in material_files with storage_path
     for (const item of fileBuffers) {
       const uniqueId = crypto.randomUUID();
-      const storageRef = `${material.id}/${uniqueId}${item.ext}`;
+      const storageRef = `${materialId}/${uniqueId}${item.ext}`;
 
       try {
         await supabase.storage
           .from("materials")
           .upload(storageRef, item.buffer, {
-            contentType: item.file.type || "application/pdf",
+            contentType: item.file.type || "application/octet-stream",
             cacheControl: "3600",
           });
       } catch (storageException) {
         console.warn("Storage upload notice:", storageException);
       }
 
-      await supabase
+      const { error: fileError } = await supabase
         .from("material_files")
         .insert({
-          material_id: material.id,
+          id: crypto.randomUUID(),
+          material_id: materialId,
           file_name: item.file.name,
-          mime_type: item.file.type || "application/pdf",
+          mime_type: item.file.type || "application/octet-stream",
           size: item.file.size,
           version: 1,
+          storage_path: storageRef,
           storage_ref: storageRef,
         });
+
+      if (fileError) {
+        console.error("Failed to insert material file:", fileError);
+      }
     }
 
-    await logAuditAction("UPLOAD_MATERIAL", material.id, null, { 
+    await logAuditAction("UPLOAD_MATERIAL", materialId, null, { 
       title, 
       type: normalizedType, 
       subject, 

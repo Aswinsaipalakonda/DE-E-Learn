@@ -234,14 +234,20 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
   };
 
   const validateAndAddFiles = (incomingFiles: File[]) => {
-    const allowedExtensions = [".pdf", ".ppt", ".pptx", ".doc", ".docx", ".txt"];
+    const allowedExtensions = [
+      ".pdf", ".ppt", ".pptx", ".doc", ".docx", ".txt", ".md", ".rtf", ".odt",
+      ".xls", ".xlsx", ".csv",
+      ".py", ".java", ".c", ".cpp", ".h", ".cs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".json", ".sql", ".ipynb", ".sh", ".xml", ".yaml", ".yml",
+      ".zip", ".rar", ".7z", ".tar", ".gz",
+      ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"
+    ];
     const maxFileSize = 100 * 1024 * 1024; // 100 MB
 
     const validNewFiles: File[] = [];
     for (const f of incomingFiles) {
       const ext = "." + f.name.split(".").pop()?.toLowerCase();
       if (!allowedExtensions.includes(ext)) {
-        setError(`File "${f.name}" is unsupported. Please upload PDF, Word, or PowerPoint files.`);
+        setError(`File "${f.name}" (${ext}) is unsupported. Allowed: PDF, PPT, Word, Excel, Code, ZIP, TXT, and Images.`);
         return;
       }
       if (f.size > maxFileSize) {
@@ -877,7 +883,7 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
           {/* Drag & Drop File Upload Area */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Attach Documents (PDF, Word, PPT) *
+              Attach Study Files (PDF, PPT, Excel, Code, ZIP, TXT, Images) *
             </label>
             
             <div
@@ -895,7 +901,7 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.rtf,.odt,.xls,.xlsx,.csv,.py,.java,.c,.cpp,.h,.cs,.js,.ts,.tsx,.jsx,.html,.css,.json,.sql,.ipynb,.sh,.xml,.yaml,.yml,.zip,.rar,.7z,.tar,.gz,.png,.jpg,.jpeg,.gif,.webp,.svg"
                 onChange={handleFileInputChange}
                 className="hidden"
               />
@@ -909,7 +915,7 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
                   Click to select or drag and drop study materials
                 </p>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-normal">
-                  Supported formats: <span className="font-semibold text-slate-700">PDF, Word (.docx), PowerPoint (.pptx)</span> (Up to 100MB each)
+                  Supported: <span className="font-semibold text-slate-700">PDF, PowerPoint, Excel, Coding files, Word, ZIP, Images</span> (Up to 100MB each)
                 </p>
               </div>
             </div>

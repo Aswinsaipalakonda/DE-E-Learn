@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 import { trackDownloadAndGetUrl, trackPreviewAndGetUrl } from "./actions";
-import { Download, FileText, Loader2, Eye } from "lucide-react";
+import { 
+  Download, 
+  FileText, 
+  Loader2, 
+  Eye, 
+  Code, 
+  Table, 
+  Presentation, 
+  FileArchive, 
+  Image as ImageIcon,
+  FolderOpen
+} from "lucide-react";
 import FilePreviewModal from "@/components/file-preview-modal";
 
 interface FileItem {
@@ -16,6 +27,50 @@ interface FileItem {
 interface FileListProps {
   materialId: string;
   files: FileItem[];
+}
+
+function getFileTypeDetails(fileName: string) {
+  const ext = "." + (fileName.split(".").pop() || "").toLowerCase();
+  if ([".py", ".java", ".c", ".cpp", ".h", ".cs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".json", ".sql", ".ipynb", ".sh", ".xml", ".yaml", ".yml"].includes(ext)) {
+    return {
+      label: `${ext.slice(1).toUpperCase()} Code`,
+      icon: <Code className="h-5 w-5 text-purple-600" />,
+      bg: "bg-purple-50 text-purple-700 border-purple-200",
+    };
+  }
+  if ([".xls", ".xlsx", ".csv"].includes(ext)) {
+    return {
+      label: "Excel Spreadsheet",
+      icon: <Table className="h-5 w-5 text-emerald-600" />,
+      bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    };
+  }
+  if ([".ppt", ".pptx"].includes(ext)) {
+    return {
+      label: "PowerPoint Presentation",
+      icon: <Presentation className="h-5 w-5 text-amber-600" />,
+      bg: "bg-amber-50 text-amber-700 border-amber-200",
+    };
+  }
+  if ([".zip", ".rar", ".7z", ".tar", ".gz"].includes(ext)) {
+    return {
+      label: "ZIP Archive",
+      icon: <FileArchive className="h-5 w-5 text-indigo-600" />,
+      bg: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    };
+  }
+  if ([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"].includes(ext)) {
+    return {
+      label: "Image File",
+      icon: <ImageIcon className="h-5 w-5 text-pink-600" />,
+      bg: "bg-pink-50 text-pink-700 border-pink-200",
+    };
+  }
+  return {
+    label: ext === ".doc" || ext === ".docx" ? "Word Document" : ext === ".txt" || ext === ".md" ? "Text Document" : "PDF Document",
+    icon: <FileText className="h-5 w-5 text-blue-600" />,
+    bg: "bg-blue-50 text-blue-700 border-blue-200",
+  };
 }
 
 export default function FileList({ materialId, files }: FileListProps) {
@@ -32,20 +87,15 @@ export default function FileList({ materialId, files }: FileListProps) {
   const handleDownload = async (fileId: string, storageRef: string, fileName: string) => {
     setDownloadingId(fileId);
     try {
-      const result = await trackDownloadAndGetUrl(fileId, materialId, storageRef, fileName);
-      if (result.error) {
-        alert(result.error);
-        return;
-      }
-      if (result.downloadUrl) {
-        const link = document.createElement("a");
-        link.href = result.downloadUrl;
-        link.download = fileName;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+      await trackDownloadAndGetUrl(fileId, materialId, storageRef, fileName);
+      const downloadUrl = `/api/materials/file/${storageRef}?download=1&filename=${encodeURIComponent(fileName)}`;
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch {
       alert("Failed to initiate download. Please try again.");
     } finally {
@@ -53,30 +103,17 @@ export default function FileList({ materialId, files }: FileListProps) {
     }
   };
 
-  const handlePreview = async (file: FileItem) => {
+  const handlePreview = (file: FileItem) => {
+    const previewUrl = `/api/materials/file/${file.storage_ref}?filename=${encodeURIComponent(file.file_name)}`;
     setPreviewingFile({
       id: file.id,
       fileName: file.file_name,
-      fileUrl: null,
+      fileUrl: previewUrl,
       mimeType: file.mime_type,
       storageRef: file.storage_ref,
     });
     setIsPreviewModalOpen(true);
-
-    try {
-      const res = await trackPreviewAndGetUrl(file.id, materialId, file.storage_ref, file.file_name);
-      if (res.error) {
-        alert(res.error);
-        setIsPreviewModalOpen(false);
-        return;
-      }
-      if (res.previewUrl) {
-        setPreviewingFile((prev) => (prev ? { ...prev, fileUrl: res.previewUrl } : null));
-      }
-    } catch {
-      alert("Failed to open preview.");
-      setIsPreviewModalOpen(false);
-    }
+    trackPreviewAndGetUrl(file.id, materialId, file.storage_ref, file.file_name).catch(() => {});
   };
 
   const formatSize = (bytes: number) => {
@@ -87,20 +124,35 @@ export default function FileList({ materialId, files }: FileListProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  if (!files || files.length === 0) {
+    return (
+      <div className="p-8 text-center bg-white rounded-3xl border border-slate-200/90 shadow-2xs space-y-2">
+        <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+          <FolderOpen className="h-6 w-6" />
+        </div>
+        <p className="text-sm font-bold text-slate-800">No Study Files Attached Yet</p>
+        <p className="text-xs text-slate-500 font-normal max-w-sm mx-auto">
+          The instructor has registered this material entry, but documents have not been uploaded yet. Please check back shortly.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
         <div className="divide-y divide-slate-100">
           {files.map((file) => {
             const isDownloading = downloadingId === file.id;
+            const fileType = getFileTypeDetails(file.file_name);
             return (
               <div 
                 key={file.id} 
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 gap-3 hover:bg-slate-50/70 transition-all"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200 shadow-2xs">
-                    <FileText className="h-5 w-5" />
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border shadow-2xs ${fileType.bg}`}>
+                    {fileType.icon}
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
@@ -109,7 +161,7 @@ export default function FileList({ materialId, files }: FileListProps) {
                     <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 font-normal">
                       <span>{formatSize(file.size)}</span>
                       <span>•</span>
-                      <span className="uppercase">{file.file_name.split(".").pop() || "PDF"} Document</span>
+                      <span>{fileType.label}</span>
                     </div>
                   </div>
                 </div>

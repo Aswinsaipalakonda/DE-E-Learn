@@ -129,7 +129,11 @@ export default async function FacultyMaterialsPage() {
   const allRawEvents = [...serverEvents, ...cookieEvents, ...dbEvents];
   const eventsMap = new Map<string, any>();
   allRawEvents.forEach((ev) => {
-    const key = ev.id || `${ev.type}-${ev.target_id || ev.targetId}-${ev.actor_roll || ev.metadata?.roll_number || ev.actor_id}-${ev.file_name || ev.metadata?.file_name || "page"}-${ev.created_at}`;
+    const actorKey = ev.actor_roll || ev.metadata?.roll_number || ev.users?.roll_number || (ev.actor_email ? ev.actor_email.split('@')[0].toUpperCase() : '') || ev.actor_id;
+    const targetId = ev.target_id || ev.targetId;
+    const timeBucket = Math.floor(new Date(ev.created_at || ev.timestamp || 0).getTime() / (30 * 60 * 1000));
+    const filePart = ev.file_name || ev.metadata?.file_name || "main";
+    const key = `${ev.type}-${targetId}-${actorKey}-${filePart}-${timeBucket}`;
     if (!eventsMap.has(key)) {
       eventsMap.set(key, ev);
     }
@@ -169,7 +173,28 @@ export default async function FacultyMaterialsPage() {
       return true;
     });
 
-    const views = validStudentEvents.filter((e) => e.type === "view").length;
+    // Count distinct students who viewed this material
+    const uniqueStudentViewers = new Set(
+      validStudentEvents
+        .filter((e) => e.type === "view")
+        .map((ev) => {
+          const userProfile = 
+            (ev.users as Record<string, unknown>) || 
+            (ev.actor_id ? userMap.get(String(ev.actor_id)) : null) ||
+            (ev.actor_email ? userMap.get(String(ev.actor_email).toLowerCase()) : null);
+          const userEmail = (userProfile?.email as string) || ev.actor_email || ev.metadata?.email || "";
+          return (
+            (userProfile?.roll_number as string) || 
+            ev.actor_roll || 
+            ev.metadata?.roll_number || 
+            (userEmail.includes("@") ? userEmail.split("@")[0].toUpperCase() : "") ||
+            ev.actor_id
+          );
+        })
+        .filter(Boolean)
+    );
+
+    const views = uniqueStudentViewers.size;
     const downloads = validStudentEvents.filter((e) => e.type === "download").length;
 
     const engagementLogs: StudentEngagementLog[] = validStudentEvents.map((ev, idx) => {

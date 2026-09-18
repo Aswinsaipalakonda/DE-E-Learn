@@ -309,31 +309,38 @@ async function deleteMaterial(req, res) {
 
 async function downloadFile(req, res) {
   try {
-    const { fileId } = req.params;
+    const rawParam = req.params.fileId || req.params[0] || '';
+    const cleanRef = rawParam.replace(/\/download\/?$/, '').replace(/^\//, '');
     const user = req.user;
 
     const [files] = await pool.query(
       `SELECT mf.*, m.branch, m.semester, m.state, m.title as material_title
        FROM material_files mf
        JOIN materials m ON mf.material_id = m.id
-       WHERE mf.id = ? LIMIT 1`,
-      [fileId]
+       WHERE mf.id = ? OR mf.storage_path = ? OR mf.storage_ref = ? OR mf.storage_path LIKE ?
+       LIMIT 1`,
+      [cleanRef, cleanRef, cleanRef, `%${cleanRef}`]
     );
 
     if (!files.length) {
+      // Fallback: check if file directly exists on disk by cleanRef
+      const directDiskPath = path.join(uploadBaseDir, cleanRef);
+      if (fs.existsSync(directDiskPath)) {
+        const baseName = path.basename(directDiskPath);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(baseName)}"`);
+        return fs.createReadStream(directDiskPath).pipe(res);
+      }
       return res.status(404).json({ error: 'Requested file not found.' });
     }
 
     const fileRecord = files[0];
 
-    // Check student scope (optional strict check: branch & semester match)
-    if (user && user.role === 'student') {
-      if (fileRecord.state !== 'published') {
-        return res.status(403).json({ error: 'Material is not currently available for download.' });
-      }
+    if (user && user.role === 'student' && fileRecord.state !== 'published') {
+      return res.status(403).json({ error: 'Material is not currently available for download.' });
     }
 
-    const diskPath = path.join(uploadBaseDir, fileRecord.storage_path);
+    const diskPath = path.join(uploadBaseDir, fileRecord.storage_path || fileRecord.storage_ref);
     if (!fs.existsSync(diskPath)) {
       return res.status(404).json({ error: 'File content does not exist on storage.' });
     }
@@ -342,13 +349,15 @@ async function downloadFile(req, res) {
     if (user) {
       pool.query(
         'INSERT INTO activity_events (id, type, actor_id, target_id, metadata) VALUES (?, ?, ?, ?, ?)',
-        [crypto.randomUUID(), 'download', user.id, fileRecord.material_id, JSON.stringify({ fileId, fileName: fileRecord.file_name })]
+        [crypto.randomUUID(), 'download', user.id, fileRecord.material_id, JSON.stringify({ fileId: fileRecord.id, fileName: fileRecord.file_name })]
       ).catch(() => {});
     }
 
-    // Set headers and stream file
+    const isDownload = req.query.download === '1' || req.query.download === 'true' || req.path.includes('/download');
+    const disposition = isDownload ? 'attachment' : 'inline';
+
     res.setHeader('Content-Type', fileRecord.mime_type || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileRecord.file_name)}"`);
+    res.setHeader('Content-Disposition', `${disposition}; filename="${encodeURIComponent(fileRecord.file_name)}"`);
     res.setHeader('Content-Length', fileRecord.size);
 
     const stream = fs.createReadStream(diskPath);
