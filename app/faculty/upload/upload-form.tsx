@@ -20,9 +20,60 @@ import {
   GraduationCap,
   Search,
   BookOpen,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  Code,
+  Table,
+  Presentation,
+  FileArchive,
+  Image as ImageIcon
 } from "lucide-react";
+import FilePreviewModal from "@/components/file-preview-modal";
 import { formatSubjectTitle } from "@/lib/utils";
+
+function getFileTypeDetails(fileName: string) {
+  const ext = "." + (fileName.split(".").pop() || "").toLowerCase();
+  if ([".py", ".java", ".c", ".cpp", ".h", ".cs", ".js", ".ts", ".tsx", ".jsx", ".html", ".css", ".json", ".sql", ".ipynb", ".sh", ".xml", ".yaml", ".yml"].includes(ext)) {
+    return {
+      label: `${ext.slice(1).toUpperCase()} Code`,
+      icon: <Code className="h-4 w-4 text-purple-600" />,
+      bg: "bg-purple-50 text-purple-700 border-purple-200",
+    };
+  }
+  if ([".xls", ".xlsx", ".csv"].includes(ext)) {
+    return {
+      label: "Excel Spreadsheet",
+      icon: <Table className="h-4 w-4 text-emerald-600" />,
+      bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    };
+  }
+  if ([".ppt", ".pptx"].includes(ext)) {
+    return {
+      label: "PowerPoint Slides",
+      icon: <Presentation className="h-4 w-4 text-amber-600" />,
+      bg: "bg-amber-50 text-amber-700 border-amber-200",
+    };
+  }
+  if ([".zip", ".rar", ".7z", ".tar", ".gz"].includes(ext)) {
+    return {
+      label: "ZIP Archive",
+      icon: <FileArchive className="h-4 w-4 text-indigo-600" />,
+      bg: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    };
+  }
+  if ([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"].includes(ext)) {
+    return {
+      label: "Image Asset",
+      icon: <ImageIcon className="h-4 w-4 text-pink-600" />,
+      bg: "bg-pink-50 text-pink-700 border-pink-200",
+    };
+  }
+  return {
+    label: ext === ".doc" || ext === ".docx" ? "Word Document" : ext === ".txt" || ext === ".md" ? "Text Document" : "PDF Document",
+    icon: <FileText className="h-4 w-4 text-blue-600" />,
+    bg: "bg-blue-50 text-blue-700 border-blue-200",
+  };
+}
 
 interface RegulationOption {
   code: string;
@@ -83,6 +134,34 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Preview modal state for locally attached files
+  const [previewTarget, setPreviewTarget] = useState<{
+    file: File;
+    objectUrl: string;
+  } | null>(null);
+
+  const handlePreviewFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setPreviewTarget({ file, objectUrl: url });
+  };
+
+  const handleClosePreview = () => {
+    if (previewTarget?.objectUrl) {
+      URL.revokeObjectURL(previewTarget.objectUrl);
+    }
+    setPreviewTarget(null);
+  };
+
+  const handleDownloadLocalFile = () => {
+    if (!previewTarget) return;
+    const a = document.createElement("a");
+    a.href = previewTarget.objectUrl;
+    a.download = previewTarget.file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   const defaultDepartmentBranches: BranchOption[] = [
     { code: "CSM", name: "Artificial Intelligence and Machine Learning" },
@@ -928,27 +1007,48 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
                 Attached Files ({files.length})
               </span>
               <div className="space-y-2">
-                {files.map((file, idx) => (
-                  <div 
-                    key={`${file.name}-${idx}`} 
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs sm:text-sm"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <FileText className="h-4 w-4 text-primary shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-800 truncate">{file.name}</p>
-                        <p className="text-[11px] text-slate-500">{formatSize(file.size)}</p>
+                {files.map((file, idx) => {
+                  const typeInfo = getFileTypeDetails(file.name);
+                  return (
+                    <div 
+                      key={`${file.name}-${idx}`} 
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs sm:text-sm"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`p-1.5 rounded-lg border ${typeInfo.bg} shrink-0`}>
+                          {typeInfo.icon}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-800 truncate">{file.name}</p>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                            <span>{formatSize(file.size)}</span>
+                            <span>•</span>
+                            <span>{typeInfo.label}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handlePreviewFile(file)}
+                          className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-full flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+                          title="Preview attached file"
+                        >
+                          <Eye className="h-3.5 w-3.5 text-blue-600" />
+                          <span>Preview</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Remove file"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(idx)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1024,19 +1124,48 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
               </div>
             )}
 
-            {/* Files Attached Summary */}
-            <div className="space-y-1.5 pt-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                Attached Study Files ({files.length})
-              </span>
-              <div className="space-y-1.5">
-                {files.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-200/70 text-xs text-slate-800">
-                    <FileCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold truncate flex-1">{file.name}</span>
-                    <span className="text-slate-400 text-[11px]">{formatSize(file.size)}</span>
-                  </div>
-                ))}
+            {/* Files Attached Summary with In-Browser Preview */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  Attached Study Files ({files.length})
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">Click Preview to inspect attached files</span>
+              </div>
+              <div className="space-y-2">
+                {files.map((file, idx) => {
+                  const typeInfo = getFileTypeDetails(file.name);
+                  return (
+                    <div 
+                      key={idx} 
+                      className="flex items-center justify-between gap-3 p-3 bg-white rounded-2xl border border-slate-200/80 text-xs text-slate-800 shadow-2xs hover:border-slate-300 transition-all"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`p-1.5 rounded-lg border ${typeInfo.bg} shrink-0`}>
+                          {typeInfo.icon}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-semibold text-slate-900 truncate block">{file.name}</span>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
+                            <span>{formatSize(file.size)}</span>
+                            <span>•</span>
+                            <span>{typeInfo.label}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewFile(file)}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-full border border-slate-200 flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-2xs"
+                        title={`Preview ${file.name}`}
+                      >
+                        <Eye className="h-3.5 w-3.5 text-blue-600" />
+                        <span>Preview</span>
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1082,6 +1211,18 @@ export default function UploadForm({ regulations, subjects, branches = [] }: Upl
             </div>
           </div>
         </div>
+      )}
+
+      {/* In-Browser Preview Modal for Selected Study Files */}
+      {previewTarget && (
+        <FilePreviewModal
+          isOpen={!!previewTarget}
+          onClose={handleClosePreview}
+          fileName={previewTarget.file.name}
+          fileUrl={previewTarget.objectUrl}
+          mimeType={previewTarget.file.type}
+          onDownload={handleDownloadLocalFile}
+        />
       )}
     </div>
   );
