@@ -45,6 +45,50 @@ export async function deleteMaterial(id: string) {
   return { success: true };
 }
 
+// Bulk Archive or Publish Materials
+export async function bulkToggleMaterialState(ids: string[], newState: "draft" | "published" | "archived") {
+  if (!ids || ids.length === 0) return { error: "No materials selected." };
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { error } = await supabase
+    .from("materials")
+    .update({ state: newState })
+    .in("id", ids)
+    .eq("owner_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/faculty/materials");
+  return { success: true };
+}
+
+// Bulk Soft Delete Materials
+export async function bulkDeleteMaterials(ids: string[]) {
+  if (!ids || ids.length === 0) return { error: "No materials selected." };
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { error } = await supabase
+    .from("materials")
+    .update({ state: "deleted" })
+    .in("id", ids)
+    .eq("owner_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/faculty/materials");
+  return { success: true };
+}
+
 // Edit Material Metadata (Title, Description, Type, State)
 export async function updateMaterialDetails(formData: FormData) {
   const cookieStore = await cookies();
