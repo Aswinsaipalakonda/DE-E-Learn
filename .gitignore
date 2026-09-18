@@ -40,6 +40,10 @@ yarn-error.log*
 /backups/*
 !/backups/.gitkeep
 
+# deployment archives
+*.zip
+*.tar.gz
+
 # vercel
 .vercel
 
