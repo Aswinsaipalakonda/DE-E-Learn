@@ -17,6 +17,7 @@ import {
   Copy,
   Check
 } from "lucide-react";
+import PdfCanvasViewer from "./pdf-canvas-viewer";
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -225,17 +226,11 @@ export default function FilePreviewModal({
               <p className="text-sm font-medium text-slate-700">Generating secure preview stream...</p>
             </div>
           ) : isPdf ? (
-            <div className="w-full h-full relative">
-              {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </div>
-              )}
-              <iframe
-                src={`${fileUrl}#toolbar=1&navpanes=0`}
-                className="w-full h-full rounded-xl border border-slate-200 bg-white"
-                title={fileName}
-                onLoad={() => setIsLoading(false)}
+            <div className="w-full h-full relative flex flex-col rounded-xl overflow-hidden border border-slate-200 bg-white">
+              <PdfCanvasViewer
+                fileUrl={fileUrl}
+                fileName={fileName}
+                onDownload={onDownload}
               />
             </div>
           ) : isImage ? (
