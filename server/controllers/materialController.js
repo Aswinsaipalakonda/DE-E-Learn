@@ -309,7 +309,7 @@ async function deleteMaterial(req, res) {
 
 async function downloadFile(req, res) {
   try {
-    const rawParam = req.params.fileId || req.params[0] || '';
+    const rawParam = req.params.filePath || req.params.fileId || req.params[0] || '';
     const cleanRef = rawParam.replace(/\/download\/?$/, '').replace(/^\//, '');
     const user = req.user;
 
