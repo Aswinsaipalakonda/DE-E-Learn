@@ -20,6 +20,7 @@ import {
   LayoutGrid, 
   ListFilter 
 } from "lucide-react";
+import { resolveBranchCode } from "@/lib/utils";
 
 export interface FileInfo {
   id: string;
@@ -123,15 +124,7 @@ function formatTimestamp(isoString?: string): string {
   }
 }
 
-// Resolve standard branch code from branch string or roll number
-function resolveBranchCode(rawBranch?: string | null, rawRoll?: string | null): "CIC" | "CSD" | "CSM" {
-  const b = (rawBranch || "").toUpperCase();
-  const r = (rawRoll || "").toUpperCase();
-  if (b.includes("CIC") || b.includes("CYBER") || b.includes("IOT") || b.startsWith("23CIC") || r.includes("A47") || r.includes("47")) return "CIC";
-  if (b.includes("CSD") || b.includes("DATA SCIENCE") || b.includes("DESIGN") || b.startsWith("23CSD") || r.includes("A05") || r.includes("05")) return "CSD";
-  if (b.includes("CSM") || b.includes("AI") || b.includes("MACHINE") || b.startsWith("23CSM") || r.includes("A42") || r.includes("42")) return "CSM";
-  return "CIC";
-}
+
 
 export default function StudentCohortProgressMatrix({
   materialId,

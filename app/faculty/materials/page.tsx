@@ -5,6 +5,7 @@ import MaterialsList, { SubjectItem } from "./materials-list";
 import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import { getServerActivityEvents } from "@/utils/activity-store";
+import { resolveBranchCode } from "@/lib/utils";
 
 interface FileItem {
   id: string;
@@ -294,7 +295,7 @@ export default async function FacultyMaterialsPage() {
     const email = String(u.email || "");
     const rawRoll = (u.roll_number as string) || (email.includes("@") ? email.split("@")[0].toUpperCase() : "");
     const roll = rawRoll.toUpperCase();
-    const branch = (u.branch as string) || (roll.includes("47") ? "CIC" : roll.includes("05") ? "CSD" : roll.includes("42") ? "CSM" : "CIC");
+    const branch = resolveBranchCode(u.branch as string, roll);
     const current_semester = typeof u.current_semester === "number" ? u.current_semester : 3;
     const section = (u.section as string) || (parseInt(roll.slice(-2), 10) <= 36 ? "A" : "B");
 
