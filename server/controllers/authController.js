@@ -39,7 +39,10 @@ async function login(req, res) {
     }
 
     // 2. Fallback check for default roll numbers or faculty keys
-    if (!isValid) {
+    // STRICT SECURITY RULE: ONLY allowed when first_login_pending is true/1.
+    // Once a user has set their own password (first_login_pending = 0), previous defaults are permanently revoked.
+    const isFirstLoginPending = user.first_login_pending === 1 || user.first_login_pending === true || user.first_login_pending === '1';
+    if (!isValid && isFirstLoginPending) {
       const regNo = cleanEmail.split('@')[0].toUpperCase();
       const phoneDigits = user.phone ? user.phone.replace(/\D/g, '') : '';
       const phoneSuffix = phoneDigits.length >= 4 ? phoneDigits.slice(-4) : null;

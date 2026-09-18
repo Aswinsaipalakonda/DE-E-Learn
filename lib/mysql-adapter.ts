@@ -693,7 +693,7 @@ export class MySQLClient {
             const payload: any = jwt.verify(token, JWT_SECRET);
             if (payload?.id && attributes?.password) {
               const hash = await bcrypt.hash(attributes.password, 10);
-              await pool.query('UPDATE users SET password_hash = ?, first_login_pending = 0 WHERE id = ?', [hash, payload.id]);
+              await pool.query('UPDATE users SET password_hash = ?, first_login_pending = 0, updated_at = NOW() WHERE id = ?', [hash, payload.id]);
             }
           }
           return { data: { user: {} }, error: null as { message: string } | null };
@@ -727,7 +727,10 @@ export class MySQLClient {
           }
 
           // 2. Fallback check for default roll numbers or faculty keys
-          if (!isValid) {
+          // STRICT SECURITY RULE: ONLY allowed when first_login_pending is true/1.
+          // Once a user has set their own password (first_login_pending = 0), previous defaults are permanently revoked.
+          const isFirstLoginPending = user.first_login_pending === 1 || user.first_login_pending === true || user.first_login_pending === '1';
+          if (!isValid && isFirstLoginPending) {
             const regNo = cleanEmail.split('@')[0].toUpperCase();
             const phoneDigits = user.phone ? user.phone.replace(/\D/g, '') : '';
             const phoneSuffix = phoneDigits.length >= 4 ? phoneDigits.slice(-4) : null;
@@ -834,7 +837,7 @@ export class MySQLClient {
           try {
             if (attributes?.password) {
               const hash = await bcrypt.hash(attributes.password, 10);
-              await pool.query('UPDATE users SET password_hash = ?, first_login_pending = 1 WHERE id = ?', [hash, id]);
+              await pool.query('UPDATE users SET password_hash = ?, first_login_pending = 1, updated_at = NOW() WHERE id = ? OR email = ?', [hash, id, id]);
             }
             return { data: { user: { id } }, error: null as { message: string } | null };
           } catch (err: any) {

@@ -282,8 +282,9 @@ export async function adminResetUserPassword(userId: string, email: string) {
   await adminClient
     .from("users")
     .update({ 
-      first_login_pending: false,
-      status: "active"
+      first_login_pending: true,
+      status: "active",
+      updated_at: new Date().toISOString()
     })
     .or(`id.eq.${userId},email.eq.${normalizedEmail}`);
 
